@@ -1,0 +1,1543 @@
+{
+  "total_issues": 151,
+  "errors": 0,
+  "warnings": 63,
+  "info": 88,
+  "files_affected": 11,
+  "issues_by_file": {
+    "automated_testing.py": [
+      "LintIssue(file_path='automated_testing.py', line_number=104, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (139 > 120)', source_line='                    expected_shape = targets.shape if len(targets.shape) == len(outputs.shape) else targets.shape[:-1] + outputs.shape[-1:]')",
+      "LintIssue(file_path='automated_testing.py', line_number=119, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (126 > 120)', source_line='                    loss = torch.nn.functional.cross_entropy(outputs, targets.argmax(dim=1) if targets.dim() > 1 else targets)')",
+      "LintIssue(file_path='automated_testing.py', line_number=730, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (124 > 120)', source_line='        report_lines.append(f\"Success Rate: {passed_tests/total_tests*100:.1f}%\" if total_tests > 0 else \"Success Rate: 0%\")')",
+      "LintIssue(file_path='automated_testing.py', line_number=169, column=4, severity='warning', code='FUNCTION_TOO_LONG', message=\"Function 'validate_functional_equivalence' is too long (54 > 50)\", source_line='    def validate_functional_equivalence(self, original_model: nn.Module, optimized_model: nn.Module,')",
+      "LintIssue(file_path='automated_testing.py', line_number=459, column=4, severity='warning', code='FUNCTION_TOO_LONG', message=\"Function 'test_model_gradient_flow' is too long (56 > 50)\", source_line='    def test_model_gradient_flow(self, model: nn.Module, test_data: Optional[Tuple] = None) -> Dict[str, Any]:')",
+      "LintIssue(file_path='automated_testing.py', line_number=89, column=4, severity='warning', code='HIGH_COMPLEXITY', message=\"Function 'validate_memory_optimization' has high cyclomatic complexity (15 > 10)\", source_line='    def validate_memory_optimization(self, model: nn.Module, test_data: Optional[Tuple] = None) -> Dict[str, Any]:')",
+      "LintIssue(file_path='automated_testing.py', line_number=37, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='automated_testing.py', line_number=251, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='automated_testing.py', line_number=521, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='automated_testing.py', line_number=599, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='automated_testing.py', line_number=716, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='automated_testing.py', line_number=858, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for class 'SimpleModel'\", source_line='    class SimpleModel(nn.Module):')",
+      "LintIssue(file_path='automated_testing.py', line_number=897, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for class 'ModelV1'\", source_line='    class ModelV1(nn.Module):')",
+      "LintIssue(file_path='automated_testing.py', line_number=905, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for class 'ModelV2'\", source_line='    class ModelV2(nn.Module):')",
+      "LintIssue(file_path='automated_testing.py', line_number=859, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='        def __init__(self):')",
+      "LintIssue(file_path='automated_testing.py', line_number=869, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'forward'\", source_line='        def forward(self, x):')",
+      "LintIssue(file_path='automated_testing.py', line_number=898, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='        def __init__(self):')",
+      "LintIssue(file_path='automated_testing.py', line_number=902, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'forward'\", source_line='        def forward(self, x):')",
+      "LintIssue(file_path='automated_testing.py', line_number=906, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='        def __init__(self):')",
+      "LintIssue(file_path='automated_testing.py', line_number=911, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'forward'\", source_line='        def forward(self, x):')"
+    ],
+    "benchmarking_tools.py": [
+      "LintIssue(file_path='benchmarking_tools.py', line_number=317, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (130 > 120)', source_line=\"                    input_tensor = torch.randn(batch_size, seq_len, model.config.hidden_size if hasattr(model, 'config') else 768)\")",
+      "LintIssue(file_path='benchmarking_tools.py', line_number=447, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (148 > 120)', source_line=\"        speedup = original_inference.execution_time / optimized_inference.execution_time if optimized_inference.execution_time > 0 else float('inf')\")",
+      "LintIssue(file_path='benchmarking_tools.py', line_number=448, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (183 > 120)', source_line='        memory_improvement = (original_inference.memory_usage - optimized_inference.memory_usage) / original_inference.memory_usage * 100 if original_inference.memory_usage > 0 else 0')",
+      "LintIssue(file_path='benchmarking_tools.py', line_number=466, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (168 > 120)', source_line=\"                'throughput_improvement_factor': (optimized_inference.throughput / original_inference.throughput) if original_inference.throughput > 0 else float('inf')\")",
+      "LintIssue(file_path='benchmarking_tools.py', line_number=358, column=4, severity='warning', code='FUNCTION_TOO_LONG', message=\"Function 'benchmark_throughput' is too long (62 > 50)\", source_line='    def benchmark_throughput(self, model: nn.Module, input_data: torch.Tensor,')",
+      "LintIssue(file_path='benchmarking_tools.py', line_number=42, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='benchmarking_tools.py', line_number=205, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='benchmarking_tools.py', line_number=430, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='benchmarking_tools.py', line_number=556, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='benchmarking_tools.py', line_number=683, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='benchmarking_tools.py', line_number=819, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for class 'SimpleModel'\", source_line='    class SimpleModel(nn.Module):')",
+      "LintIssue(file_path='benchmarking_tools.py', line_number=820, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='        def __init__(self, input_size=768, hidden_size=2048, output_size=768):')",
+      "LintIssue(file_path='benchmarking_tools.py', line_number=830, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'forward'\", source_line='        def forward(self, x):')"
+    ],
+    "code_quality.py": [
+      "LintIssue(file_path='code_quality.py', line_number=137, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (134 > 120)', source_line='                        message=f\"Invalid function name \\'{node.name}\\'. Should match: {self.config[\\'naming_conventions\\'][\\'function\\']}\",')",
+      "LintIssue(file_path='code_quality.py', line_number=149, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (134 > 120)', source_line='                        message=f\"Invalid function name \\'{node.name}\\'. Should match: {self.config[\\'naming_conventions\\'][\\'function\\']}\",')",
+      "LintIssue(file_path='code_quality.py', line_number=161, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (128 > 120)', source_line='                        message=f\"Invalid class name \\'{node.name}\\'. Should match: {self.config[\\'naming_conventions\\'][\\'class\\']}\",')",
+      "LintIssue(file_path='code_quality.py', line_number=176, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (146 > 120)', source_line='                                    message=f\"Invalid constant name \\'{target.id}\\'. Should match: {self.config[\\'naming_conventions\\'][\\'constant\\']}\",')",
+      "LintIssue(file_path='code_quality.py', line_number=187, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (146 > 120)', source_line='                                    message=f\"Invalid variable name \\'{target.id}\\'. Should match: {self.config[\\'naming_conventions\\'][\\'variable\\']}\",')",
+      "LintIssue(file_path='code_quality.py', line_number=262, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (149 > 120)', source_line='                        message=f\"Function \\'{node.name}\\' has high cyclomatic complexity ({complexity} > {self.config[\\'max_cyclomatic_complexity\\']})\",')",
+      "LintIssue(file_path='code_quality.py', line_number=693, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (126 > 120)', source_line='                report_lines.append(f\"  {issue.file_path}:{issue.line_number}:{issue.column} - {issue.code}: {issue.message}\")')",
+      "LintIssue(file_path='code_quality.py', line_number=699, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (126 > 120)', source_line='                report_lines.append(f\"  {issue.file_path}:{issue.line_number}:{issue.column} - {issue.code}: {issue.message}\")')",
+      "LintIssue(file_path='code_quality.py', line_number=705, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (126 > 120)', source_line='                report_lines.append(f\"  {issue.file_path}:{issue.line_number}:{issue.column} - {issue.code}: {issue.message}\")')",
+      "LintIssue(file_path='code_quality.py', line_number=874, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (176 > 120)', source_line='very_long_line = \"This is a very long line that exceeds the maximum allowed length for readability purposes and should be shortened to improve code quality and maintainability\"')",
+      "LintIssue(file_path='code_quality.py', line_number=841, column=0, severity='warning', code='FUNCTION_TOO_LONG', message=\"Function 'example_quality_checking' is too long (55 > 50)\", source_line='def example_quality_checking():')",
+      "LintIssue(file_path='code_quality.py', line_number=124, column=4, severity='warning', code='FUNCTION_TOO_LONG', message=\"Function '_check_naming_conventions' is too long (65 > 50)\", source_line='    def _check_naming_conventions(self, file_path: str, tree: ast.AST) -> List[LintIssue]:')",
+      "LintIssue(file_path='code_quality.py', line_number=726, column=4, severity='warning', code='FUNCTION_TOO_LONG', message=\"Function 'generate_html_report' is too long (52 > 50)\", source_line='    def generate_html_report(self, issues: List[LintIssue], output_path: str):')",
+      "LintIssue(file_path='code_quality.py', line_number=124, column=4, severity='warning', code='HIGH_COMPLEXITY', message=\"Function '_check_naming_conventions' has high cyclomatic complexity (14 > 10)\", source_line='    def _check_naming_conventions(self, file_path: str, tree: ast.AST) -> List[LintIssue]:')",
+      "LintIssue(file_path='code_quality.py', line_number=554, column=4, severity='warning', code='HIGH_COMPLEXITY', message=\"Function 'calculate_file_metrics' has high cyclomatic complexity (11 > 10)\", source_line='    def calculate_file_metrics(self, file_path: str) -> Dict[str, Any]:')",
+      "LintIssue(file_path='code_quality.py', line_number=675, column=4, severity='warning', code='HIGH_COMPLEXITY', message=\"Function 'generate_text_report' has high cyclomatic complexity (12 > 10)\", source_line='    def generate_text_report(self, issues: List[LintIssue]) -> str:')",
+      "LintIssue(file_path='code_quality.py', line_number=38, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='code_quality.py', line_number=431, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self, config_file: Optional[str] = None):')",
+      "LintIssue(file_path='code_quality.py', line_number=551, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='code_quality.py', line_number=672, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')"
+    ],
+    "config_validation.py": [
+      "LintIssue(file_path='config_validation.py', line_number=51, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (126 > 120)', source_line='    def validate_config(self, config: Dict[str, Any], schema_name: str = None, schema: ConfigSchema = None) -> Dict[str, Any]:')",
+      "LintIssue(file_path='config_validation.py', line_number=239, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (125 > 120)', source_line='                    errors.append(f\"Field \\'{field_name}\\' has type {type(value).__name__}, expected {expected_type.__name__}\")')",
+      "LintIssue(file_path='config_validation.py', line_number=307, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (125 > 120)', source_line='                    errors.append(f\"Field \\'{field_name}\\' has type {type(value).__name__}, expected {expected_type.__name__}\")')",
+      "LintIssue(file_path='config_validation.py', line_number=324, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (148 > 120)', source_line='                warnings.append(f\"Estimated memory usage ({estimated_memory/1e9:.2f}GB) may be high for batch_size={batch_size}, seq_len={seq_len}\")')",
+      "LintIssue(file_path='config_validation.py', line_number=545, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (124 > 120)', source_line='                    raise ConfigValidationError(f\"Configuration validation failed for function \\'{func.__name__}\\': {str(e)}\")')",
+      "LintIssue(file_path='config_validation.py', line_number=615, column=0, severity='warning', code='FUNCTION_TOO_LONG', message=\"Function 'example_validation' is too long (51 > 50)\", source_line='def example_validation():')",
+      "LintIssue(file_path='config_validation.py', line_number=166, column=4, severity='warning', code='FUNCTION_TOO_LONG', message=\"Function 'validate_model_config' is too long (106 > 50)\", source_line='    def validate_model_config(self, config: Dict[str, Any]) -> Dict[str, Any]:')",
+      "LintIssue(file_path='config_validation.py', line_number=51, column=4, severity='warning', code='HIGH_COMPLEXITY', message=\"Function 'validate_config' has high cyclomatic complexity (16 > 10)\", source_line='    def validate_config(self, config: Dict[str, Any], schema_name: str = None, schema: ConfigSchema = None) -> Dict[str, Any]:')",
+      "LintIssue(file_path='config_validation.py', line_number=111, column=4, severity='warning', code='HIGH_COMPLEXITY', message=\"Function '_validate_field' has high cyclomatic complexity (17 > 10)\", source_line='    def _validate_field(self, field_name: str, value: Any, schema: ConfigSchema) -> tuple:')",
+      "LintIssue(file_path='config_validation.py', line_number=166, column=4, severity='warning', code='HIGH_COMPLEXITY', message=\"Function 'validate_model_config' has high cyclomatic complexity (23 > 10)\", source_line='    def validate_model_config(self, config: Dict[str, Any]) -> Dict[str, Any]:')",
+      "LintIssue(file_path='config_validation.py', line_number=286, column=4, severity='warning', code='HIGH_COMPLEXITY', message=\"Function 'validate_memory_config' has high cyclomatic complexity (12 > 10)\", source_line='    def validate_memory_config(self, config: Dict[str, Any]) -> Dict[str, Any]:')",
+      "LintIssue(file_path='config_validation.py', line_number=340, column=4, severity='warning', code='HIGH_COMPLEXITY', message=\"Function 'validate_hardware_config' has high cyclomatic complexity (15 > 10)\", source_line='    def validate_hardware_config(self, config: Dict[str, Any]) -> Dict[str, Any]:')",
+      "LintIssue(file_path='config_validation.py', line_number=408, column=4, severity='warning', code='HIGH_COMPLEXITY', message=\"Function 'load_config' has high cyclomatic complexity (12 > 10)\", source_line='    def load_config(self, config_path: str, validate: bool = True, schema_name: str = None):')",
+      "LintIssue(file_path='config_validation.py', line_number=43, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='config_validation.py', line_number=404, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='config_validation.py', line_number=517, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self, schema_name: str = None, validator: ConfigValidator = None):')",
+      "LintIssue(file_path='config_validation.py', line_number=521, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__call__'\", source_line='    def __call__(self, func):')",
+      "LintIssue(file_path='config_validation.py', line_number=558, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'decorator'\", source_line='    def decorator(func):')",
+      "LintIssue(file_path='config_validation.py', line_number=523, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'wrapper'\", source_line='        def wrapper(*args, **kwargs):')",
+      "LintIssue(file_path='config_validation.py', line_number=560, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'wrapper'\", source_line='        def wrapper(*args, **kwargs):')"
+    ],
+    "debugging_utils.py": [
+      "LintIssue(file_path='debugging_utils.py', line_number=101, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (133 > 120)', source_line=\"            'element_wise_diff': torch.mean(torch.abs(tensor1 - tensor2)).item() if tensor1.shape == tensor2.shape else float('inf'),\")",
+      "LintIssue(file_path='debugging_utils.py', line_number=102, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (123 > 120)', source_line=\"            'max_diff': torch.max(torch.abs(tensor1 - tensor2)).item() if tensor1.shape == tensor2.shape else float('inf'),\")",
+      "LintIssue(file_path='debugging_utils.py', line_number=242, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (131 > 120)', source_line='                print(f\"  Gradient stats: min={grad.min().item():.4f}, max={grad.max().item():.4f}, mean={grad.mean().item():.4f}\")')",
+      "LintIssue(file_path='debugging_utils.py', line_number=279, column=4, severity='warning', code='FUNCTION_TOO_LONG', message=\"Function 'trace_function' is too long (51 > 50)\", source_line='    def trace_function(self, func_name: str = None):')",
+      "LintIssue(file_path='debugging_utils.py', line_number=28, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='debugging_utils.py', line_number=157, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='debugging_utils.py', line_number=272, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='debugging_utils.py', line_number=501, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for class 'SimpleModel'\", source_line='    class SimpleModel(torch.nn.Module):')",
+      "LintIssue(file_path='debugging_utils.py', line_number=169, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'make_hook'\", source_line='        def make_hook(name):')",
+      "LintIssue(file_path='debugging_utils.py', line_number=188, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'make_hook'\", source_line='        def make_hook(name):')",
+      "LintIssue(file_path='debugging_utils.py', line_number=203, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'make_timer_hook'\", source_line='        def make_timer_hook(name):')",
+      "LintIssue(file_path='debugging_utils.py', line_number=211, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'make_timer_backward_hook'\", source_line='        def make_timer_backward_hook(name):')",
+      "LintIssue(file_path='debugging_utils.py', line_number=281, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'decorator'\", source_line='        def decorator(func):')",
+      "LintIssue(file_path='debugging_utils.py', line_number=502, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='        def __init__(self):')",
+      "LintIssue(file_path='debugging_utils.py', line_number=508, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'forward'\", source_line='        def forward(self, x):')",
+      "LintIssue(file_path='debugging_utils.py', line_number=170, column=12, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'hook_fn'\", source_line='            def hook_fn(module, input, output):')",
+      "LintIssue(file_path='debugging_utils.py', line_number=189, column=12, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'hook_fn'\", source_line='            def hook_fn(grad):')",
+      "LintIssue(file_path='debugging_utils.py', line_number=204, column=12, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'hook_fn'\", source_line='            def hook_fn(module, input, output):')",
+      "LintIssue(file_path='debugging_utils.py', line_number=212, column=12, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'hook_fn'\", source_line='            def hook_fn(module, grad_input, grad_output):')",
+      "LintIssue(file_path='debugging_utils.py', line_number=283, column=12, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'wrapper'\", source_line='            def wrapper(*args, **kwargs):')"
+    ],
+    "documentation_generator.py": [
+      "LintIssue(file_path='documentation_generator.py', line_number=117, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (135 > 120)', source_line='            default = defaults[i - (len(node.args.args) - len(defaults))] if default_idx >= 0 and default_idx < len(defaults) else None')",
+      "LintIssue(file_path='documentation_generator.py', line_number=134, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (132 > 120)', source_line='            default = ast.unparse(node.args.kw_defaults[i]) if i < len(node.args.kw_defaults) and node.args.kw_defaults[i] else None')",
+      "LintIssue(file_path='documentation_generator.py', line_number=475, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (166 > 120)', source_line='                                <li class=\"param\"><code>{{ param.name }}</code>: {{ param.type or \\'Any\\' }}{% if param.default %} = {{ param.default }}{% endif %}</li>')",
+      "LintIssue(file_path='documentation_generator.py', line_number=507, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (162 > 120)', source_line='                            <li class=\"param\"><code>{{ param.name }}</code>: {{ param.type or \\'Any\\' }}{% if param.default %} = {{ param.default }}{% endif %}</li>')",
+      "LintIssue(file_path='documentation_generator.py', line_number=695, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (129 > 120)', source_line='                    content += f\"- `{func.signature}` - {func.docstring.split(\\'.\\')[0] if func.docstring else \\'No description\\'}\\\\n\"')",
+      "LintIssue(file_path='documentation_generator.py', line_number=701, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (121 > 120)', source_line='                    content += f\"- `{cls.name}` - {cls.docstring.split(\\'.\\')[0] if cls.docstring else \\'No description\\'}\\\\n\"')",
+      "LintIssue(file_path='documentation_generator.py', line_number=787, column=0, severity='warning', code='FUNCTION_TOO_LONG', message=\"Function 'example_documentation_generation' is too long (86 > 50)\", source_line='def example_documentation_generation():')",
+      "LintIssue(file_path='documentation_generator.py', line_number=889, column=0, severity='warning', code='FUNCTION_TOO_LONG', message=\"Function 'example_code_parsing' is too long (76 > 50)\", source_line='def example_code_parsing():')",
+      "LintIssue(file_path='documentation_generator.py', line_number=398, column=4, severity='warning', code='FUNCTION_TOO_LONG', message=\"Function '_create_module_page' is too long (126 > 50)\", source_line='    def _create_module_page(self, module_name: str, module_doc: ModuleDoc) -> str:')",
+      "LintIssue(file_path='documentation_generator.py', line_number=539, column=4, severity='warning', code='FUNCTION_TOO_LONG', message=\"Function '_create_module_md' is too long (61 > 50)\", source_line='    def _create_module_md(self, module_name: str, module_doc: ModuleDoc) -> str:')",
+      "LintIssue(file_path='documentation_generator.py', line_number=62, column=4, severity='warning', code='HIGH_COMPLEXITY', message=\"Function 'parse_file' has high cyclomatic complexity (15 > 10)\", source_line='    def parse_file(self, file_path: str) -> ModuleDoc:')",
+      "LintIssue(file_path='documentation_generator.py', line_number=539, column=4, severity='warning', code='HIGH_COMPLEXITY', message=\"Function '_create_module_md' has high cyclomatic complexity (25 > 10)\", source_line='    def _create_module_md(self, module_name: str, module_doc: ModuleDoc) -> str:')",
+      "LintIssue(file_path='documentation_generator.py', line_number=59, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='documentation_generator.py', line_number=201, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='documentation_generator.py', line_number=298, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='documentation_generator.py', line_number=711, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')"
+    ],
+    "model_inspection.py": [
+      "LintIssue(file_path='model_inspection.py', line_number=114, column=4, severity='warning', code='FUNCTION_TOO_LONG', message=\"Function '_estimate_flops' is too long (56 > 50)\", source_line='    def _estimate_flops(self, model: nn.Module, input_shape: tuple) -> float:')",
+      "LintIssue(file_path='model_inspection.py', line_number=114, column=4, severity='warning', code='HIGH_COMPLEXITY', message=\"Function '_estimate_flops' has high cyclomatic complexity (13 > 10)\", source_line='    def _estimate_flops(self, model: nn.Module, input_shape: tuple) -> float:')",
+      "LintIssue(file_path='model_inspection.py', line_number=299, column=4, severity='warning', code='HIGH_COMPLEXITY', message=\"Function 'analyze_tensor_shapes' has high cyclomatic complexity (13 > 10)\", source_line='    def analyze_tensor_shapes(self, model: nn.Module, sample_input: torch.Tensor):')",
+      "LintIssue(file_path='model_inspection.py', line_number=51, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='model_inspection.py', line_number=420, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='model_inspection.py', line_number=484, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='model_inspection.py', line_number=610, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for class 'SimpleModel'\", source_line='    class SimpleModel(nn.Module):')",
+      "LintIssue(file_path='model_inspection.py', line_number=661, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for class 'ModelA'\", source_line='    class ModelA(nn.Module):')",
+      "LintIssue(file_path='model_inspection.py', line_number=673, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for class 'ModelB'\", source_line='    class ModelB(nn.Module):')",
+      "LintIssue(file_path='model_inspection.py', line_number=303, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'hook_fn'\", source_line='        def hook_fn(module, input, output):')",
+      "LintIssue(file_path='model_inspection.py', line_number=611, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='        def __init__(self):')",
+      "LintIssue(file_path='model_inspection.py', line_number=621, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'forward'\", source_line='        def forward(self, x):')",
+      "LintIssue(file_path='model_inspection.py', line_number=662, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='        def __init__(self):')",
+      "LintIssue(file_path='model_inspection.py', line_number=670, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'forward'\", source_line='        def forward(self, x):')",
+      "LintIssue(file_path='model_inspection.py', line_number=674, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='        def __init__(self):')",
+      "LintIssue(file_path='model_inspection.py', line_number=684, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'forward'\", source_line='        def forward(self, x):')",
+      "LintIssue(file_path='model_inspection.py', line_number=121, column=12, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'count_conv2d'\", source_line='            def count_conv2d(m, x, y):')",
+      "LintIssue(file_path='model_inspection.py', line_number=128, column=12, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'count_linear'\", source_line='            def count_linear(m, x, y):')",
+      "LintIssue(file_path='model_inspection.py', line_number=135, column=12, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'count_matmul'\", source_line='            def count_matmul(m, x, y):')"
+    ],
+    "profiling_tools.py": [
+      "LintIssue(file_path='profiling_tools.py', line_number=237, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (149 > 120)', source_line=\"        avg_time = np.mean([m.value for m in self.metrics if 'time' in m.unit.lower()]) if any('time' in m.unit.lower() for m in self.metrics) else 0\")",
+      "LintIssue(file_path='profiling_tools.py', line_number=399, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (134 > 120)', source_line=\"                    'gpu_memory': torch.cuda.get_device_properties(0).total_memory / (1024**3) if torch.cuda.device_count() > 0 else 0\")",
+      "LintIssue(file_path='profiling_tools.py', line_number=41, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='profiling_tools.py', line_number=336, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self):')",
+      "LintIssue(file_path='profiling_tools.py', line_number=504, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self, profiler: PerformanceProfiler):')",
+      "LintIssue(file_path='profiling_tools.py', line_number=632, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'matrix_mult'\", source_line='    def matrix_mult(size=1000):')",
+      "LintIssue(file_path='profiling_tools.py', line_number=663, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'simple_add'\", source_line='    def simple_add():')",
+      "LintIssue(file_path='profiling_tools.py', line_number=668, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'complex_operation'\", source_line='    def complex_operation():')",
+      "LintIssue(file_path='profiling_tools.py', line_number=51, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'decorator'\", source_line='        def decorator(func):')",
+      "LintIssue(file_path='profiling_tools.py', line_number=92, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'decorator'\", source_line='        def decorator(func):')",
+      "LintIssue(file_path='profiling_tools.py', line_number=415, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'monitor_loop'\", source_line='        def monitor_loop():')",
+      "LintIssue(file_path='profiling_tools.py', line_number=53, column=12, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'wrapper'\", source_line='            def wrapper(*args, **kwargs):')",
+      "LintIssue(file_path='profiling_tools.py', line_number=94, column=12, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'wrapper'\", source_line='            def wrapper(*args, **kwargs):')"
+    ],
+    "setup.py": [
+      "LintIssue(file_path='setup.py', line_number=8, column=0, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'read_requirements'\", source_line='def read_requirements():')"
+    ],
+    "test_dev_tools.py": [
+      "LintIssue(file_path='test_dev_tools.py', line_number=60, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for class 'TestModel'\", source_line='    class TestModel(nn.Module):')",
+      "LintIssue(file_path='test_dev_tools.py', line_number=61, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='        def __init__(self):')",
+      "LintIssue(file_path='test_dev_tools.py', line_number=66, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'forward'\", source_line='        def forward(self, x):')"
+    ],
+    "__init__.py": [
+      "LintIssue(file_path='__init__.py', line_number=170, column=0, severity='warning', code='LINE_TOO_LONG', message='Line too long (156 > 120)', source_line='        print(f\"SUCCESS: Tests completed - Optimization: {opt_passed}/{total_opt}, Integration: {int_passed}/{total_int}, Hardware: {hw_passed}/{total_hw}\")')",
+      "LintIssue(file_path='__init__.py', line_number=410, column=0, severity='warning', code='FUNCTION_TOO_LONG', message=\"Function 'quick_start_guide' is too long (89 > 50)\", source_line='def quick_start_guide():')",
+      "LintIssue(file_path='__init__.py', line_number=93, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='    def __init__(self, project_root: str = \".\"):')",
+      "LintIssue(file_path='__init__.py', line_number=380, column=4, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for class 'SimpleQwen3VL'\", source_line='    class SimpleQwen3VL(nn.Module):')",
+      "LintIssue(file_path='__init__.py', line_number=381, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function '__init__'\", source_line='        def __init__(self):')",
+      "LintIssue(file_path='__init__.py', line_number=389, column=8, severity='info', code='MISSING_DOCSTRING', message=\"Missing docstring for function 'forward'\", source_line='        def forward(self, x):')"
+    ]
+  },
+  "issues": [
+    {
+      "file_path": "automated_testing.py",
+      "line_number": 104,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (139 > 120)",
+      "source_line": "                    expected_shape = targets.shape if len(targets.shape) == len(outputs.shape) else targets.shape[:-1] + outputs.shape[-1:]"
+    },
+    {
+      "file_path": "automated_testing.py",
+      "line_number": 119,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (126 > 120)",
+      "source_line": "                    loss = torch.nn.functional.cross_entropy(outputs, targets.argmax(dim=1) if targets.dim() > 1 else targets)"
+    },
+    {
+      "file_path": "automated_testing.py",
+      "line_number": 730,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (124 > 120)",
+      "source_line": "        report_lines.append(f\"Success Rate: {passed_tests/total_tests*100:.1f}%\" if total_tests > 0 else \"Success Rate: 0%\")"
+    },
+    {
+      "file_path": "automated_testing.py",
+      "line_number": 169,
+      "column": 4,
+      "severity": "warning",
+      "code": "FUNCTION_TOO_LONG",
+      "message": "Function 'validate_functional_equivalence' is too long (54 > 50)",
+      "source_line": "    def validate_functional_equivalence(self, original_model: nn.Module, optimized_model: nn.Module,"
+    },
+    {
+      "file_path": "automated_testing.py",
+      "line_number": 459,
+      "column": 4,
+      "severity": "warning",
+      "code": "FUNCTION_TOO_LONG",
+      "message": "Function 'test_model_gradient_flow' is too long (56 > 50)",
+      "source_line": "    def test_model_gradient_flow(self, model: nn.Module, test_data: Optional[Tuple] = None) -> Dict[str, Any]:"
+    },
+    {
+      "file_path": "automated_testing.py",
+      "line_number": 89,
+      "column": 4,
+      "severity": "warning",
+      "code": "HIGH_COMPLEXITY",
+      "message": "Function 'validate_memory_optimization' has high cyclomatic complexity (15 > 10)",
+      "source_line": "    def validate_memory_optimization(self, model: nn.Module, test_data: Optional[Tuple] = None) -> Dict[str, Any]:"
+    },
+    {
+      "file_path": "automated_testing.py",
+      "line_number": 37,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "automated_testing.py",
+      "line_number": 251,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "automated_testing.py",
+      "line_number": 521,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "automated_testing.py",
+      "line_number": 599,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "automated_testing.py",
+      "line_number": 716,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "automated_testing.py",
+      "line_number": 858,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for class 'SimpleModel'",
+      "source_line": "    class SimpleModel(nn.Module):"
+    },
+    {
+      "file_path": "automated_testing.py",
+      "line_number": 897,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for class 'ModelV1'",
+      "source_line": "    class ModelV1(nn.Module):"
+    },
+    {
+      "file_path": "automated_testing.py",
+      "line_number": 905,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for class 'ModelV2'",
+      "source_line": "    class ModelV2(nn.Module):"
+    },
+    {
+      "file_path": "automated_testing.py",
+      "line_number": 859,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "        def __init__(self):"
+    },
+    {
+      "file_path": "automated_testing.py",
+      "line_number": 869,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'forward'",
+      "source_line": "        def forward(self, x):"
+    },
+    {
+      "file_path": "automated_testing.py",
+      "line_number": 898,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "        def __init__(self):"
+    },
+    {
+      "file_path": "automated_testing.py",
+      "line_number": 902,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'forward'",
+      "source_line": "        def forward(self, x):"
+    },
+    {
+      "file_path": "automated_testing.py",
+      "line_number": 906,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "        def __init__(self):"
+    },
+    {
+      "file_path": "automated_testing.py",
+      "line_number": 911,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'forward'",
+      "source_line": "        def forward(self, x):"
+    },
+    {
+      "file_path": "benchmarking_tools.py",
+      "line_number": 317,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (130 > 120)",
+      "source_line": "                    input_tensor = torch.randn(batch_size, seq_len, model.config.hidden_size if hasattr(model, 'config') else 768)"
+    },
+    {
+      "file_path": "benchmarking_tools.py",
+      "line_number": 447,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (148 > 120)",
+      "source_line": "        speedup = original_inference.execution_time / optimized_inference.execution_time if optimized_inference.execution_time > 0 else float('inf')"
+    },
+    {
+      "file_path": "benchmarking_tools.py",
+      "line_number": 448,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (183 > 120)",
+      "source_line": "        memory_improvement = (original_inference.memory_usage - optimized_inference.memory_usage) / original_inference.memory_usage * 100 if original_inference.memory_usage > 0 else 0"
+    },
+    {
+      "file_path": "benchmarking_tools.py",
+      "line_number": 466,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (168 > 120)",
+      "source_line": "                'throughput_improvement_factor': (optimized_inference.throughput / original_inference.throughput) if original_inference.throughput > 0 else float('inf')"
+    },
+    {
+      "file_path": "benchmarking_tools.py",
+      "line_number": 358,
+      "column": 4,
+      "severity": "warning",
+      "code": "FUNCTION_TOO_LONG",
+      "message": "Function 'benchmark_throughput' is too long (62 > 50)",
+      "source_line": "    def benchmark_throughput(self, model: nn.Module, input_data: torch.Tensor,"
+    },
+    {
+      "file_path": "benchmarking_tools.py",
+      "line_number": 42,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "benchmarking_tools.py",
+      "line_number": 205,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "benchmarking_tools.py",
+      "line_number": 430,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "benchmarking_tools.py",
+      "line_number": 556,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "benchmarking_tools.py",
+      "line_number": 683,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "benchmarking_tools.py",
+      "line_number": 819,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for class 'SimpleModel'",
+      "source_line": "    class SimpleModel(nn.Module):"
+    },
+    {
+      "file_path": "benchmarking_tools.py",
+      "line_number": 820,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "        def __init__(self, input_size=768, hidden_size=2048, output_size=768):"
+    },
+    {
+      "file_path": "benchmarking_tools.py",
+      "line_number": 830,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'forward'",
+      "source_line": "        def forward(self, x):"
+    },
+    {
+      "file_path": "code_quality.py",
+      "line_number": 137,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (134 > 120)",
+      "source_line": "                        message=f\"Invalid function name '{node.name}'. Should match: {self.config['naming_conventions']['function']}\","
+    },
+    {
+      "file_path": "code_quality.py",
+      "line_number": 149,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (134 > 120)",
+      "source_line": "                        message=f\"Invalid function name '{node.name}'. Should match: {self.config['naming_conventions']['function']}\","
+    },
+    {
+      "file_path": "code_quality.py",
+      "line_number": 161,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (128 > 120)",
+      "source_line": "                        message=f\"Invalid class name '{node.name}'. Should match: {self.config['naming_conventions']['class']}\","
+    },
+    {
+      "file_path": "code_quality.py",
+      "line_number": 176,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (146 > 120)",
+      "source_line": "                                    message=f\"Invalid constant name '{target.id}'. Should match: {self.config['naming_conventions']['constant']}\","
+    },
+    {
+      "file_path": "code_quality.py",
+      "line_number": 187,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (146 > 120)",
+      "source_line": "                                    message=f\"Invalid variable name '{target.id}'. Should match: {self.config['naming_conventions']['variable']}\","
+    },
+    {
+      "file_path": "code_quality.py",
+      "line_number": 262,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (149 > 120)",
+      "source_line": "                        message=f\"Function '{node.name}' has high cyclomatic complexity ({complexity} > {self.config['max_cyclomatic_complexity']})\","
+    },
+    {
+      "file_path": "code_quality.py",
+      "line_number": 693,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (126 > 120)",
+      "source_line": "                report_lines.append(f\"  {issue.file_path}:{issue.line_number}:{issue.column} - {issue.code}: {issue.message}\")"
+    },
+    {
+      "file_path": "code_quality.py",
+      "line_number": 699,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (126 > 120)",
+      "source_line": "                report_lines.append(f\"  {issue.file_path}:{issue.line_number}:{issue.column} - {issue.code}: {issue.message}\")"
+    },
+    {
+      "file_path": "code_quality.py",
+      "line_number": 705,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (126 > 120)",
+      "source_line": "                report_lines.append(f\"  {issue.file_path}:{issue.line_number}:{issue.column} - {issue.code}: {issue.message}\")"
+    },
+    {
+      "file_path": "code_quality.py",
+      "line_number": 874,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (176 > 120)",
+      "source_line": "very_long_line = \"This is a very long line that exceeds the maximum allowed length for readability purposes and should be shortened to improve code quality and maintainability\""
+    },
+    {
+      "file_path": "code_quality.py",
+      "line_number": 841,
+      "column": 0,
+      "severity": "warning",
+      "code": "FUNCTION_TOO_LONG",
+      "message": "Function 'example_quality_checking' is too long (55 > 50)",
+      "source_line": "def example_quality_checking():"
+    },
+    {
+      "file_path": "code_quality.py",
+      "line_number": 124,
+      "column": 4,
+      "severity": "warning",
+      "code": "FUNCTION_TOO_LONG",
+      "message": "Function '_check_naming_conventions' is too long (65 > 50)",
+      "source_line": "    def _check_naming_conventions(self, file_path: str, tree: ast.AST) -> List[LintIssue]:"
+    },
+    {
+      "file_path": "code_quality.py",
+      "line_number": 726,
+      "column": 4,
+      "severity": "warning",
+      "code": "FUNCTION_TOO_LONG",
+      "message": "Function 'generate_html_report' is too long (52 > 50)",
+      "source_line": "    def generate_html_report(self, issues: List[LintIssue], output_path: str):"
+    },
+    {
+      "file_path": "code_quality.py",
+      "line_number": 124,
+      "column": 4,
+      "severity": "warning",
+      "code": "HIGH_COMPLEXITY",
+      "message": "Function '_check_naming_conventions' has high cyclomatic complexity (14 > 10)",
+      "source_line": "    def _check_naming_conventions(self, file_path: str, tree: ast.AST) -> List[LintIssue]:"
+    },
+    {
+      "file_path": "code_quality.py",
+      "line_number": 554,
+      "column": 4,
+      "severity": "warning",
+      "code": "HIGH_COMPLEXITY",
+      "message": "Function 'calculate_file_metrics' has high cyclomatic complexity (11 > 10)",
+      "source_line": "    def calculate_file_metrics(self, file_path: str) -> Dict[str, Any]:"
+    },
+    {
+      "file_path": "code_quality.py",
+      "line_number": 675,
+      "column": 4,
+      "severity": "warning",
+      "code": "HIGH_COMPLEXITY",
+      "message": "Function 'generate_text_report' has high cyclomatic complexity (12 > 10)",
+      "source_line": "    def generate_text_report(self, issues: List[LintIssue]) -> str:"
+    },
+    {
+      "file_path": "code_quality.py",
+      "line_number": 38,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "code_quality.py",
+      "line_number": 431,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self, config_file: Optional[str] = None):"
+    },
+    {
+      "file_path": "code_quality.py",
+      "line_number": 551,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "code_quality.py",
+      "line_number": 672,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "config_validation.py",
+      "line_number": 51,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (126 > 120)",
+      "source_line": "    def validate_config(self, config: Dict[str, Any], schema_name: str = None, schema: ConfigSchema = None) -> Dict[str, Any]:"
+    },
+    {
+      "file_path": "config_validation.py",
+      "line_number": 239,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (125 > 120)",
+      "source_line": "                    errors.append(f\"Field '{field_name}' has type {type(value).__name__}, expected {expected_type.__name__}\")"
+    },
+    {
+      "file_path": "config_validation.py",
+      "line_number": 307,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (125 > 120)",
+      "source_line": "                    errors.append(f\"Field '{field_name}' has type {type(value).__name__}, expected {expected_type.__name__}\")"
+    },
+    {
+      "file_path": "config_validation.py",
+      "line_number": 324,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (148 > 120)",
+      "source_line": "                warnings.append(f\"Estimated memory usage ({estimated_memory/1e9:.2f}GB) may be high for batch_size={batch_size}, seq_len={seq_len}\")"
+    },
+    {
+      "file_path": "config_validation.py",
+      "line_number": 545,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (124 > 120)",
+      "source_line": "                    raise ConfigValidationError(f\"Configuration validation failed for function '{func.__name__}': {str(e)}\")"
+    },
+    {
+      "file_path": "config_validation.py",
+      "line_number": 615,
+      "column": 0,
+      "severity": "warning",
+      "code": "FUNCTION_TOO_LONG",
+      "message": "Function 'example_validation' is too long (51 > 50)",
+      "source_line": "def example_validation():"
+    },
+    {
+      "file_path": "config_validation.py",
+      "line_number": 166,
+      "column": 4,
+      "severity": "warning",
+      "code": "FUNCTION_TOO_LONG",
+      "message": "Function 'validate_model_config' is too long (106 > 50)",
+      "source_line": "    def validate_model_config(self, config: Dict[str, Any]) -> Dict[str, Any]:"
+    },
+    {
+      "file_path": "config_validation.py",
+      "line_number": 51,
+      "column": 4,
+      "severity": "warning",
+      "code": "HIGH_COMPLEXITY",
+      "message": "Function 'validate_config' has high cyclomatic complexity (16 > 10)",
+      "source_line": "    def validate_config(self, config: Dict[str, Any], schema_name: str = None, schema: ConfigSchema = None) -> Dict[str, Any]:"
+    },
+    {
+      "file_path": "config_validation.py",
+      "line_number": 111,
+      "column": 4,
+      "severity": "warning",
+      "code": "HIGH_COMPLEXITY",
+      "message": "Function '_validate_field' has high cyclomatic complexity (17 > 10)",
+      "source_line": "    def _validate_field(self, field_name: str, value: Any, schema: ConfigSchema) -> tuple:"
+    },
+    {
+      "file_path": "config_validation.py",
+      "line_number": 166,
+      "column": 4,
+      "severity": "warning",
+      "code": "HIGH_COMPLEXITY",
+      "message": "Function 'validate_model_config' has high cyclomatic complexity (23 > 10)",
+      "source_line": "    def validate_model_config(self, config: Dict[str, Any]) -> Dict[str, Any]:"
+    },
+    {
+      "file_path": "config_validation.py",
+      "line_number": 286,
+      "column": 4,
+      "severity": "warning",
+      "code": "HIGH_COMPLEXITY",
+      "message": "Function 'validate_memory_config' has high cyclomatic complexity (12 > 10)",
+      "source_line": "    def validate_memory_config(self, config: Dict[str, Any]) -> Dict[str, Any]:"
+    },
+    {
+      "file_path": "config_validation.py",
+      "line_number": 340,
+      "column": 4,
+      "severity": "warning",
+      "code": "HIGH_COMPLEXITY",
+      "message": "Function 'validate_hardware_config' has high cyclomatic complexity (15 > 10)",
+      "source_line": "    def validate_hardware_config(self, config: Dict[str, Any]) -> Dict[str, Any]:"
+    },
+    {
+      "file_path": "config_validation.py",
+      "line_number": 408,
+      "column": 4,
+      "severity": "warning",
+      "code": "HIGH_COMPLEXITY",
+      "message": "Function 'load_config' has high cyclomatic complexity (12 > 10)",
+      "source_line": "    def load_config(self, config_path: str, validate: bool = True, schema_name: str = None):"
+    },
+    {
+      "file_path": "config_validation.py",
+      "line_number": 43,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "config_validation.py",
+      "line_number": 404,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "config_validation.py",
+      "line_number": 517,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self, schema_name: str = None, validator: ConfigValidator = None):"
+    },
+    {
+      "file_path": "config_validation.py",
+      "line_number": 521,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__call__'",
+      "source_line": "    def __call__(self, func):"
+    },
+    {
+      "file_path": "config_validation.py",
+      "line_number": 558,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'decorator'",
+      "source_line": "    def decorator(func):"
+    },
+    {
+      "file_path": "config_validation.py",
+      "line_number": 523,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'wrapper'",
+      "source_line": "        def wrapper(*args, **kwargs):"
+    },
+    {
+      "file_path": "config_validation.py",
+      "line_number": 560,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'wrapper'",
+      "source_line": "        def wrapper(*args, **kwargs):"
+    },
+    {
+      "file_path": "debugging_utils.py",
+      "line_number": 101,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (133 > 120)",
+      "source_line": "            'element_wise_diff': torch.mean(torch.abs(tensor1 - tensor2)).item() if tensor1.shape == tensor2.shape else float('inf'),"
+    },
+    {
+      "file_path": "debugging_utils.py",
+      "line_number": 102,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (123 > 120)",
+      "source_line": "            'max_diff': torch.max(torch.abs(tensor1 - tensor2)).item() if tensor1.shape == tensor2.shape else float('inf'),"
+    },
+    {
+      "file_path": "debugging_utils.py",
+      "line_number": 242,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (131 > 120)",
+      "source_line": "                print(f\"  Gradient stats: min={grad.min().item():.4f}, max={grad.max().item():.4f}, mean={grad.mean().item():.4f}\")"
+    },
+    {
+      "file_path": "debugging_utils.py",
+      "line_number": 279,
+      "column": 4,
+      "severity": "warning",
+      "code": "FUNCTION_TOO_LONG",
+      "message": "Function 'trace_function' is too long (51 > 50)",
+      "source_line": "    def trace_function(self, func_name: str = None):"
+    },
+    {
+      "file_path": "debugging_utils.py",
+      "line_number": 28,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "debugging_utils.py",
+      "line_number": 157,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "debugging_utils.py",
+      "line_number": 272,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "debugging_utils.py",
+      "line_number": 501,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for class 'SimpleModel'",
+      "source_line": "    class SimpleModel(torch.nn.Module):"
+    },
+    {
+      "file_path": "debugging_utils.py",
+      "line_number": 169,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'make_hook'",
+      "source_line": "        def make_hook(name):"
+    },
+    {
+      "file_path": "debugging_utils.py",
+      "line_number": 188,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'make_hook'",
+      "source_line": "        def make_hook(name):"
+    },
+    {
+      "file_path": "debugging_utils.py",
+      "line_number": 203,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'make_timer_hook'",
+      "source_line": "        def make_timer_hook(name):"
+    },
+    {
+      "file_path": "debugging_utils.py",
+      "line_number": 211,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'make_timer_backward_hook'",
+      "source_line": "        def make_timer_backward_hook(name):"
+    },
+    {
+      "file_path": "debugging_utils.py",
+      "line_number": 281,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'decorator'",
+      "source_line": "        def decorator(func):"
+    },
+    {
+      "file_path": "debugging_utils.py",
+      "line_number": 502,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "        def __init__(self):"
+    },
+    {
+      "file_path": "debugging_utils.py",
+      "line_number": 508,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'forward'",
+      "source_line": "        def forward(self, x):"
+    },
+    {
+      "file_path": "debugging_utils.py",
+      "line_number": 170,
+      "column": 12,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'hook_fn'",
+      "source_line": "            def hook_fn(module, input, output):"
+    },
+    {
+      "file_path": "debugging_utils.py",
+      "line_number": 189,
+      "column": 12,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'hook_fn'",
+      "source_line": "            def hook_fn(grad):"
+    },
+    {
+      "file_path": "debugging_utils.py",
+      "line_number": 204,
+      "column": 12,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'hook_fn'",
+      "source_line": "            def hook_fn(module, input, output):"
+    },
+    {
+      "file_path": "debugging_utils.py",
+      "line_number": 212,
+      "column": 12,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'hook_fn'",
+      "source_line": "            def hook_fn(module, grad_input, grad_output):"
+    },
+    {
+      "file_path": "debugging_utils.py",
+      "line_number": 283,
+      "column": 12,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'wrapper'",
+      "source_line": "            def wrapper(*args, **kwargs):"
+    },
+    {
+      "file_path": "documentation_generator.py",
+      "line_number": 117,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (135 > 120)",
+      "source_line": "            default = defaults[i - (len(node.args.args) - len(defaults))] if default_idx >= 0 and default_idx < len(defaults) else None"
+    },
+    {
+      "file_path": "documentation_generator.py",
+      "line_number": 134,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (132 > 120)",
+      "source_line": "            default = ast.unparse(node.args.kw_defaults[i]) if i < len(node.args.kw_defaults) and node.args.kw_defaults[i] else None"
+    },
+    {
+      "file_path": "documentation_generator.py",
+      "line_number": 475,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (166 > 120)",
+      "source_line": "                                <li class=\"param\"><code>{{ param.name }}</code>: {{ param.type or 'Any' }}{% if param.default %} = {{ param.default }}{% endif %}</li>"
+    },
+    {
+      "file_path": "documentation_generator.py",
+      "line_number": 507,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (162 > 120)",
+      "source_line": "                            <li class=\"param\"><code>{{ param.name }}</code>: {{ param.type or 'Any' }}{% if param.default %} = {{ param.default }}{% endif %}</li>"
+    },
+    {
+      "file_path": "documentation_generator.py",
+      "line_number": 695,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (129 > 120)",
+      "source_line": "                    content += f\"- `{func.signature}` - {func.docstring.split('.')[0] if func.docstring else 'No description'}\\n\""
+    },
+    {
+      "file_path": "documentation_generator.py",
+      "line_number": 701,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (121 > 120)",
+      "source_line": "                    content += f\"- `{cls.name}` - {cls.docstring.split('.')[0] if cls.docstring else 'No description'}\\n\""
+    },
+    {
+      "file_path": "documentation_generator.py",
+      "line_number": 787,
+      "column": 0,
+      "severity": "warning",
+      "code": "FUNCTION_TOO_LONG",
+      "message": "Function 'example_documentation_generation' is too long (86 > 50)",
+      "source_line": "def example_documentation_generation():"
+    },
+    {
+      "file_path": "documentation_generator.py",
+      "line_number": 889,
+      "column": 0,
+      "severity": "warning",
+      "code": "FUNCTION_TOO_LONG",
+      "message": "Function 'example_code_parsing' is too long (76 > 50)",
+      "source_line": "def example_code_parsing():"
+    },
+    {
+      "file_path": "documentation_generator.py",
+      "line_number": 398,
+      "column": 4,
+      "severity": "warning",
+      "code": "FUNCTION_TOO_LONG",
+      "message": "Function '_create_module_page' is too long (126 > 50)",
+      "source_line": "    def _create_module_page(self, module_name: str, module_doc: ModuleDoc) -> str:"
+    },
+    {
+      "file_path": "documentation_generator.py",
+      "line_number": 539,
+      "column": 4,
+      "severity": "warning",
+      "code": "FUNCTION_TOO_LONG",
+      "message": "Function '_create_module_md' is too long (61 > 50)",
+      "source_line": "    def _create_module_md(self, module_name: str, module_doc: ModuleDoc) -> str:"
+    },
+    {
+      "file_path": "documentation_generator.py",
+      "line_number": 62,
+      "column": 4,
+      "severity": "warning",
+      "code": "HIGH_COMPLEXITY",
+      "message": "Function 'parse_file' has high cyclomatic complexity (15 > 10)",
+      "source_line": "    def parse_file(self, file_path: str) -> ModuleDoc:"
+    },
+    {
+      "file_path": "documentation_generator.py",
+      "line_number": 539,
+      "column": 4,
+      "severity": "warning",
+      "code": "HIGH_COMPLEXITY",
+      "message": "Function '_create_module_md' has high cyclomatic complexity (25 > 10)",
+      "source_line": "    def _create_module_md(self, module_name: str, module_doc: ModuleDoc) -> str:"
+    },
+    {
+      "file_path": "documentation_generator.py",
+      "line_number": 59,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "documentation_generator.py",
+      "line_number": 201,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "documentation_generator.py",
+      "line_number": 298,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "documentation_generator.py",
+      "line_number": 711,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "model_inspection.py",
+      "line_number": 114,
+      "column": 4,
+      "severity": "warning",
+      "code": "FUNCTION_TOO_LONG",
+      "message": "Function '_estimate_flops' is too long (56 > 50)",
+      "source_line": "    def _estimate_flops(self, model: nn.Module, input_shape: tuple) -> float:"
+    },
+    {
+      "file_path": "model_inspection.py",
+      "line_number": 114,
+      "column": 4,
+      "severity": "warning",
+      "code": "HIGH_COMPLEXITY",
+      "message": "Function '_estimate_flops' has high cyclomatic complexity (13 > 10)",
+      "source_line": "    def _estimate_flops(self, model: nn.Module, input_shape: tuple) -> float:"
+    },
+    {
+      "file_path": "model_inspection.py",
+      "line_number": 299,
+      "column": 4,
+      "severity": "warning",
+      "code": "HIGH_COMPLEXITY",
+      "message": "Function 'analyze_tensor_shapes' has high cyclomatic complexity (13 > 10)",
+      "source_line": "    def analyze_tensor_shapes(self, model: nn.Module, sample_input: torch.Tensor):"
+    },
+    {
+      "file_path": "model_inspection.py",
+      "line_number": 51,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "model_inspection.py",
+      "line_number": 420,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "model_inspection.py",
+      "line_number": 484,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "model_inspection.py",
+      "line_number": 610,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for class 'SimpleModel'",
+      "source_line": "    class SimpleModel(nn.Module):"
+    },
+    {
+      "file_path": "model_inspection.py",
+      "line_number": 661,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for class 'ModelA'",
+      "source_line": "    class ModelA(nn.Module):"
+    },
+    {
+      "file_path": "model_inspection.py",
+      "line_number": 673,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for class 'ModelB'",
+      "source_line": "    class ModelB(nn.Module):"
+    },
+    {
+      "file_path": "model_inspection.py",
+      "line_number": 303,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'hook_fn'",
+      "source_line": "        def hook_fn(module, input, output):"
+    },
+    {
+      "file_path": "model_inspection.py",
+      "line_number": 611,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "        def __init__(self):"
+    },
+    {
+      "file_path": "model_inspection.py",
+      "line_number": 621,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'forward'",
+      "source_line": "        def forward(self, x):"
+    },
+    {
+      "file_path": "model_inspection.py",
+      "line_number": 662,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "        def __init__(self):"
+    },
+    {
+      "file_path": "model_inspection.py",
+      "line_number": 670,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'forward'",
+      "source_line": "        def forward(self, x):"
+    },
+    {
+      "file_path": "model_inspection.py",
+      "line_number": 674,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "        def __init__(self):"
+    },
+    {
+      "file_path": "model_inspection.py",
+      "line_number": 684,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'forward'",
+      "source_line": "        def forward(self, x):"
+    },
+    {
+      "file_path": "model_inspection.py",
+      "line_number": 121,
+      "column": 12,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'count_conv2d'",
+      "source_line": "            def count_conv2d(m, x, y):"
+    },
+    {
+      "file_path": "model_inspection.py",
+      "line_number": 128,
+      "column": 12,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'count_linear'",
+      "source_line": "            def count_linear(m, x, y):"
+    },
+    {
+      "file_path": "model_inspection.py",
+      "line_number": 135,
+      "column": 12,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'count_matmul'",
+      "source_line": "            def count_matmul(m, x, y):"
+    },
+    {
+      "file_path": "profiling_tools.py",
+      "line_number": 237,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (149 > 120)",
+      "source_line": "        avg_time = np.mean([m.value for m in self.metrics if 'time' in m.unit.lower()]) if any('time' in m.unit.lower() for m in self.metrics) else 0"
+    },
+    {
+      "file_path": "profiling_tools.py",
+      "line_number": 399,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (134 > 120)",
+      "source_line": "                    'gpu_memory': torch.cuda.get_device_properties(0).total_memory / (1024**3) if torch.cuda.device_count() > 0 else 0"
+    },
+    {
+      "file_path": "profiling_tools.py",
+      "line_number": 41,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "profiling_tools.py",
+      "line_number": 336,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self):"
+    },
+    {
+      "file_path": "profiling_tools.py",
+      "line_number": 504,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self, profiler: PerformanceProfiler):"
+    },
+    {
+      "file_path": "profiling_tools.py",
+      "line_number": 632,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'matrix_mult'",
+      "source_line": "    def matrix_mult(size=1000):"
+    },
+    {
+      "file_path": "profiling_tools.py",
+      "line_number": 663,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'simple_add'",
+      "source_line": "    def simple_add():"
+    },
+    {
+      "file_path": "profiling_tools.py",
+      "line_number": 668,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'complex_operation'",
+      "source_line": "    def complex_operation():"
+    },
+    {
+      "file_path": "profiling_tools.py",
+      "line_number": 51,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'decorator'",
+      "source_line": "        def decorator(func):"
+    },
+    {
+      "file_path": "profiling_tools.py",
+      "line_number": 92,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'decorator'",
+      "source_line": "        def decorator(func):"
+    },
+    {
+      "file_path": "profiling_tools.py",
+      "line_number": 415,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'monitor_loop'",
+      "source_line": "        def monitor_loop():"
+    },
+    {
+      "file_path": "profiling_tools.py",
+      "line_number": 53,
+      "column": 12,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'wrapper'",
+      "source_line": "            def wrapper(*args, **kwargs):"
+    },
+    {
+      "file_path": "profiling_tools.py",
+      "line_number": 94,
+      "column": 12,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'wrapper'",
+      "source_line": "            def wrapper(*args, **kwargs):"
+    },
+    {
+      "file_path": "setup.py",
+      "line_number": 8,
+      "column": 0,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'read_requirements'",
+      "source_line": "def read_requirements():"
+    },
+    {
+      "file_path": "test_dev_tools.py",
+      "line_number": 60,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for class 'TestModel'",
+      "source_line": "    class TestModel(nn.Module):"
+    },
+    {
+      "file_path": "test_dev_tools.py",
+      "line_number": 61,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "        def __init__(self):"
+    },
+    {
+      "file_path": "test_dev_tools.py",
+      "line_number": 66,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'forward'",
+      "source_line": "        def forward(self, x):"
+    },
+    {
+      "file_path": "__init__.py",
+      "line_number": 170,
+      "column": 0,
+      "severity": "warning",
+      "code": "LINE_TOO_LONG",
+      "message": "Line too long (156 > 120)",
+      "source_line": "        print(f\"SUCCESS: Tests completed - Optimization: {opt_passed}/{total_opt}, Integration: {int_passed}/{total_int}, Hardware: {hw_passed}/{total_hw}\")"
+    },
+    {
+      "file_path": "__init__.py",
+      "line_number": 410,
+      "column": 0,
+      "severity": "warning",
+      "code": "FUNCTION_TOO_LONG",
+      "message": "Function 'quick_start_guide' is too long (89 > 50)",
+      "source_line": "def quick_start_guide():"
+    },
+    {
+      "file_path": "__init__.py",
+      "line_number": 93,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "    def __init__(self, project_root: str = \".\"):"
+    },
+    {
+      "file_path": "__init__.py",
+      "line_number": 380,
+      "column": 4,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for class 'SimpleQwen3VL'",
+      "source_line": "    class SimpleQwen3VL(nn.Module):"
+    },
+    {
+      "file_path": "__init__.py",
+      "line_number": 381,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function '__init__'",
+      "source_line": "        def __init__(self):"
+    },
+    {
+      "file_path": "__init__.py",
+      "line_number": 389,
+      "column": 8,
+      "severity": "info",
+      "code": "MISSING_DOCSTRING",
+      "message": "Missing docstring for function 'forward'",
+      "source_line": "        def forward(self, x):"
+    }
+  ]
+}

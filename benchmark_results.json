@@ -1,0 +1,165 @@
+{
+  "total_benchmarks": 4,
+  "completed_benchmarks": 4,
+  "results": {
+    "model_performance": {
+      "inference": {
+        "avg_time_seconds": 0.0,
+        "std_time_seconds": 0.0,
+        "times_list": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "memory_allocated_bytes": 183556608,
+        "memory_reserved_bytes": 205520896,
+        "device": "cuda",
+        "num_runs": 5
+      },
+      "generation": {
+        "avg_generation_time_seconds": 0.0,
+        "std_generation_time_seconds": 0.0,
+        "avg_generated_tokens": -22.0,
+        "generation_times_list": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "generated_tokens_counts": [
+          -22,
+          -22,
+          -22
+        ],
+        "device": "cuda",
+        "num_runs": 3,
+        "max_new_tokens": 10
+      },
+      "memory": {
+        "initial_memory_bytes": 183556608,
+        "final_memory_bytes": 183556608,
+        "peak_memory_bytes": 183556608,
+        "memory_increase_bytes": 0,
+        "device": "cuda"
+      },
+      "model_config": {
+        "hidden_size": 256,
+        "num_attention_heads": 8,
+        "num_hidden_layers": 4,
+        "vocab_size": 1000
+      }
+    },
+    "multimodal_integration": {
+      "multimodal": {
+        "avg_time_seconds": 0.0,
+        "std_time_seconds": 0.0,
+        "times_list": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "memory_allocated_bytes": 45548032,
+        "memory_reserved_bytes": 54525952,
+        "device": "cuda",
+        "num_runs": 3
+      },
+      "text_only": {
+        "avg_time_seconds": 0.0,
+        "std_time_seconds": 0.0,
+        "times_list": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "memory_allocated_bytes": 44945920,
+        "memory_reserved_bytes": 54525952,
+        "device": "cuda",
+        "num_runs": 3
+      },
+      "image_only": {
+        "avg_time_seconds": 0.0,
+        "std_time_seconds": 0.0,
+        "times_list": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "memory_allocated_bytes": 45548032,
+        "memory_reserved_bytes": 54525952,
+        "device": "cuda",
+        "num_runs": 3
+      },
+      "efficiency_ratios": {
+        "multimodal_to_text_ratio": 0,
+        "multimodal_to_image_ratio": 0
+      }
+    },
+    "memory_efficiency": {
+      "baseline_memory": {
+        "initial_memory_bytes": 91202048,
+        "final_memory_bytes": 91202048,
+        "peak_memory_bytes": 91202048,
+        "memory_increase_bytes": 0,
+        "device": "cuda"
+      },
+      "optimized_memory": {
+        "initial_memory_bytes": 91202048,
+        "final_memory_bytes": 91202048,
+        "peak_memory_bytes": 91202048,
+        "memory_increase_bytes": 0,
+        "device": "cuda"
+      },
+      "baseline_performance": {
+        "avg_time_seconds": 0.0,
+        "std_time_seconds": 0.0,
+        "times_list": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "memory_allocated_bytes": 91202048,
+        "memory_reserved_bytes": 119537664,
+        "device": "cuda",
+        "num_runs": 3
+      },
+      "optimized_performance": {
+        "avg_time_seconds": 0.0,
+        "std_time_seconds": 0.0,
+        "times_list": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "memory_allocated_bytes": 91202048,
+        "memory_reserved_bytes": 119537664,
+        "device": "cuda",
+        "num_runs": 3
+      },
+      "memory_savings_bytes": 0,
+      "memory_savings_percentage": 0.0,
+      "performance_impact_seconds": 0.0
+    },
+    "capacity_preservation": {
+      "config_params": {
+        "num_hidden_layers": 32,
+        "num_attention_heads": 32,
+        "vision_num_hidden_layers": 24,
+        "vision_num_attention_heads": 16,
+        "hidden_size": 2048,
+        "vocab_size": 152064
+      },
+      "model_architecture": {
+        "language_model_layers": 32,
+        "vision_model_layers": 24,
+        "language_model_attention_heads": 32,
+        "vision_model_attention_heads": 16
+      },
+      "capacity_preserved": true,
+      "expected_language_layers": 32,
+      "expected_language_attention_heads": 32,
+      "expected_vision_layers": 24,
+      "expected_vision_attention_heads": 16
+    }
+  }
+}

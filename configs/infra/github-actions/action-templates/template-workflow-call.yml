@@ -1,0 +1,41 @@
+name: Template for Reusable Action
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      python-version:
+        required: false
+        type: string
+        default: '3.9'
+    secrets:
+      DEPLOY_KEY:
+        required: true
+
+jobs:
+  setup-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: python -m pytest
+
+      - name: Deploy
+        if: ${{ inputs.environment == 'production' }}
+        run: echo "Deploying to production..."
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}

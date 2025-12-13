@@ -1,0 +1,305 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Qwen3-VL Configuration Schema",
+  "description": "Schema for Qwen3-VL multimodal model configuration files",
+  "definitions": {
+    "modelConfig": {
+      "type": "object",
+      "properties": {
+        "model_name": {
+          "type": "string",
+          "description": "Name of the model"
+        },
+        "model_type": {
+          "type": "string",
+          "description": "Type of the model"
+        },
+        "task_type": {
+          "type": "string",
+          "description": "Task type (e.g., multimodal)"
+        },
+        "hidden_size": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Size of hidden layers"
+        },
+        "num_hidden_layers": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of hidden layers"
+        },
+        "num_attention_heads": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of attention heads"
+        },
+        "intermediate_size": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Intermediate layer size"
+        },
+        "hidden_act": {
+          "type": "string",
+          "enum": ["silu", "relu", "gelu"],
+          "description": "Hidden activation function"
+        },
+        "max_position_embeddings": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum position embeddings"
+        },
+        "vocab_size": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Vocabulary size"
+        },
+        "vision_hidden_size": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Vision hidden layer size"
+        },
+        "vision_num_hidden_layers": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of vision hidden layers"
+        },
+        "vision_num_attention_heads": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of vision attention heads"
+        },
+        "vision_patch_size": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Vision patch size"
+        },
+        "vision_image_size": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Vision image size"
+        },
+        "num_query_tokens": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of query tokens"
+        },
+        "torch_dtype": {
+          "type": "string",
+          "enum": ["float16", "float32", "bfloat16"],
+          "description": "Torch data type"
+        },
+        "use_gradient_checkpointing": {
+          "type": "boolean",
+          "description": "Whether to use gradient checkpointing"
+        },
+        "use_adapters": {
+          "type": "boolean",
+          "description": "Whether to use adapters"
+        },
+        "use_sparsity": {
+          "type": "boolean",
+          "description": "Whether to use sparsity"
+        },
+        "use_dynamic_sparse_attention": {
+          "type": "boolean",
+          "description": "Whether to use dynamic sparse attention"
+        },
+        "use_adaptive_depth": {
+          "type": "boolean",
+          "description": "Whether to use adaptive depth"
+        },
+        "use_context_adaptive_positional_encoding": {
+          "type": "boolean",
+          "description": "Whether to use context adaptive positional encoding"
+        },
+        "use_conditional_feature_extraction": {
+          "type": "boolean",
+          "description": "Whether to use conditional feature extraction"
+        }
+      },
+      "required": [
+        "model_name",
+        "model_type",
+        "task_type",
+        "hidden_size",
+        "num_hidden_layers",
+        "num_attention_heads",
+        "intermediate_size",
+        "hidden_act",
+        "max_position_embeddings",
+        "vocab_size",
+        "vision_hidden_size",
+        "vision_num_hidden_layers",
+        "vision_num_attention_heads",
+        "vision_patch_size",
+        "vision_image_size",
+        "num_query_tokens",
+        "torch_dtype",
+        "use_gradient_checkpointing",
+        "use_adapters",
+        "use_sparsity",
+        "use_dynamic_sparse_attention",
+        "use_adaptive_depth",
+        "use_context_adaptive_positional_encoding",
+        "use_conditional_feature_extraction"
+      ]
+    },
+    "trainingConfig": {
+      "type": "object",
+      "properties": {
+        "learning_rate": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Learning rate for training"
+        },
+        "batch_size": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Batch size for training"
+        },
+        "num_epochs": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of training epochs"
+        },
+        "warmup_steps": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of warmup steps"
+        },
+        "weight_decay": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Weight decay factor"
+        },
+        "adam_epsilon": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Adam epsilon value"
+        },
+        "max_grad_norm": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Maximum gradient norm"
+        },
+        "logging_steps": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Steps between logging"
+        },
+        "eval_steps": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Steps between evaluations"
+        },
+        "save_steps": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Steps between saving checkpoints"
+        },
+        "max_steps": {
+          "type": "integer",
+          "description": "Maximum training steps (-1 for unlimited)"
+        },
+        "gradient_accumulation_steps": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Gradient accumulation steps"
+        },
+        "warmup_ratio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Warmup ratio"
+        },
+        "lr_scheduler_type": {
+          "type": "string",
+          "enum": ["linear", "cosine", "constant", "constant_with_warmup"],
+          "description": "Learning rate scheduler type"
+        },
+        "fp16": {
+          "type": "boolean",
+          "description": "Whether to use FP16 precision"
+        },
+        "dataloader_num_workers": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of data loader workers"
+        },
+        "load_best_model_at_end": {
+          "type": "boolean",
+          "description": "Whether to load best model at end of training"
+        },
+        "metric_for_best_model": {
+          "type": "string",
+          "description": "Metric to use for selecting best model"
+        },
+        "greater_is_better": {
+          "type": "boolean",
+          "description": "Whether higher metric values are better"
+        }
+      },
+      "required": [
+        "learning_rate",
+        "batch_size",
+        "num_epochs",
+        "warmup_steps",
+        "weight_decay",
+        "adam_epsilon",
+        "max_grad_norm"
+      ]
+    },
+    "inferenceConfig": {
+      "type": "object",
+      "properties": {
+        "max_new_tokens": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum number of new tokens to generate"
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Temperature for generation"
+        },
+        "top_k": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Top-k sampling parameter"
+        },
+        "top_p": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Top-p (nucleus) sampling parameter"
+        },
+        "repetition_penalty": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Repetition penalty factor"
+        }
+      },
+      "required": [
+        "max_new_tokens",
+        "temperature",
+        "top_k",
+        "top_p",
+        "repetition_penalty"
+      ]
+    }
+  },
+  "properties": {
+    "model": {
+      "$ref": "#/definitions/modelConfig"
+    },
+    "training": {
+      "$ref": "#/definitions/trainingConfig"
+    },
+    "inference": {
+      "$ref": "#/definitions/inferenceConfig"
+    }
+  }
+}

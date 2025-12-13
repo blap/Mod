@@ -1,0 +1,88 @@
+# Python cache directories
+__pycache__/
+*.py[cod]
+*$py.class
+*$pyc.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.cache/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# IDE-specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.pytest_cache/*
+.coverage
+htmlcov/
+.cov/
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+
+# Coverage reports
+coverage.xml
+*.cover
+
+# Local configuration files
+config.local
+*.local
+
+# Model files and datasets
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.model
+*.safetensors
+data/
+dataset/
+
+# Performance and profiling
+profile/
+prof/
+
+# Distribution / packaging
+*.tar.gz
+*.whl
+
+# Pre-commit
+.pre-commit/

@@ -1,0 +1,32 @@
+{
+  "python_matrix": [
+    "3.8",
+    "3.9",
+    "3.10",
+    "3.11"
+  ],
+  "os_matrix": [
+    "ubuntu-latest",
+    "windows-latest",
+    "macos-latest"
+  ],
+  "node_matrix": [
+    "16",
+    "18",
+    "20"
+  ],
+  "test_scenarios": {
+    "unit": {
+      "name": "Unit Tests",
+      "command": "pytest tests/unit"
+    },
+    "integration": {
+      "name": "Integration Tests",
+      "command": "pytest tests/integration"
+    },
+    "e2e": {
+      "name": "End-to-End Tests",
+      "command": "pytest tests/e2e"
+    }
+  }
+}

@@ -1,0 +1,243 @@
+Code Quality Report
+==================================================
+
+Total Issues: 151
+Errors: 0
+Warnings: 63
+Info: 88
+
+WARNINGS:
+  automated_testing.py:104:0 - LINE_TOO_LONG: Line too long (139 > 120)
+  automated_testing.py:119:0 - LINE_TOO_LONG: Line too long (126 > 120)
+  automated_testing.py:730:0 - LINE_TOO_LONG: Line too long (124 > 120)
+  automated_testing.py:169:4 - FUNCTION_TOO_LONG: Function 'validate_functional_equivalence' is too long (54 > 50)
+  automated_testing.py:459:4 - FUNCTION_TOO_LONG: Function 'test_model_gradient_flow' is too long (56 > 50)
+  automated_testing.py:89:4 - HIGH_COMPLEXITY: Function 'validate_memory_optimization' has high cyclomatic complexity (15 > 10)
+  benchmarking_tools.py:317:0 - LINE_TOO_LONG: Line too long (130 > 120)
+  benchmarking_tools.py:447:0 - LINE_TOO_LONG: Line too long (148 > 120)
+  benchmarking_tools.py:448:0 - LINE_TOO_LONG: Line too long (183 > 120)
+  benchmarking_tools.py:466:0 - LINE_TOO_LONG: Line too long (168 > 120)
+  benchmarking_tools.py:358:4 - FUNCTION_TOO_LONG: Function 'benchmark_throughput' is too long (62 > 50)
+  code_quality.py:137:0 - LINE_TOO_LONG: Line too long (134 > 120)
+  code_quality.py:149:0 - LINE_TOO_LONG: Line too long (134 > 120)
+  code_quality.py:161:0 - LINE_TOO_LONG: Line too long (128 > 120)
+  code_quality.py:176:0 - LINE_TOO_LONG: Line too long (146 > 120)
+  code_quality.py:187:0 - LINE_TOO_LONG: Line too long (146 > 120)
+  code_quality.py:262:0 - LINE_TOO_LONG: Line too long (149 > 120)
+  code_quality.py:693:0 - LINE_TOO_LONG: Line too long (126 > 120)
+  code_quality.py:699:0 - LINE_TOO_LONG: Line too long (126 > 120)
+  code_quality.py:705:0 - LINE_TOO_LONG: Line too long (126 > 120)
+  code_quality.py:874:0 - LINE_TOO_LONG: Line too long (176 > 120)
+  code_quality.py:841:0 - FUNCTION_TOO_LONG: Function 'example_quality_checking' is too long (55 > 50)
+  code_quality.py:124:4 - FUNCTION_TOO_LONG: Function '_check_naming_conventions' is too long (65 > 50)
+  code_quality.py:726:4 - FUNCTION_TOO_LONG: Function 'generate_html_report' is too long (52 > 50)
+  code_quality.py:124:4 - HIGH_COMPLEXITY: Function '_check_naming_conventions' has high cyclomatic complexity (14 > 10)
+  code_quality.py:554:4 - HIGH_COMPLEXITY: Function 'calculate_file_metrics' has high cyclomatic complexity (11 > 10)
+  code_quality.py:675:4 - HIGH_COMPLEXITY: Function 'generate_text_report' has high cyclomatic complexity (12 > 10)
+  config_validation.py:51:0 - LINE_TOO_LONG: Line too long (126 > 120)
+  config_validation.py:239:0 - LINE_TOO_LONG: Line too long (125 > 120)
+  config_validation.py:307:0 - LINE_TOO_LONG: Line too long (125 > 120)
+  config_validation.py:324:0 - LINE_TOO_LONG: Line too long (148 > 120)
+  config_validation.py:545:0 - LINE_TOO_LONG: Line too long (124 > 120)
+  config_validation.py:615:0 - FUNCTION_TOO_LONG: Function 'example_validation' is too long (51 > 50)
+  config_validation.py:166:4 - FUNCTION_TOO_LONG: Function 'validate_model_config' is too long (106 > 50)
+  config_validation.py:51:4 - HIGH_COMPLEXITY: Function 'validate_config' has high cyclomatic complexity (16 > 10)
+  config_validation.py:111:4 - HIGH_COMPLEXITY: Function '_validate_field' has high cyclomatic complexity (17 > 10)
+  config_validation.py:166:4 - HIGH_COMPLEXITY: Function 'validate_model_config' has high cyclomatic complexity (23 > 10)
+  config_validation.py:286:4 - HIGH_COMPLEXITY: Function 'validate_memory_config' has high cyclomatic complexity (12 > 10)
+  config_validation.py:340:4 - HIGH_COMPLEXITY: Function 'validate_hardware_config' has high cyclomatic complexity (15 > 10)
+  config_validation.py:408:4 - HIGH_COMPLEXITY: Function 'load_config' has high cyclomatic complexity (12 > 10)
+  debugging_utils.py:101:0 - LINE_TOO_LONG: Line too long (133 > 120)
+  debugging_utils.py:102:0 - LINE_TOO_LONG: Line too long (123 > 120)
+  debugging_utils.py:242:0 - LINE_TOO_LONG: Line too long (131 > 120)
+  debugging_utils.py:279:4 - FUNCTION_TOO_LONG: Function 'trace_function' is too long (51 > 50)
+  documentation_generator.py:117:0 - LINE_TOO_LONG: Line too long (135 > 120)
+  documentation_generator.py:134:0 - LINE_TOO_LONG: Line too long (132 > 120)
+  documentation_generator.py:475:0 - LINE_TOO_LONG: Line too long (166 > 120)
+  documentation_generator.py:507:0 - LINE_TOO_LONG: Line too long (162 > 120)
+  documentation_generator.py:695:0 - LINE_TOO_LONG: Line too long (129 > 120)
+  documentation_generator.py:701:0 - LINE_TOO_LONG: Line too long (121 > 120)
+  documentation_generator.py:787:0 - FUNCTION_TOO_LONG: Function 'example_documentation_generation' is too long (86 > 50)
+  documentation_generator.py:889:0 - FUNCTION_TOO_LONG: Function 'example_code_parsing' is too long (76 > 50)
+  documentation_generator.py:398:4 - FUNCTION_TOO_LONG: Function '_create_module_page' is too long (126 > 50)
+  documentation_generator.py:539:4 - FUNCTION_TOO_LONG: Function '_create_module_md' is too long (61 > 50)
+  documentation_generator.py:62:4 - HIGH_COMPLEXITY: Function 'parse_file' has high cyclomatic complexity (15 > 10)
+  documentation_generator.py:539:4 - HIGH_COMPLEXITY: Function '_create_module_md' has high cyclomatic complexity (25 > 10)
+  model_inspection.py:114:4 - FUNCTION_TOO_LONG: Function '_estimate_flops' is too long (56 > 50)
+  model_inspection.py:114:4 - HIGH_COMPLEXITY: Function '_estimate_flops' has high cyclomatic complexity (13 > 10)
+  model_inspection.py:299:4 - HIGH_COMPLEXITY: Function 'analyze_tensor_shapes' has high cyclomatic complexity (13 > 10)
+  profiling_tools.py:237:0 - LINE_TOO_LONG: Line too long (149 > 120)
+  profiling_tools.py:399:0 - LINE_TOO_LONG: Line too long (134 > 120)
+  __init__.py:170:0 - LINE_TOO_LONG: Line too long (156 > 120)
+  __init__.py:410:0 - FUNCTION_TOO_LONG: Function 'quick_start_guide' is too long (89 > 50)
+
+INFO:
+  automated_testing.py:37:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  automated_testing.py:251:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  automated_testing.py:521:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  automated_testing.py:599:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  automated_testing.py:716:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  automated_testing.py:858:4 - MISSING_DOCSTRING: Missing docstring for class 'SimpleModel'
+  automated_testing.py:897:4 - MISSING_DOCSTRING: Missing docstring for class 'ModelV1'
+  automated_testing.py:905:4 - MISSING_DOCSTRING: Missing docstring for class 'ModelV2'
+  automated_testing.py:859:8 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  automated_testing.py:869:8 - MISSING_DOCSTRING: Missing docstring for function 'forward'
+  automated_testing.py:898:8 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  automated_testing.py:902:8 - MISSING_DOCSTRING: Missing docstring for function 'forward'
+  automated_testing.py:906:8 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  automated_testing.py:911:8 - MISSING_DOCSTRING: Missing docstring for function 'forward'
+  benchmarking_tools.py:42:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  benchmarking_tools.py:205:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  benchmarking_tools.py:430:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  benchmarking_tools.py:556:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  benchmarking_tools.py:683:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  benchmarking_tools.py:819:4 - MISSING_DOCSTRING: Missing docstring for class 'SimpleModel'
+  benchmarking_tools.py:820:8 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  benchmarking_tools.py:830:8 - MISSING_DOCSTRING: Missing docstring for function 'forward'
+  code_quality.py:38:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  code_quality.py:431:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  code_quality.py:551:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  code_quality.py:672:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  config_validation.py:43:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  config_validation.py:404:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  config_validation.py:517:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  config_validation.py:521:4 - MISSING_DOCSTRING: Missing docstring for function '__call__'
+  config_validation.py:558:4 - MISSING_DOCSTRING: Missing docstring for function 'decorator'
+  config_validation.py:523:8 - MISSING_DOCSTRING: Missing docstring for function 'wrapper'
+  config_validation.py:560:8 - MISSING_DOCSTRING: Missing docstring for function 'wrapper'
+  debugging_utils.py:28:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  debugging_utils.py:157:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  debugging_utils.py:272:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  debugging_utils.py:501:4 - MISSING_DOCSTRING: Missing docstring for class 'SimpleModel'
+  debugging_utils.py:169:8 - MISSING_DOCSTRING: Missing docstring for function 'make_hook'
+  debugging_utils.py:188:8 - MISSING_DOCSTRING: Missing docstring for function 'make_hook'
+  debugging_utils.py:203:8 - MISSING_DOCSTRING: Missing docstring for function 'make_timer_hook'
+  debugging_utils.py:211:8 - MISSING_DOCSTRING: Missing docstring for function 'make_timer_backward_hook'
+  debugging_utils.py:281:8 - MISSING_DOCSTRING: Missing docstring for function 'decorator'
+  debugging_utils.py:502:8 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  debugging_utils.py:508:8 - MISSING_DOCSTRING: Missing docstring for function 'forward'
+  debugging_utils.py:170:12 - MISSING_DOCSTRING: Missing docstring for function 'hook_fn'
+  debugging_utils.py:189:12 - MISSING_DOCSTRING: Missing docstring for function 'hook_fn'
+  debugging_utils.py:204:12 - MISSING_DOCSTRING: Missing docstring for function 'hook_fn'
+  debugging_utils.py:212:12 - MISSING_DOCSTRING: Missing docstring for function 'hook_fn'
+  debugging_utils.py:283:12 - MISSING_DOCSTRING: Missing docstring for function 'wrapper'
+  documentation_generator.py:59:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  documentation_generator.py:201:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  documentation_generator.py:298:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  documentation_generator.py:711:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  model_inspection.py:51:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  model_inspection.py:420:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  model_inspection.py:484:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  model_inspection.py:610:4 - MISSING_DOCSTRING: Missing docstring for class 'SimpleModel'
+  model_inspection.py:661:4 - MISSING_DOCSTRING: Missing docstring for class 'ModelA'
+  model_inspection.py:673:4 - MISSING_DOCSTRING: Missing docstring for class 'ModelB'
+  model_inspection.py:303:8 - MISSING_DOCSTRING: Missing docstring for function 'hook_fn'
+  model_inspection.py:611:8 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  model_inspection.py:621:8 - MISSING_DOCSTRING: Missing docstring for function 'forward'
+  model_inspection.py:662:8 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  model_inspection.py:670:8 - MISSING_DOCSTRING: Missing docstring for function 'forward'
+  model_inspection.py:674:8 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  model_inspection.py:684:8 - MISSING_DOCSTRING: Missing docstring for function 'forward'
+  model_inspection.py:121:12 - MISSING_DOCSTRING: Missing docstring for function 'count_conv2d'
+  model_inspection.py:128:12 - MISSING_DOCSTRING: Missing docstring for function 'count_linear'
+  model_inspection.py:135:12 - MISSING_DOCSTRING: Missing docstring for function 'count_matmul'
+  profiling_tools.py:41:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  profiling_tools.py:336:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  profiling_tools.py:504:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  profiling_tools.py:632:4 - MISSING_DOCSTRING: Missing docstring for function 'matrix_mult'
+  profiling_tools.py:663:4 - MISSING_DOCSTRING: Missing docstring for function 'simple_add'
+  profiling_tools.py:668:4 - MISSING_DOCSTRING: Missing docstring for function 'complex_operation'
+  profiling_tools.py:51:8 - MISSING_DOCSTRING: Missing docstring for function 'decorator'
+  profiling_tools.py:92:8 - MISSING_DOCSTRING: Missing docstring for function 'decorator'
+  profiling_tools.py:415:8 - MISSING_DOCSTRING: Missing docstring for function 'monitor_loop'
+  profiling_tools.py:53:12 - MISSING_DOCSTRING: Missing docstring for function 'wrapper'
+  profiling_tools.py:94:12 - MISSING_DOCSTRING: Missing docstring for function 'wrapper'
+  setup.py:8:0 - MISSING_DOCSTRING: Missing docstring for function 'read_requirements'
+  test_dev_tools.py:60:4 - MISSING_DOCSTRING: Missing docstring for class 'TestModel'
+  test_dev_tools.py:61:8 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  test_dev_tools.py:66:8 - MISSING_DOCSTRING: Missing docstring for function 'forward'
+  __init__.py:93:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  __init__.py:380:4 - MISSING_DOCSTRING: Missing docstring for class 'SimpleQwen3VL'
+  __init__.py:381:8 - MISSING_DOCSTRING: Missing docstring for function '__init__'
+  __init__.py:389:8 - MISSING_DOCSTRING: Missing docstring for function 'forward'
+
+ISSUES BY FILE:
+  automated_testing.py: 20 issues
+    104:0 - LINE_TOO_LONG: Line too long (139 > 120)...
+    119:0 - LINE_TOO_LONG: Line too long (126 > 120)...
+    730:0 - LINE_TOO_LONG: Line too long (124 > 120)...
+    169:4 - FUNCTION_TOO_LONG: Function 'validate_functional_equivalence' is too ...
+    459:4 - FUNCTION_TOO_LONG: Function 'test_model_gradient_flow' is too long (5...
+    ... and 15 more issues
+
+  benchmarking_tools.py: 13 issues
+    317:0 - LINE_TOO_LONG: Line too long (130 > 120)...
+    447:0 - LINE_TOO_LONG: Line too long (148 > 120)...
+    448:0 - LINE_TOO_LONG: Line too long (183 > 120)...
+    466:0 - LINE_TOO_LONG: Line too long (168 > 120)...
+    358:4 - FUNCTION_TOO_LONG: Function 'benchmark_throughput' is too long (62 > ...
+    ... and 8 more issues
+
+  code_quality.py: 20 issues
+    137:0 - LINE_TOO_LONG: Line too long (134 > 120)...
+    149:0 - LINE_TOO_LONG: Line too long (134 > 120)...
+    161:0 - LINE_TOO_LONG: Line too long (128 > 120)...
+    176:0 - LINE_TOO_LONG: Line too long (146 > 120)...
+    187:0 - LINE_TOO_LONG: Line too long (146 > 120)...
+    ... and 15 more issues
+
+  config_validation.py: 20 issues
+    51:0 - LINE_TOO_LONG: Line too long (126 > 120)...
+    239:0 - LINE_TOO_LONG: Line too long (125 > 120)...
+    307:0 - LINE_TOO_LONG: Line too long (125 > 120)...
+    324:0 - LINE_TOO_LONG: Line too long (148 > 120)...
+    545:0 - LINE_TOO_LONG: Line too long (124 > 120)...
+    ... and 15 more issues
+
+  debugging_utils.py: 20 issues
+    101:0 - LINE_TOO_LONG: Line too long (133 > 120)...
+    102:0 - LINE_TOO_LONG: Line too long (123 > 120)...
+    242:0 - LINE_TOO_LONG: Line too long (131 > 120)...
+    279:4 - FUNCTION_TOO_LONG: Function 'trace_function' is too long (51 > 50)...
+    28:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'...
+    ... and 15 more issues
+
+  documentation_generator.py: 16 issues
+    117:0 - LINE_TOO_LONG: Line too long (135 > 120)...
+    134:0 - LINE_TOO_LONG: Line too long (132 > 120)...
+    475:0 - LINE_TOO_LONG: Line too long (166 > 120)...
+    507:0 - LINE_TOO_LONG: Line too long (162 > 120)...
+    695:0 - LINE_TOO_LONG: Line too long (129 > 120)...
+    ... and 11 more issues
+
+  model_inspection.py: 19 issues
+    114:4 - FUNCTION_TOO_LONG: Function '_estimate_flops' is too long (56 > 50)...
+    114:4 - HIGH_COMPLEXITY: Function '_estimate_flops' has high cyclomatic com...
+    299:4 - HIGH_COMPLEXITY: Function 'analyze_tensor_shapes' has high cyclomat...
+    51:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'...
+    420:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'...
+    ... and 14 more issues
+
+  profiling_tools.py: 13 issues
+    237:0 - LINE_TOO_LONG: Line too long (149 > 120)...
+    399:0 - LINE_TOO_LONG: Line too long (134 > 120)...
+    41:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'...
+    336:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'...
+    504:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'...
+    ... and 8 more issues
+
+  setup.py: 1 issues
+    8:0 - MISSING_DOCSTRING: Missing docstring for function 'read_requirements'...
+
+  test_dev_tools.py: 3 issues
+    60:4 - MISSING_DOCSTRING: Missing docstring for class 'TestModel'...
+    61:8 - MISSING_DOCSTRING: Missing docstring for function '__init__'...
+    66:8 - MISSING_DOCSTRING: Missing docstring for function 'forward'...
+
+  __init__.py: 6 issues
+    170:0 - LINE_TOO_LONG: Line too long (156 > 120)...
+    410:0 - FUNCTION_TOO_LONG: Function 'quick_start_guide' is too long (89 > 50)...
+    93:4 - MISSING_DOCSTRING: Missing docstring for function '__init__'...
+    380:4 - MISSING_DOCSTRING: Missing docstring for class 'SimpleQwen3VL'...
+    381:8 - MISSING_DOCSTRING: Missing docstring for function '__init__'...
+    ... and 1 more issues

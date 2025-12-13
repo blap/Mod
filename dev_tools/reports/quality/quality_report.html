@@ -1,0 +1,27 @@
+
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Code Quality Report</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                .header { background-color: #f0f0f0; padding: 10px; border-radius: 5px; }
+                .issue { border: 1px solid #ddd; margin: 10px 0; padding: 10px; border-radius: 5px; }
+                .error { border-left: 5px solid #d9534f; }
+                .warning { border-left: 5px solid #f0ad4e; }
+                .info { border-left: 5px solid #5bc0de; }
+                .severity { font-weight: bold; margin-right: 10px; }
+                .file-path { color: #666; font-family: monospace; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>Code Quality Report</h1>
+                <p>Total Issues: {total_issues}</p>
+                <p>Errors: {error_count}, Warnings: {warning_count}, Info: {info_count}</p>
+            </div>
+
+            {issue_list}
+        </body>
+        </html>
+        

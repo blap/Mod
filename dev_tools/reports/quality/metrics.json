@@ -1,0 +1,138 @@
+{
+  "files": [
+    {
+      "file_path": "automated_testing.py",
+      "total_lines": 941,
+      "code_lines": 683,
+      "comment_lines": 69,
+      "docstring_lines": 35,
+      "functions": 36,
+      "classes": 9,
+      "imports": 14,
+      "complexity": 140
+    },
+    {
+      "file_path": "benchmarking_tools.py",
+      "total_lines": 894,
+      "code_lines": 648,
+      "comment_lines": 58,
+      "docstring_lines": 36,
+      "functions": 33,
+      "classes": 7,
+      "imports": 16,
+      "complexity": 90
+    },
+    {
+      "file_path": "code_quality.py",
+      "total_lines": 947,
+      "code_lines": 736,
+      "comment_lines": 46,
+      "docstring_lines": 40,
+      "functions": 33,
+      "classes": 7,
+      "imports": 19,
+      "complexity": 141
+    },
+    {
+      "file_path": "config_validation.py",
+      "total_lines": 711,
+      "code_lines": 540,
+      "comment_lines": 53,
+      "docstring_lines": 28,
+      "functions": 26,
+      "classes": 5,
+      "imports": 10,
+      "complexity": 178
+    },
+    {
+      "file_path": "debugging_utils.py",
+      "total_lines": 517,
+      "code_lines": 399,
+      "comment_lines": 24,
+      "docstring_lines": 34,
+      "functions": 42,
+      "classes": 4,
+      "imports": 15,
+      "complexity": 101
+    },
+    {
+      "file_path": "documentation_generator.py",
+      "total_lines": 983,
+      "code_lines": 747,
+      "comment_lines": 46,
+      "docstring_lines": 53,
+      "functions": 32,
+      "classes": 8,
+      "imports": 15,
+      "complexity": 127
+    },
+    {
+      "file_path": "model_inspection.py",
+      "total_lines": 703,
+      "code_lines": 533,
+      "comment_lines": 40,
+      "docstring_lines": 34,
+      "functions": 37,
+      "classes": 8,
+      "imports": 12,
+      "complexity": 117
+    },
+    {
+      "file_path": "profiling_tools.py",
+      "total_lines": 699,
+      "code_lines": 517,
+      "comment_lines": 40,
+      "docstring_lines": 35,
+      "functions": 38,
+      "classes": 4,
+      "imports": 17,
+      "complexity": 91
+    },
+    {
+      "file_path": "setup.py",
+      "total_lines": 55,
+      "code_lines": 51,
+      "comment_lines": 1,
+      "docstring_lines": 1,
+      "functions": 1,
+      "classes": 0,
+      "imports": 1,
+      "complexity": 1
+    },
+    {
+      "file_path": "test_dev_tools.py",
+      "total_lines": 132,
+      "code_lines": 96,
+      "comment_lines": 14,
+      "docstring_lines": 2,
+      "functions": 3,
+      "classes": 1,
+      "imports": 15,
+      "complexity": 4
+    },
+    {
+      "file_path": "__init__.py",
+      "total_lines": 511,
+      "code_lines": 355,
+      "comment_lines": 53,
+      "docstring_lines": 20,
+      "functions": 18,
+      "classes": 2,
+      "imports": 24,
+      "complexity": 31
+    }
+  ],
+  "totals": {
+    "total_lines": 7093,
+    "code_lines": 5305,
+    "comment_lines": 444,
+    "docstring_lines": 318,
+    "functions": 299,
+    "classes": 55,
+    "imports": 158,
+    "complexity": 1021
+  },
+  "average_complexity_per_function": 3.4147157190635453,
+  "comment_ratio": 0.08369462770970783,
+  "docstring_ratio": 0.05994344957587182
+}
