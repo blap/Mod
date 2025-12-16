@@ -747,13 +747,3 @@ def apply_int8_quantization_to_model(
     return quantized_model, quantization_info
 
 
-if __name__ == "__main__":
-    print("INT8 Quantization Optimization for Qwen3-VL Model")
-    print("=" * 60)
-    print("This module implements INT8 quantization techniques for CPU optimization")
-    print("Targeting Intel i5-10210U architecture")
-    print("=" * 60)
-    
-    # Example usage
-    config = INT8QuantizationConfig()
-    print(f"Default quantization config: {config}")

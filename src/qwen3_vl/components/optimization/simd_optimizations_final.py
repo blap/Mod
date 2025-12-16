@@ -907,10 +907,3 @@ def run_comprehensive_tests():
         return False
 
 
-if __name__ == "__main__":
-    success = run_comprehensive_tests()
-
-    if success:
-        print("\n[SUCCESS] SIMD and JIT optimizations are ready for production use in Qwen3-VL!")
-    else:
-        print("\n[FAILURE] Some SIMD and JIT optimizations tests failed.")
