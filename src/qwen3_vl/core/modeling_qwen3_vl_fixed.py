@@ -2,8 +2,8 @@
 Qwen3-VL Model implementation with full capacity preservation and Phase 2 efficiency improvements
 This file now serves as a compatibility layer that imports from the new modular structure.
 """
-from src.qwen3_vl.components.models.qwen3_vl_model import Qwen3VLForConditionalGeneration
-from src.qwen3_vl.components.models.qwen3_vl_model import Qwen3VLPreTrainedModel
+from src.qwen3_vl.models.qwen3_vl_model import Qwen3VLForConditionalGeneration
+from src.qwen3_vl.models.qwen3_vl_model import Qwen3VLPreTrainedModel
 from src.qwen3_vl.model_layers.attention_mechanisms import Qwen3VLAttention, Qwen3VLVisionAttention, repeat_kv
 from src.qwen3_vl.attention.rotary_embeddings import Qwen3VLRotaryEmbedding, apply_rotary_pos_emb, rotate_half
 from src.qwen3_vl.model_layers.layer_components import Qwen3VLMLP, Qwen3VLVisionMLP, Qwen3VLDecoderLayer, Qwen3VLVisionLayer

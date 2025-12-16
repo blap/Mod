@@ -307,8 +307,8 @@ def integrate_with_qwen3vl_pipeline():
     """
     Integrate hardware adaptation with existing Qwen3-VL pipeline components
     """
-    from src.qwen3_vl.components.optimization.cpu_optimizer import CPUPipeline, CPUPreprocessor
-    from src.qwen3_vl.components.optimization.cpu_optimizations import apply_cpu_optimizations
+    from src.qwen3_vl.training.optimizers.cpu_optimizations import CPUPipeline, CPUPreprocessor
+    from src.qwen3_vl.training.optimizers.cpu_optimizations import apply_cpu_optimizations
     
     # Create a hardware-adaptive pipeline
     class HardwareAdaptivePipeline(CPUPipeline):

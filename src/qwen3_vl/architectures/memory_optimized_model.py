@@ -26,12 +26,12 @@ from src.qwen3_vl.optimization.integrated_memory_manager import (
     MemoryOptimizedContext
 )
 from src.qwen3_vl.config.config import Qwen3VLConfig
-from src.qwen3_vl.components.attention.attention_mechanisms import Qwen3VLAttention, Qwen3VLVisionAttention
-from src.qwen3_vl.components.attention.rotary_embeddings import apply_rotary_pos_emb
-from src.qwen3_vl.components.layers.layer_components import Qwen3VLMLP, Qwen3VLVisionMLP, Qwen3VLDecoderLayer, Qwen3VLVisionLayer
-from src.qwen3_vl.components.layers.vision_transformer import Qwen3VLVisionTransformer
-from src.qwen3_vl.components.layers.language_decoder import Qwen3VLDecoder
-from src.qwen3_vl.components.layers.multimodal_projector import Qwen3VLMultimodalProjector
+from src.qwen3_vl.model_layers.attention_mechanisms import Qwen3VLAttention, Qwen3VLVisionAttention
+from src.qwen3_vl.model_layers.rotary_embeddings import apply_rotary_pos_emb
+from src.qwen3_vl.model_layers.layer_components import Qwen3VLMLP, Qwen3VLVisionMLP, Qwen3VLDecoderLayer, Qwen3VLVisionLayer
+from src.qwen3_vl.model_layers.vision_transformer import Qwen3VLVisionTransformer
+from src.qwen3_vl.model_layers.language_decoder import Qwen3VLDecoder
+from src.qwen3_vl.model_layers.multimodal_projector import Qwen3VLMultimodalProjector
 
 
 logger = logging.getLogger(__name__)
