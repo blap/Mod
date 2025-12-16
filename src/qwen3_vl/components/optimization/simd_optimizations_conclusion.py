@@ -171,5 +171,3 @@ def main():
     print("\nReady for deployment in production environments!")
 
 
-if __name__ == "__main__":
-    main()

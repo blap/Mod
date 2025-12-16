@@ -124,5 +124,3 @@ def demonstrate_kernel_fusion():
     return fused_model, report
 
 
-if __name__ == "__main__":
-    demonstrate_kernel_fusion()
