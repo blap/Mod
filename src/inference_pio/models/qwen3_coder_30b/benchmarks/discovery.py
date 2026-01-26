@@ -1,8 +1,8 @@
 """
-Qwen3-coder-30b Model Benchmark Discovery Module
+GLM-4-7 Model Benchmark Discovery Module
 
 This module provides automatic discovery and execution of benchmark functions
-specifically for the Qwen3-coder-30b model.
+specifically for the GLM-4-7 model.
 """
 
 import importlib
@@ -18,52 +18,52 @@ import csv
 from benchmarks.discovery import BenchmarkDiscovery
 
 
-class Qwen3Coder30bBenchmarkDiscovery(BenchmarkDiscovery):
+class GLM47BenchmarkDiscovery(BenchmarkDiscovery):
     """
-    Specialized benchmark discovery for Qwen3-coder-30b model benchmarks.
+    Specialized benchmark discovery for GLM-4-7 model benchmarks.
     """
 
     def __init__(self):
         """
-        Initialize the Qwen3-coder-30b benchmark discovery system.
+        Initialize the GLM-4-7 benchmark discovery system.
         """
         super().__init__(search_paths=[
-            "src/inference_pio/models/qwen3_coder_30b/benchmarks"
+            "src/inference_pio/models/glm_4_7/benchmarks"
         ])
-        self.model_name = "qwen3_coder_30b"
+        self.model_name = "glm_4_7"
 
 
-def run_qwen3_coder_30b_benchmarks(include_categories: List[str] = None) -> Dict[str, Any]:
+def run_glm_4_7_benchmarks(include_categories: List[str] = None) -> Dict[str, Any]:
     """
-    Run all Qwen3-coder-30b benchmarks.
+    Run all GLM-4-7 benchmarks.
 
     Args:
         include_categories: List of categories to include. If None, runs all.
 
     Returns:
-        Dictionary with results from Qwen3-coder-30b benchmarks
+        Dictionary with results from GLM-4-7 benchmarks
     """
-    discovery = Qwen3Coder30bBenchmarkDiscovery()
+    discovery = GLM47BenchmarkDiscovery()
     discovery.discover_benchmarks()
     
-    print(f"Discovered {len(discovery.discovered_benchmarks)} Qwen3-coder-30b benchmark functions")
+    print(f"Discovered {len(discovery.discovered_benchmarks)} GLM-4-7 benchmark functions")
     
     results = discovery.run_model_benchmarks(discovery.model_name)
     
     # Save results
-    discovery.save_results(results, output_dir="benchmark_results/qwen3_coder_30b")
+    discovery.save_results(results, output_dir="benchmark_results/glm_4_7")
     
     return results
 
 
-def run_qwen3_coder_30b_performance_benchmarks() -> Dict[str, Any]:
+def run_glm_4_7_performance_benchmarks() -> Dict[str, Any]:
     """
-    Run only performance benchmarks for Qwen3-coder-30b.
+    Run only performance benchmarks for GLM-4-7.
 
     Returns:
-        Dictionary with results from Qwen3-coder-30b performance benchmarks
+        Dictionary with results from GLM-4-7 performance benchmarks
     """
-    discovery = Qwen3Coder30bBenchmarkDiscovery()
+    discovery = GLM47BenchmarkDiscovery()
     discovery.discover_benchmarks()
     
     # Filter to only performance benchmarks
@@ -71,12 +71,12 @@ def run_qwen3_coder_30b_performance_benchmarks() -> Dict[str, Any]:
     
     results = {
         'timestamp': datetime.now().isoformat(),
-        'model': 'qwen3_coder_30b',
+        'model': 'glm_4_7',
         'results': {},
         'summary': {}
     }
     
-    print(f"Running {len(performance_benchmarks)} Qwen3-coder-30b performance benchmarks...")
+    print(f"Running {len(performance_benchmarks)} GLM-4-7 performance benchmarks...")
     
     for benchmark in performance_benchmarks:
         print(f"Running {benchmark['full_name']}...")
@@ -94,19 +94,19 @@ def run_qwen3_coder_30b_performance_benchmarks() -> Dict[str, Any]:
         'success_rate': successful_runs / total_runs if total_runs > 0 else 0
     }
     
-    print(f"\nQwen3-coder-30b Performance Benchmark Summary:")
+    print(f"\nGLM-4-7 Performance Benchmark Summary:")
     print(f"  Total: {total_runs}")
     print(f"  Successful: {successful_runs}")
     print(f"  Failed: {total_runs - successful_runs}")
     print(f"  Success Rate: {results['summary']['success_rate']:.2%}")
     
     # Save results
-    discovery.save_results(results, output_dir="benchmark_results/qwen3_coder_30b")
+    discovery.save_results(results, output_dir="benchmark_results/glm_4_7")
     
     return results
 
 
 if __name__ == "__main__":
     # Example usage
-    results = run_qwen3_coder_30b_benchmarks()
-    print("\nQwen3-coder-30b benchmark discovery and execution completed!")
+    results = run_glm_4_7_benchmarks()
+    print("\nGLM-4-7 benchmark discovery and execution completed!")
