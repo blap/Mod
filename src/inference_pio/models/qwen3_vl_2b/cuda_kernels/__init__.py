@@ -13,7 +13,6 @@ import torch.nn as nn
 logger = logging.getLogger(__name__)
 
 from ..config import Qwen3VL2BConfig
-from ..plugin.cuda_kernels import Qwen3VL2BHardwareKernelManager
 
 
 class Qwen3VL2BGELUKernel(nn.Module):
@@ -319,6 +318,8 @@ def _get_parent_module(model: nn.Module, full_name: str) -> Tuple[nn.Module, str
 
     return parent_module, child_name
 
+
+from .qwen3_vl_kernels import *
 
 __all__ = [
     "Qwen3VL2BGELUKernel",

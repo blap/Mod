@@ -224,9 +224,6 @@ from .nas_controller import (
 
 from .model_adapter import (
     BaseModelAdapter,
-    GLM47ModelAdapter,
-    Qwen34BInstruct2507ModelAdapter,
-    Qwen3Coder30BModelAdapter,
     get_model_adapter
 )
 
@@ -523,9 +520,6 @@ __all__ = [
 
     # Model Adapter
     "BaseModelAdapter",
-    "GLM47ModelAdapter",
-    "Qwen34BInstruct2507ModelAdapter",
-    "Qwen3Coder30BModelAdapter",
     "get_model_adapter",
 
     # Streaming Computation
@@ -730,7 +724,7 @@ __all__ = [
     "AsyncMultimodalRequest",
     "AsyncMultimodalResult",
     "GenericAsyncMultimodalProcessor",
-    "create_async_multimodal_engine",
+    "create_generic_async_multimodal_engine",
     "apply_async_multimodal_processing_to_model",
 
     # Intelligent Multimodal Caching
