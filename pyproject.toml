@@ -69,7 +69,6 @@ dev = [
     "yapf",
 ]
 perf_regression = [
-    "pytest>=7.0.0",
     "requests>=2.25.0",
 ]
 cuda = [
@@ -159,53 +158,6 @@ exclude = [
     "build",
     "dist"
 ]
-
-[tool.pytest.ini_options]
-testpaths = [
-    "tests/unit",
-    "tests/integration",
-    "tests/performance",
-    "src/inference_pio/tests",
-    "src/inference_pio/common/tests",
-    "src/inference_pio/models/glm_4_7_flash/tests",
-    "src/inference_pio/models/qwen3_4b_instruct_2507/tests",
-    "src/inference_pio/models/qwen3_coder_30b/tests",
-    "src/inference_pio/models/qwen3_vl_2b/tests"
-]
-python_files = [
-    "test_*.py",
-    "*_test.py",
-    "tests/*.py",
-    "tests/*/*.py",
-    "tests/*/*/*.py"
-]
-python_classes = [
-    "Test*",
-    "*Tests"
-]
-python_functions = [
-    "test_*",
-    "test*",
-    "*test*"
-]
-addopts = [
-    "-ra",
-    "--strict-markers",
-    "--strict-config",
-    "-W",
-    "ignore::DeprecationWarning",
-    "--generate-reports",
-    "--reports-dir=test_reports"
-]
-markers = [
-    "slow: marks tests as slow",
-    "unit: marks tests as unit tests",
-    "integration: marks tests as integration tests",
-    "performance: marks tests as performance tests",
-    "model: marks tests related to specific models",
-    "common: marks tests related to common components"
-]
-
 
 [tool.coverage.run]
 source = [

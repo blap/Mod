@@ -98,81 +98,8 @@ The unified discovery system extends the basic discovery with:
 
 ## Assertion Functions
 
-The framework includes over 100 assertion functions organized by category:
-
-### Basic Assertions
-```python
-from src.inference_pio.test_utils import (
-    assert_true, assert_false, assert_equal, assert_not_equal,
-    assert_is_none, assert_is_not_none
-)
-
-def test_basic_assertions():
-    assert_true(5 > 3)
-    assert_false(5 < 3)
-    assert_equal(2 + 2, 4)
-    assert_not_equal(2 + 2, 5)
-    assert_is_none(None)
-    assert_is_not_none("not none")
-```
-
-### Container Assertions
-```python
-from src.inference_pio.test_utils import (
-    assert_in, assert_not_in, assert_length, assert_items_equal
-)
-
-def test_container_assertions():
-    assert_in("a", ["a", "b", "c"])
-    assert_not_in("d", ["a", "b", "c"])
-    assert_length([1, 2, 3], 3)
-    assert_items_equal([1, 2, 3], [3, 1, 2])  # Order-independent
-```
-
-### Numeric Assertions
-```python
-from src.inference_pio.test_utils import (
-    assert_greater, assert_less, assert_between, assert_close
-)
-
-def test_numeric_assertions():
-    assert_greater(10, 5)
-    assert_less(3, 7)
-    assert_between(5, 1, 10)
-    assert_close(1.0000001, 1.0, rel_tol=1e-06)
-```
-
-### Tensor Assertions
-```python
-import torch
-from src.inference_pio.test_utils import (
-    assert_tensor_equal, assert_tensor_close, assert_tensor_shape, assert_tensor_dtype
-)
-
-def test_tensor_assertions():
-    tensor1 = torch.tensor([1.0, 2.0, 3.0])
-    tensor2 = torch.tensor([1.0, 2.0, 3.0])
-    
-    assert_tensor_equal(tensor1, tensor2)
-    assert_tensor_shape(tensor1, (3,))
-    assert_tensor_dtype(tensor1, torch.float32)
-    
-    tensor3 = torch.tensor([1.0001, 2.0001, 3.0001])
-    assert_tensor_close(tensor1, tensor3, rtol=1e-03)
-```
-
-### File System Assertions
-```python
-from src.inference_pio.test_utils import (
-    assert_file_exists, assert_dir_exists, assert_readable, assert_writable
-)
-
-def test_file_system_assertions():
-    assert_file_exists("/path/to/existing/file.txt")
-    assert_dir_exists("/path/to/existing/directory")
-    assert_readable("/path/to/readable/file.txt")
-    assert_writable("/path/to/writable/file.txt")
-```
+The framework includes over 100 assertion functions organized by category.
+(See code for full list)
 
 ## Test Structure
 
@@ -215,139 +142,19 @@ if __name__ == '__main__':
     run_tests([test_basic_functionality])
 ```
 
-### Class-Based Tests
-
-```python
-from src.inference_pio.test_utils import assert_equal
-
-class TestCalculator:
-    def test_addition(self):
-        result = 5 + 3
-        assert_equal(result, 8, "Addition should work correctly")
-
-    def test_subtraction(self):
-        result = 10 - 4
-        assert_equal(result, 6, "Subtraction should work correctly")
-
-# The discovery system will automatically wrap class methods
-```
-
-### Using Different Assertions
-
-```python
-from src.inference_pio.test_utils import (
-    assert_equal, assert_true, assert_false,
-    assert_in, assert_is_none, assert_greater,
-    assert_raises, run_tests
-)
-
-def test_various_assertions():
-    # Equality assertions
-    assert_equal(1 + 1, 2, "Basic addition")
-    assert_equal("hello", "hello", "String equality")
-
-    # Boolean assertions
-    assert_true(5 > 3, "Greater than comparison")
-    assert_false(5 < 3, "Less than comparison")
-
-    # Container assertions
-    assert_in("a", ["a", "b", "c"], "Item in list")
-    assert_in("key", {"key": "value"}, "Key in dictionary")
-
-    # Null assertions
-    assert_is_none(None, "None value")
-    assert_is_not_none("not none", "Non-none value")
-
-    # Numeric assertions
-    assert_greater(10, 5, "Greater than")
-    assert_less(3, 7, "Less than")
-
-    # Exception assertions
-    def raises_error():
-        raise ValueError("Test error")
-
-    assert_raises(ValueError, raises_error)
-
-if __name__ == '__main__':
-    run_tests([test_various_assertions])
-```
-
-### Tensor-Specific Tests
-
-```python
-import torch
-from src.inference_pio.test_utils import (
-    assert_tensor_equal, assert_tensor_shape, assert_tensor_dtype
-)
-
-def test_tensor_operations():
-    """Test tensor operations."""
-    tensor1 = torch.tensor([1, 2, 3])
-    tensor2 = torch.tensor([1, 2, 3])
-    
-    # Test tensor equality
-    assert_tensor_equal(tensor1, tensor2, "Tensors should be equal")
-    
-    # Test tensor shape
-    assert_tensor_shape(tensor1, (3,), "Tensor should have shape (3,)")
-    
-    # Test tensor dtype
-    assert_tensor_dtype(tensor1, torch.int64, "Tensor should have int64 dtype")
-
-def test_tensor_with_tolerance():
-    """Test tensor operations with tolerance."""
-    tensor1 = torch.tensor([1.0, 2.0, 3.0])
-    tensor2 = torch.tensor([1.0001, 2.0001, 3.0001])
-    
-    # Test tensor closeness with tolerance
-    from src.inference_pio.test_utils import assert_tensor_close
-    assert_tensor_close(tensor1, tensor2, rtol=1e-03, 
-                       message="Tensors should be close within tolerance")
-```
-
-### Skipping Tests
-
-```python
-from src.inference_pio.test_utils import skip_test, run_tests
-
-def test_feature_that_requires_gpu():
-    # Check if GPU is available
-    import torch
-    if not torch.cuda.is_available():
-        skip_test("GPU not available for this test")
-
-    # Test code here...
-    assert torch.cuda.is_available(), "CUDA should be available"
-
-def test_conditional_skip():
-    import sys
-    if sys.version_info < (3, 8):
-        skip_test("Requires Python 3.8 or higher")
-    
-    # Test code here...
-    assert sys.version_info >= (3, 8), "Python version should be 3.8+"
-```
-
-### File System Tests
-
-```python
-from src.inference_pio.test_utils import (
-    assert_file_exists, assert_dir_exists, assert_readable
-)
-
-def test_file_operations():
-    """Test file system operations."""
-    # Test file existence
-    assert_file_exists("requirements.txt", "Requirements file should exist")
-    
-    # Test directory existence
-    assert_dir_exists("src", "Source directory should exist")
-    
-    # Test file readability
-    assert_readable("README.md", "README should be readable")
-```
-
 ## Running Tests
+
+### Using Optimized Test Runner
+
+The primary way to run tests is via the `optimized_test_runner.py` script:
+
+```bash
+# Run all tests in 'tests' directory
+python optimized_test_runner.py
+
+# List available tests
+python optimized_test_runner.py --list
+```
 
 ### Individual Model Tests
 
@@ -356,15 +163,6 @@ from src.inference_pio.test_discovery import run_model_tests
 
 # Run all tests for a specific model
 run_model_tests('qwen3_vl_2b')
-```
-
-### All Project Tests
-
-```python
-from src.inference_pio.test_discovery import run_all_project_tests
-
-# Run all tests in the project
-run_all_project_tests()
 ```
 
 ### Manual Test Execution
@@ -379,33 +177,6 @@ if __name__ == '__main__':
     run_tests([test_example])
 ```
 
-### Using the Unified Discovery System
-
-```python
-from inference_pio.unified_test_discovery import UnifiedTestDiscovery
-
-# Create a discovery instance
-discovery = UnifiedTestDiscovery()
-
-# Discover all items
-items = discovery.discover_all()
-
-# Run all discovered tests
-results = discovery.run_tests_only()
-
-# Run all discovered benchmarks
-benchmark_results = discovery.run_benchmarks_only()
-```
-
-### Model-Specific Test Execution
-
-```python
-from inference_pio.unified_test_discovery import run_tests_for_model
-
-# Run tests for a specific model
-results = run_tests_for_model('qwen3_vl_2b')
-```
-
 ## Best Practices
 
 ### 1. Descriptive Test Names
@@ -415,92 +186,6 @@ def test_model_initialization_with_valid_config():
     """Test that model initializes correctly with valid configuration."""
     # Implementation here
 ```
-
-### 2. Single Responsibility
-Each test should focus on a single aspect of functionality:
-```python
-def test_tensor_addition():
-    """Test tensor addition operation."""
-    tensor1 = torch.tensor([1, 2, 3])
-    tensor2 = torch.tensor([4, 5, 6])
-    result = tensor1 + tensor2
-    expected = torch.tensor([5, 7, 9])
-    assert_tensor_equal(result, expected)
-
-def test_tensor_multiplication():
-    """Test tensor multiplication operation."""
-    tensor1 = torch.tensor([1, 2, 3])
-    tensor2 = torch.tensor([2, 3, 4])
-    result = tensor1 * tensor2
-    expected = torch.tensor([2, 6, 12])
-    assert_tensor_equal(result, expected)
-```
-
-### 3. Meaningful Messages
-Provide clear messages in assertion calls:
-```python
-def test_model_output_shape():
-    """Test that model output has expected shape."""
-    model = create_model()
-    input_tensor = torch.randn(1, 3, 224, 224)
-    output = model(input_tensor)
-    expected_shape = (1, 1000)
-    assert_tensor_shape(output, expected_shape, 
-                       f"Model output shape should be {expected_shape}, got {output.shape}")
-```
-
-### 4. Isolation
-Tests should not depend on each other's execution order:
-```python
-def test_first():
-    # This test should not affect test_second
-    pass
-
-def test_second():
-    # This test should not depend on test_first
-    pass
-```
-
-### 5. Consistent Structure
-Follow the standardized directory structure:
-```
-tests/
-├── unit/
-├── integration/
-└── performance/
-```
-
-### 6. Comprehensive Coverage
-Include unit, integration, and performance tests as appropriate:
-- Unit tests: Test individual functions, methods, or classes in isolation
-- Integration tests: Test interactions between multiple components
-- Performance tests: Measure execution time and resource usage
-
-## Test Categories
-
-### Unit Tests
-- Test individual functions, methods, or classes in isolation
-- Fast execution with minimal external dependencies
-- Focus on logic correctness
-- Located in `tests/unit/` directories
-
-### Integration Tests
-- Test interactions between multiple components
-- May involve real external dependencies
-- Validate end-to-end workflows
-- Located in `tests/integration/` directories
-
-### Performance Tests
-- Measure execution time and resource usage
-- Test scalability under load
-- Monitor performance regressions
-- Located in `tests/performance/` directories
-
-### Benchmark Tests
-- Evaluate model performance across multiple dimensions
-- Compare against baseline metrics
-- Track performance over time
-- Located in `benchmarks/` directories
 
 ## Advanced Features
 
@@ -549,21 +234,6 @@ results = run_tests_with_optimization(
 )
 ```
 
-### Custom Assertion Functions
-
-You can create custom assertion functions that integrate with the framework:
-
-```python
-from src.inference_pio.test_utils import assert_true
-
-def assert_tensor_values_in_range(tensor, min_val, max_val, message="Tensor values not in range"):
-    """Custom assertion to check if all tensor values are within a range."""
-    in_range = (tensor >= min_val) & (tensor <= max_val)
-    assert_true(in_range.all().item(), 
-               f"{message}: tensor values should be in range [{min_val}, {max_val}], "
-               f"but found values outside this range")
-```
-
 ## Integration with Other Systems
 
 ### CI/CD Integration
@@ -571,11 +241,8 @@ def assert_tensor_values_in_range(tensor, min_val, max_val, message="Tensor valu
 The testing framework integrates seamlessly with CI/CD pipelines:
 
 ```bash
-# Run all tests in CI
-python -m pytest tests/ --junit-xml=test-results.xml
-
-# Run performance regression tests
-python scripts/ci_performance_tests.py --threshold 5.0 --fail-on-regression
+# Run all tests in CI (using custom runner)
+python optimized_test_runner.py --no-cache
 ```
 
 ### Reporting
@@ -590,20 +257,3 @@ summary = get_discovery_summary()
 print(f"Total tests: {summary['total_tests']}")
 print(f"Models covered: {list(summary['by_model'].keys())}")
 ```
-
-### Configuration
-
-The system can be configured using configuration files:
-
-```ini
-# performance_regression_config.ini
-[performance_regression]
-regression_threshold = 5.0
-storage_dir = performance_history
-reports_dir = performance_reports
-fail_on_regression = true
-```
-
----
-
-This comprehensive testing framework provides all the tools needed to write robust, reliable tests for the Inference-PIO project. The extensive assertion library, combined with advanced features like performance regression tracking and test optimization, ensures that the project maintains high quality and performance standards.
