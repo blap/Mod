@@ -40,8 +40,13 @@ Detailed documentation is available in the `docs/` directory:
     ```
 
 2.  **Run Tests:**
+    The project uses a custom optimized test runner.
     ```bash
-    python -m pytest tests/
+    python optimized_test_runner.py
+    ```
+    To verify configuration and list tests:
+    ```bash
+    python optimized_test_runner.py --list
     ```
 
 3.  **Run Benchmarks:**
