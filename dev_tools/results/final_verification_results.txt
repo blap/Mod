@@ -1,0 +1,30 @@
+Final verification test started at: 2026-01-10 11:10:40.605398
+Testing basic imports and model creation...
+
+Test 1: Importing basic components...
+✅ Qwen3VLConfig imported successfully
+✅ Qwen3VLForConditionalGeneration imported successfully
+Test 2: Creating minimal config...
+✅ Minimal config created successfully
+Test 3: Validating config...
+❌ Config validation failed: ModelCapacityError: Configuration does not preserve required model capacity (32 layers, 32 heads) | Error Code: MODEL_CAPACITY_ERROR | Details: {'expected_capacity': 32, 'actual_capacity': {'num_hidden_layers': 2, 'num_attention_heads': 2}}
+Traceback: Traceback (most recent call last):
+  File "C:\Users\Admin\Documents\GitHub\Mod\final_verification_test.py", line 66, in <module>
+    if config.validate_config():
+       ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Admin\Documents\GitHub\Mod\src\qwen3_vl\config.py", line 679, in validate_config
+    raise ModelCapacityError(
+src.qwen3_vl.common.exceptions.ModelCapacityError: ModelCapacityError: Configuration does not preserve required model capacity (32 layers, 32 heads) | Error Code: MODEL_CAPACITY_ERROR | Details: {'expected_capacity': 32, 'actual_capacity': {'num_hidden_layers': 2, 'num_attention_heads': 2}}
+
+
+❌ FINAL ERROR: ModelCapacityError: Configuration does not preserve required model capacity (32 layers, 32 heads) | Error Code: MODEL_CAPACITY_ERROR | Details: {'expected_capacity': 32, 'actual_capacity': {'num_hidden_layers': 2, 'num_attention_heads': 2}}
+Complete traceback:
+Traceback (most recent call last):
+  File "C:\Users\Admin\Documents\GitHub\Mod\final_verification_test.py", line 66, in <module>
+    if config.validate_config():
+       ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Admin\Documents\GitHub\Mod\src\qwen3_vl\config.py", line 679, in validate_config
+    raise ModelCapacityError(
+src.qwen3_vl.common.exceptions.ModelCapacityError: ModelCapacityError: Configuration does not preserve required model capacity (32 layers, 32 heads) | Error Code: MODEL_CAPACITY_ERROR | Details: {'expected_capacity': 32, 'actual_capacity': {'num_hidden_layers': 2, 'num_attention_heads': 2}}
+
+Error type: ModelCapacityError

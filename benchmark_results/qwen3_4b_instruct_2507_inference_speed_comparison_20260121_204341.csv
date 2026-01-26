@@ -1,0 +1,4 @@
+Model Name,Input Length,Original TPS,Modified TPS,Improvement Percentage,Original Avg Time,Modified Avg Time,Timestamp
+Qwen3-4B-Instruct-2507,10,78.1,106.4,36.235595390524985,1.28,0.94,2026-01-21T20:43:41.513747
+Qwen3-4B-Instruct-2507,20,70.7,96.6,36.63366336633662,2.83,2.07,2026-01-21T20:43:41.513747
+Qwen3-4B-Instruct-2507,30,58.6,81.5,39.07849829351536,5.12,3.68,2026-01-21T20:43:41.513747

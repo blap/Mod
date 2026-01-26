@@ -1,0 +1,17 @@
+model,category,original_value,modified_value,percentage_difference,status
+glm_4_7,accuracy,0.8409,0.8887,5.684385777143545,completed
+glm_4_7,inference_speed,39.85,89.98,125.79673776662486,completed
+glm_4_7,memory_usage,1267.17,2750.02,-117.02060497013026,completed
+glm_4_7,optimization_impact,-3.15,-3.1,0.04999999999999982,completed
+qwen3_4b_instruct_2507,accuracy,0.793,0.7723,-2.6103404791929448,completed
+qwen3_4b_instruct_2507,inference_speed,18.17,78.56,332.36103467253713,completed
+qwen3_4b_instruct_2507,memory_usage,3995.44,3586.12,10.244678933984746,completed
+qwen3_4b_instruct_2507,optimization_impact,-8.85,-7.81,1.04,completed
+qwen3_coder_30b,accuracy,0.7766,0.8555,10.159670357970652,completed
+qwen3_coder_30b,inference_speed,32.54,28.78,-11.555009219422244,completed
+qwen3_coder_30b,memory_usage,3866.92,2226.41,42.424203241856574,completed
+qwen3_coder_30b,optimization_impact,25.0,26.56,1.5599999999999987,completed
+qwen3_vl_2b,accuracy,0.7596,0.9044,19.06266456029488,completed
+qwen3_vl_2b,inference_speed,65.53,12.55,-80.84846635128949,completed
+qwen3_vl_2b,memory_usage,3416.02,2013.73,41.05040368616108,completed
+qwen3_vl_2b,optimization_impact,17.3,17.02,-0.28000000000000114,completed

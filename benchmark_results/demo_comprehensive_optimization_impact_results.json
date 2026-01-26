@@ -1,0 +1,307 @@
+{
+  "summary": {
+    "total_models": 4,
+    "start_time": 1768738516.558763,
+    "start_datetime": "2026-01-18T09:15:16.558762",
+    "end_time": 1768738555.9036443,
+    "end_datetime": "2026-01-18T09:15:55.903644",
+    "duration": 39.34488129615784
+  },
+  "individual_results": {
+    "glm_4_7": {
+      "model": "glm_4_7",
+      "timestamp": 1768738527.0157917,
+      "datetime": "2026-01-18T09:15:27.015791",
+      "unoptimized": {
+        "inference_speed": {
+          "total_time": 0.5148563385009766,
+          "avg_time_per_inference": 0.10297126770019531,
+          "tokens_per_second": 174.80604446288524,
+          "memory_used_peak_mb": 0.0,
+          "memory_used_current_mb": 0.0,
+          "avg_cpu_usage": 4.84,
+          "avg_memory_usage": 32.04,
+          "peak_gpu_memory_usage_mb": 0.0
+        },
+        "throughput": {
+          "requests_completed": 30,
+          "actual_duration": 3.0250918865203857,
+          "requests_per_second": 9.917054134348138,
+          "peak_gpu_memory_usage_mb": 0.0,
+          "avg_cpu_usage": 3.34
+        },
+        "memory_usage": {
+          "peak_memory_increase_mb": 0.0,
+          "avg_memory_increase_mb": 0.0,
+          "std_memory_increase_mb": 0.0,
+          "peak_memory_usage_mb": 0.0,
+          "avg_peak_memory_mb": 0.0
+        }
+      },
+      "optimized": {
+        "inference_speed": {
+          "total_time": 0.5067417621612549,
+          "avg_time_per_inference": 0.10134835243225097,
+          "tokens_per_second": 177.60525522141648,
+          "memory_used_peak_mb": 0.0,
+          "memory_used_current_mb": 0.0,
+          "avg_cpu_usage": 2.66,
+          "avg_memory_usage": 32.04,
+          "peak_gpu_memory_usage_mb": 0.0
+        },
+        "throughput": {
+          "requests_completed": 30,
+          "actual_duration": 3.0246474742889404,
+          "requests_per_second": 9.918511249663121,
+          "peak_gpu_memory_usage_mb": 0.0,
+          "avg_cpu_usage": 2.0733333333333333
+        },
+        "memory_usage": {
+          "peak_memory_increase_mb": 0.0,
+          "avg_memory_increase_mb": 0.0,
+          "std_memory_increase_mb": 0.0,
+          "peak_memory_usage_mb": 0.0,
+          "avg_peak_memory_mb": 0.0
+        }
+      },
+      "comparisons": {
+        "speed_improvement_percent": 1.601323779811037,
+        "throughput_improvement_percent": 0.014693025723588882,
+        "memory_improvement_percent": 0,
+        "accuracy_preserved": true,
+        "accuracy_similarity_score": 1.0
+      },
+      "summary": {
+        "tokens_per_second_unoptimized": 174.80604446288524,
+        "tokens_per_second_optimized": 177.60525522141648,
+        "throughput_unoptimized": 9.917054134348138,
+        "throughput_optimized": 9.918511249663121,
+        "avg_memory_unoptimized": 0.0,
+        "avg_memory_optimized": 0.0
+      }
+    },
+    "qwen3_4b_instruct_2507": {
+      "model": "qwen3_4b_instruct_2507",
+      "timestamp": 1768738536.662702,
+      "datetime": "2026-01-18T09:15:36.662702",
+      "unoptimized": {
+        "inference_speed": {
+          "total_time": 0.5125000476837158,
+          "avg_time_per_inference": 0.10250000953674317,
+          "tokens_per_second": 175.6097397585855,
+          "memory_used_peak_mb": 0.0,
+          "memory_used_current_mb": 0.0,
+          "avg_cpu_usage": 4.04,
+          "avg_memory_usage": 32.14,
+          "peak_gpu_memory_usage_mb": 0.0
+        },
+        "throughput": {
+          "requests_completed": 30,
+          "actual_duration": 3.0251009464263916,
+          "requests_per_second": 9.91702443366049,
+          "peak_gpu_memory_usage_mb": 0.0,
+          "avg_cpu_usage": 1.62
+        },
+        "memory_usage": {
+          "peak_memory_increase_mb": 0.0,
+          "avg_memory_increase_mb": 0.0,
+          "std_memory_increase_mb": 0.0,
+          "peak_memory_usage_mb": 0.0,
+          "avg_peak_memory_mb": 0.0
+        }
+      },
+      "optimized": {
+        "inference_speed": {
+          "total_time": 0.5071625709533691,
+          "avg_time_per_inference": 0.10143251419067383,
+          "tokens_per_second": 177.457890535607,
+          "memory_used_peak_mb": 0.0,
+          "memory_used_current_mb": 0.0,
+          "avg_cpu_usage": 5.2,
+          "avg_memory_usage": 32.1,
+          "peak_gpu_memory_usage_mb": 0.0
+        },
+        "throughput": {
+          "requests_completed": 30,
+          "actual_duration": 3.024789571762085,
+          "requests_per_second": 9.918045301420278,
+          "peak_gpu_memory_usage_mb": 0.0,
+          "avg_cpu_usage": 3.59
+        },
+        "memory_usage": {
+          "peak_memory_increase_mb": 0.0,
+          "avg_memory_increase_mb": 0.0,
+          "std_memory_increase_mb": 0.0,
+          "peak_memory_usage_mb": 0.0,
+          "avg_peak_memory_mb": 0.0
+        }
+      },
+      "comparisons": {
+        "speed_improvement_percent": 1.0524192903891283,
+        "throughput_improvement_percent": 0.010294093421037154,
+        "memory_improvement_percent": 0,
+        "accuracy_preserved": true,
+        "accuracy_similarity_score": 1.0
+      },
+      "summary": {
+        "tokens_per_second_unoptimized": 175.6097397585855,
+        "tokens_per_second_optimized": 177.457890535607,
+        "throughput_unoptimized": 9.91702443366049,
+        "throughput_optimized": 9.918045301420278,
+        "avg_memory_unoptimized": 0.0,
+        "avg_memory_optimized": 0.0
+      }
+    },
+    "qwen3_coder_30b": {
+      "model": "qwen3_coder_30b",
+      "timestamp": 1768738546.2646506,
+      "datetime": "2026-01-18T09:15:46.264650",
+      "unoptimized": {
+        "inference_speed": {
+          "total_time": 0.5066759586334229,
+          "avg_time_per_inference": 0.10133519172668456,
+          "tokens_per_second": 177.62832134909817,
+          "memory_used_peak_mb": 0.0,
+          "memory_used_current_mb": 0.0,
+          "avg_cpu_usage": 9.0,
+          "avg_memory_usage": 32.1,
+          "peak_gpu_memory_usage_mb": 0.0
+        },
+        "throughput": {
+          "requests_completed": 30,
+          "actual_duration": 3.0275936126708984,
+          "requests_per_second": 9.908859588831818,
+          "peak_gpu_memory_usage_mb": 0.0,
+          "avg_cpu_usage": 2.63
+        },
+        "memory_usage": {
+          "peak_memory_increase_mb": 0.0,
+          "avg_memory_increase_mb": 0.0,
+          "std_memory_increase_mb": 0.0,
+          "peak_memory_usage_mb": 0.0,
+          "avg_peak_memory_mb": 0.0
+        }
+      },
+      "optimized": {
+        "inference_speed": {
+          "total_time": 0.5057222843170166,
+          "avg_time_per_inference": 0.10114445686340331,
+          "tokens_per_second": 177.96328694818337,
+          "memory_used_peak_mb": 0.0,
+          "memory_used_current_mb": 0.0,
+          "avg_cpu_usage": 2.96,
+          "avg_memory_usage": 32.120000000000005,
+          "peak_gpu_memory_usage_mb": 0.0
+        },
+        "throughput": {
+          "requests_completed": 30,
+          "actual_duration": 3.021829843521118,
+          "requests_per_second": 9.927759521046752,
+          "peak_gpu_memory_usage_mb": 0.0,
+          "avg_cpu_usage": 3.06
+        },
+        "memory_usage": {
+          "peak_memory_increase_mb": 0.0,
+          "avg_memory_increase_mb": 0.0,
+          "std_memory_increase_mb": 0.0,
+          "peak_memory_usage_mb": 0.0,
+          "avg_peak_memory_mb": 0.0
+        }
+      },
+      "comparisons": {
+        "speed_improvement_percent": 0.18857668447300746,
+        "throughput_improvement_percent": 0.19073771351281188,
+        "memory_improvement_percent": 0,
+        "accuracy_preserved": true,
+        "accuracy_similarity_score": 1.0
+      },
+      "summary": {
+        "tokens_per_second_unoptimized": 177.62832134909817,
+        "tokens_per_second_optimized": 177.96328694818337,
+        "throughput_unoptimized": 9.908859588831818,
+        "throughput_optimized": 9.927759521046752,
+        "avg_memory_unoptimized": 0.0,
+        "avg_memory_optimized": 0.0
+      }
+    },
+    "qwen3_vl_2b": {
+      "model": "qwen3_vl_2b",
+      "timestamp": 1768738555.9036443,
+      "datetime": "2026-01-18T09:15:55.903644",
+      "unoptimized": {
+        "inference_speed": {
+          "total_time": 0.5052874088287354,
+          "avg_time_per_inference": 0.10105748176574707,
+          "tokens_per_second": 178.11645100878627,
+          "memory_used_peak_mb": 0.0,
+          "memory_used_current_mb": 0.0,
+          "avg_cpu_usage": 0.38,
+          "avg_memory_usage": 32.14,
+          "peak_gpu_memory_usage_mb": 0.0
+        },
+        "throughput": {
+          "requests_completed": 30,
+          "actual_duration": 3.0232574939727783,
+          "requests_per_second": 9.923071408839158,
+          "peak_gpu_memory_usage_mb": 0.0,
+          "avg_cpu_usage": 2.5666666666666664
+        },
+        "memory_usage": {
+          "peak_memory_increase_mb": 0.0,
+          "avg_memory_increase_mb": 0.0,
+          "std_memory_increase_mb": 0.0,
+          "peak_memory_usage_mb": 0.0,
+          "avg_peak_memory_mb": 0.0
+        }
+      },
+      "optimized": {
+        "inference_speed": {
+          "total_time": 0.5066769123077393,
+          "avg_time_per_inference": 0.10133538246154786,
+          "tokens_per_second": 177.62798701460645,
+          "memory_used_peak_mb": 0.0,
+          "memory_used_current_mb": 0.0,
+          "avg_cpu_usage": 0.36,
+          "avg_memory_usage": 32.1,
+          "peak_gpu_memory_usage_mb": 0.0
+        },
+        "throughput": {
+          "requests_completed": 30,
+          "actual_duration": 3.0314221382141113,
+          "requests_per_second": 9.896345224183714,
+          "peak_gpu_memory_usage_mb": 0.0,
+          "avg_cpu_usage": 3.5033333333333334
+        },
+        "memory_usage": {
+          "peak_memory_increase_mb": 0.0,
+          "avg_memory_increase_mb": 0.0,
+          "std_memory_increase_mb": 0.0,
+          "peak_memory_usage_mb": 0.0,
+          "avg_peak_memory_mb": 0.0
+        }
+      },
+      "comparisons": {
+        "speed_improvement_percent": -0.27423856213917297,
+        "throughput_improvement_percent": -0.26933379348290654,
+        "memory_improvement_percent": 0,
+        "accuracy_preserved": true,
+        "accuracy_similarity_score": 1.0
+      },
+      "summary": {
+        "tokens_per_second_unoptimized": 178.11645100878627,
+        "tokens_per_second_optimized": 177.62798701460645,
+        "throughput_unoptimized": 9.923071408839158,
+        "throughput_optimized": 9.896345224183714,
+        "avg_memory_unoptimized": 0.0,
+        "avg_memory_optimized": 0.0
+      }
+    }
+  },
+  "aggregated_improvements": {
+    "avg_speed_improvement": 0.6420202981334999,
+    "avg_throughput_improvement": -0.013402240206367155,
+    "avg_memory_improvement": 0,
+    "models_with_improved_accuracy": 4,
+    "total_accuracy_checks": 4
+  }
+}

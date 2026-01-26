@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-01-21T09:51:35.579194",
+  "summary": {},
+  "detailed_results": {
+    "glm_4_7": {
+      "error": "Backup directory does not exist: C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\backup_original_models_os_benchmark\\glm_4_7"
+    },
+    "qwen3_4b_instruct_2507": {
+      "error": "Backup directory does not exist: C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\backup_original_models_os_benchmark\\qwen3_4b_instruct_2507"
+    },
+    "qwen3_coder_30b": {
+      "error": "Backup directory does not exist: C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\backup_original_models_os_benchmark\\qwen3_coder_30b"
+    },
+    "qwen3_vl_2b": {
+      "error": "Backup directory does not exist: C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\backup_original_models_os_benchmark\\qwen3_vl_2b"
+    }
+  }
+}

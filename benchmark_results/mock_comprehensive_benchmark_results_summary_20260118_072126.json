@@ -1,0 +1,353 @@
+{
+  "execution_summary": {
+    "start_time": "2026-01-18T07:21:24.000367",
+    "end_time": "2026-01-18T07:21:26.821114",
+    "total_duration_seconds": 2.8207473754882812,
+    "total_benchmarks": 28,
+    "models": [
+      "glm_4_7",
+      "qwen3_4b_instruct_2507",
+      "qwen3_coder_30b",
+      "qwen3_vl_2b"
+    ],
+    "categories": [
+      "accuracy",
+      "comparison",
+      "inference_speed",
+      "memory_usage",
+      "optimization_impact",
+      "power_efficiency",
+      "throughput"
+    ],
+    "platform": "win32",
+    "python_version": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+    "system_info": {
+      "cpu_count": 8,
+      "memory_total_gb": 10.298633575439453,
+      "cuda_available": true
+    }
+  },
+  "benchmark_summary": {
+    "successful_executions": 22,
+    "failed_executions": 6,
+    "total_execution_time": 1612.497768358316
+  },
+  "detailed_results": {
+    "glm_4_7": {
+      "accuracy": {
+        "status": "success",
+        "execution_time": 43.0807995830511,
+        "memory_usage_gb": 1.4369709604902123,
+        "accuracy_score": 0.9170867044609157,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": null,
+        "output": "Accuracy test completed for glm_4_7. Score: 0.917",
+        "start_time": 1768731640.9195678,
+        "end_time": 1768731684.0003674
+      },
+      "comparison": {
+        "status": "success",
+        "execution_time": 63.610306366963,
+        "memory_usage_gb": 7.379383981594343,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": null,
+        "output": "Comparison test completed for glm_4_7",
+        "start_time": 1768731620.4934483,
+        "end_time": 1768731684.1037545
+      },
+      "inference_speed": {
+        "status": "success",
+        "execution_time": 107.32790979378271,
+        "memory_usage_gb": 1.4280251297207598,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": null,
+        "output": "Inference speed test for glm_4_7. Avg time: 107.33s",
+        "start_time": 1768731576.876198,
+        "end_time": 1768731684.2041078
+      },
+      "memory_usage": {
+        "status": "success",
+        "execution_time": 53.642015234951,
+        "memory_usage_gb": 4.919596614345124,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": null,
+        "output": "Memory usage test for glm_4_7. Peak usage: 4.92GB",
+        "start_time": 1768731630.662285,
+        "end_time": 1768731684.3043003
+      },
+      "optimization_impact": {
+        "status": "success",
+        "execution_time": 76.0347289001666,
+        "memory_usage_gb": 4.031630019367969,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": null,
+        "output": "Optimization_Impact test completed for glm_4_7",
+        "start_time": 1768731608.3701665,
+        "end_time": 1768731684.4048955
+      },
+      "power_efficiency": {
+        "status": "failed",
+        "execution_time": 24.887363566082637,
+        "memory_usage_gb": 7.155064386553332,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": 54.06149451940056,
+        "output": "Power efficiency test for glm_4_7. Consumption: 54.06W",
+        "start_time": 1768731659.618383,
+        "end_time": 1768731684.5057466
+      },
+      "throughput": {
+        "status": "success",
+        "execution_time": 54.5147565434664,
+        "memory_usage_gb": 7.80873036287824,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": 31.82079218649231,
+        "power_consumption_watts": null,
+        "output": "Throughput test for glm_4_7. Rate: 31.82 tokens/sec",
+        "start_time": 1768731630.0921695,
+        "end_time": 1768731684.606926
+      }
+    },
+    "qwen3_4b_instruct_2507": {
+      "accuracy": {
+        "status": "success",
+        "execution_time": 22.93034927759483,
+        "memory_usage_gb": 6.015966843563491,
+        "accuracy_score": 0.9204208100372849,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": null,
+        "output": "Accuracy test completed for qwen3_4b_instruct_2507. Score: 0.920",
+        "start_time": 1768731661.776998,
+        "end_time": 1768731684.7073474
+      },
+      "comparison": {
+        "status": "success",
+        "execution_time": 111.32270268036531,
+        "memory_usage_gb": 1.5606704020275548,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": null,
+        "output": "Comparison test completed for qwen3_4b_instruct_2507",
+        "start_time": 1768731573.4857047,
+        "end_time": 1768731684.8084073
+      },
+      "inference_speed": {
+        "status": "success",
+        "execution_time": 35.41455236168524,
+        "memory_usage_gb": 5.798093472995441,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": null,
+        "output": "Inference speed test for qwen3_4b_instruct_2507. Avg time: 35.41s",
+        "start_time": 1768731649.4943984,
+        "end_time": 1768731684.9089508
+      },
+      "memory_usage": {
+        "status": "success",
+        "execution_time": 16.043467625335623,
+        "memory_usage_gb": 2.701594564650976,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": null,
+        "output": "Memory usage test for qwen3_4b_instruct_2507. Peak usage: 2.70GB",
+        "start_time": 1768731668.965968,
+        "end_time": 1768731685.0094354
+      },
+      "optimization_impact": {
+        "status": "success",
+        "execution_time": 75.54435477112806,
+        "memory_usage_gb": 2.4551672601431256,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": null,
+        "output": "Optimization_Impact test completed for qwen3_4b_instruct_2507",
+        "start_time": 1768731609.5656512,
+        "end_time": 1768731685.1100059
+      },
+      "power_efficiency": {
+        "status": "success",
+        "execution_time": 108.72951686484195,
+        "memory_usage_gb": 1.5678999439667876,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": 118.60711887908002,
+        "output": "Power efficiency test for qwen3_4b_instruct_2507. Consumption: 118.61W",
+        "start_time": 1768731576.480967,
+        "end_time": 1768731685.210484
+      },
+      "throughput": {
+        "status": "success",
+        "execution_time": 18.425640303517042,
+        "memory_usage_gb": 6.687649042479804,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": 22.40927770472261,
+        "power_consumption_watts": null,
+        "output": "Throughput test for qwen3_4b_instruct_2507. Rate: 22.41 tokens/sec",
+        "start_time": 1768731666.8856819,
+        "end_time": 1768731685.3113222
+      }
+    },
+    "qwen3_coder_30b": {
+      "accuracy": {
+        "status": "success",
+        "execution_time": 83.31048758600608,
+        "memory_usage_gb": 5.912951022814281,
+        "accuracy_score": 0.8233476008038247,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": null,
+        "output": "Accuracy test completed for qwen3_coder_30b. Score: 0.823",
+        "start_time": 1768731602.1017714,
+        "end_time": 1768731685.4122589
+      },
+      "comparison": {
+        "status": "failed",
+        "execution_time": 119.8977487491886,
+        "memory_usage_gb": 1.1316986926769825,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": null,
+        "output": "Comparison test completed for qwen3_coder_30b",
+        "start_time": 1768731565.6153219,
+        "end_time": 1768731685.5130706
+      },
+      "inference_speed": {
+        "status": "success",
+        "execution_time": 12.290607463858542,
+        "memory_usage_gb": 4.59591111016401,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": null,
+        "output": "Inference speed test for qwen3_coder_30b. Avg time: 12.29s",
+        "start_time": 1768731673.323388,
+        "end_time": 1768731685.6139956
+      },
+      "memory_usage": {
+        "status": "failed",
+        "execution_time": 53.216703000152826,
+        "memory_usage_gb": 3.7699033178370036,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": null,
+        "output": "Memory usage test for qwen3_coder_30b. Peak usage: 3.77GB",
+        "start_time": 1768731632.4978104,
+        "end_time": 1768731685.7145133
+      },
+      "optimization_impact": {
+        "status": "failed",
+        "execution_time": 26.00957164346635,
+        "memory_usage_gb": 6.723329886839568,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": null,
+        "output": "Optimization_Impact test completed for qwen3_coder_30b",
+        "start_time": 1768731659.8052258,
+        "end_time": 1768731685.8147974
+      },
+      "power_efficiency": {
+        "status": "success",
+        "execution_time": 13.682181615944312,
+        "memory_usage_gb": 4.298396496027257,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": 105.48378675739775,
+        "output": "Power efficiency test for qwen3_coder_30b. Consumption: 105.48W",
+        "start_time": 1768731672.2330425,
+        "end_time": 1768731685.915224
+      },
+      "throughput": {
+        "status": "success",
+        "execution_time": 11.17611684109333,
+        "memory_usage_gb": 1.0735266608277811,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": 6.415729041211088,
+        "power_consumption_watts": null,
+        "output": "Throughput test for qwen3_coder_30b. Rate: 6.42 tokens/sec",
+        "start_time": 1768731674.8396118,
+        "end_time": 1768731686.0157287
+      }
+    },
+    "qwen3_vl_2b": {
+      "accuracy": {
+        "status": "success",
+        "execution_time": 74.05315175416162,
+        "memory_usage_gb": 7.714377445102214,
+        "accuracy_score": 0.8487509287344678,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": null,
+        "output": "Accuracy test completed for qwen3_vl_2b. Score: 0.849",
+        "start_time": 1768731612.0632377,
+        "end_time": 1768731686.1163895
+      },
+      "comparison": {
+        "status": "failed",
+        "execution_time": 65.54168969128564,
+        "memory_usage_gb": 4.9050183467671795,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": null,
+        "output": "Comparison test completed for qwen3_vl_2b",
+        "start_time": 1768731620.6752274,
+        "end_time": 1768731686.216917
+      },
+      "inference_speed": {
+        "status": "failed",
+        "execution_time": 107.82530975443197,
+        "memory_usage_gb": 6.030743719597281,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": null,
+        "output": "Inference speed test for qwen3_vl_2b. Avg time: 107.83s",
+        "start_time": 1768731578.4919767,
+        "end_time": 1768731686.3172865
+      },
+      "memory_usage": {
+        "status": "success",
+        "execution_time": 92.60793698633026,
+        "memory_usage_gb": 4.410904394405604,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": null,
+        "output": "Memory usage test for qwen3_vl_2b. Peak usage: 4.41GB",
+        "start_time": 1768731593.8101091,
+        "end_time": 1768731686.4180462
+      },
+      "optimization_impact": {
+        "status": "success",
+        "execution_time": 40.45136377438829,
+        "memory_usage_gb": 3.514406191843579,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": null,
+        "output": "Optimization_Impact test completed for qwen3_vl_2b",
+        "start_time": 1768731646.0675843,
+        "end_time": 1768731686.518948
+      },
+      "power_efficiency": {
+        "status": "success",
+        "execution_time": 62.88588110591039,
+        "memory_usage_gb": 1.0253006841188235,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": null,
+        "power_consumption_watts": 110.23303874628333,
+        "output": "Power efficiency test for qwen3_vl_2b. Consumption: 110.23W",
+        "start_time": 1768731623.7341435,
+        "end_time": 1768731686.6200247
+      },
+      "throughput": {
+        "status": "success",
+        "execution_time": 38.04055451916629,
+        "memory_usage_gb": 6.339944660461009,
+        "accuracy_score": null,
+        "throughput_tokens_per_sec": 18.096201707482535,
+        "power_consumption_watts": null,
+        "output": "Throughput test for qwen3_vl_2b. Rate: 18.10 tokens/sec",
+        "start_time": 1768731648.6802056,
+        "end_time": 1768731686.72076
+      }
+    }
+  }
+}

@@ -1,0 +1,4 @@
+Model: qwen3_coder_30b
+Category: benchmark_throughput
+Execution time: 0.00s
+============================================================

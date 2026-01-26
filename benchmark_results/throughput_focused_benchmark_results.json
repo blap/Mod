@@ -1,0 +1,88 @@
+{
+  "glm_4_7": {
+    "model": "glm_4_7",
+    "category": "throughput",
+    "timestamp": 1768701181.1407175,
+    "results": [
+      {
+        "test_method": "test_batch_throughput",
+        "status": "passed",
+        "output": "\nGLM-4.7-Flash-Flash Batch Throughput (Batch size: 1):\n  Total requests: 10\n  Total time: 0.0241s\n  Requests per second: 415.42\n\nGLM-4.7-Flash-Flash Batch Throughput (Batch size: 2):\n  Total requests: 20\n  Total time: 0.0242s\n  Requests per second: 824.82\n\nGLM-4.7-Flash-Flash Batch Throughput (Batch size: 4):\n  Total requests: 40\n  Total time: 0.0238s\n  Requests per second: 1682.53\n\nGLM-4.7-Flash-Flash Batch Throughput (Batch size: 8):\n  Total requests: 80\n  Total time: 0.0249s\n  Requests per second: 3217.11\n"
+      },
+      {
+        "test_method": "test_concurrent_throughput",
+        "status": "passed",
+        "output": "\nGLM-4.7-Flash-Flash Concurrent Throughput:\n  Total time: 0.0134s\n  Requests per second: 1494.79\n  Total requests: 20\n"
+      },
+      {
+        "test_method": "test_generation_throughput",
+        "status": "passed",
+        "output": "\nGLM-4.7-Flash-Flash Generation Throughput:\n  Total requests: 20\n  Total time: 0.2090s\n  Requests per second: 95.67\n"
+      },
+      {
+        "test_method": "test_latency_vs_throughput_tradeoff",
+        "status": "passed",
+        "output": "\nGLM-4.7-Flash-Flash Latency vs Throughput:\n  Single request latency: 0.0024s\n  Average latency (under load): 0.0024s\n  Throughput: 419.68 req/sec\n"
+      },
+      {
+        "test_method": "test_sequential_throughput",
+        "status": "passed",
+        "output": "\nGLM-4.7-Flash-Flash Sequential Throughput:\n  Total time: 0.0482s\n  Requests per second: 414.75\n  Total requests: 20\n"
+      },
+      {
+        "test_method": "test_throughput_under_load",
+        "status": "passed",
+        "output": "\nGLM-4.7-Flash-Flash Sustained Load Throughput:\n  Total requests: 100\n  Total time: 0.2351s\n  Requests per second: 425.35\n"
+      },
+      {
+        "test_method": "test_throughput_with_variable_request_sizes",
+        "status": "passed",
+        "output": "  10 requests: 433.24 req/sec\n  25 requests: 414.94 req/sec\n  50 requests: 413.61 req/sec\n"
+      }
+    ],
+    "status": "success"
+  },
+  "qwen3_4b_instruct_2507": {
+    "model": "qwen3_4b_instruct_2507",
+    "category": "throughput",
+    "timestamp": 1768701182.090807,
+    "results": [
+      {
+        "test_method": "test_batch_throughput",
+        "status": "passed",
+        "output": "\nQwen3-4B-Instruct-2507 Batch Throughput (Batch size: 1):\n  Total requests: 10\n  Total time: 0.0250s\n  Requests per second: 400.56\n\nQwen3-4B-Instruct-2507 Batch Throughput (Batch size: 2):\n  Total requests: 20\n  Total time: 0.0236s\n  Requests per second: 846.06\n\nQwen3-4B-Instruct-2507 Batch Throughput (Batch size: 4):\n  Total requests: 40\n  Total time: 0.0240s\n  Requests per second: 1665.43\n\nQwen3-4B-Instruct-2507 Batch Throughput (Batch size: 8):\n  Total requests: 80\n  Total time: 0.0245s\n  Requests per second: 3264.08\n"
+      },
+      {
+        "test_method": "test_concurrent_throughput",
+        "status": "passed",
+        "output": "\nQwen3-4B-Instruct-2507 Concurrent Throughput:\n  Total time: 0.0161s\n  Requests per second: 1240.33\n  Total requests: 20\n"
+      },
+      {
+        "test_method": "test_generation_throughput",
+        "status": "passed",
+        "output": "\nQwen3-4B-Instruct-2507 Generation Throughput:\n  Total requests: 20\n  Total time: 0.2069s\n  Requests per second: 96.67\n"
+      },
+      {
+        "test_method": "test_latency_vs_throughput_tradeoff",
+        "status": "passed",
+        "output": "\nQwen3-4B-Instruct-2507 Latency vs Throughput:\n  Single request latency: 0.0021s\n  Average latency (under load): 0.0022s\n  Throughput: 455.02 req/sec\n"
+      },
+      {
+        "test_method": "test_sequential_throughput",
+        "status": "passed",
+        "output": "\nQwen3-4B-Instruct-2507 Sequential Throughput:\n  Total time: 0.0478s\n  Requests per second: 418.22\n  Total requests: 20\n"
+      },
+      {
+        "test_method": "test_throughput_under_load",
+        "status": "passed",
+        "output": "\nQwen3-4B-Instruct-2507 Sustained Load Throughput:\n  Total requests: 100\n  Total time: 0.2317s\n  Requests per second: 431.64\n"
+      },
+      {
+        "test_method": "test_throughput_with_variable_request_sizes",
+        "status": "passed",
+        "output": "  10 requests: 408.53 req/sec\n  25 requests: 411.10 req/sec\n  50 requests: 417.84 req/sec\n"
+      }
+    ],
+    "status": "success"
+  }
+}

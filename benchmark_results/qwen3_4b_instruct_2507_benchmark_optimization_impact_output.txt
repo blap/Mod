@@ -1,0 +1,4 @@
+Model: qwen3_4b_instruct_2507
+Category: benchmark_optimization_impact
+Execution time: 0.00s
+============================================================

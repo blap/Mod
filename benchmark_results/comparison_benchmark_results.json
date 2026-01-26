@@ -1,0 +1,30 @@
+{
+  "qwen3_vl_2b": {
+    "benchmark_comparison": {
+      "status": "cross_import_error",
+      "execution_time": 0.0,
+      "error": "Cross-model import error (expected): cannot import name 'create_qwen3_vl_2b_plugin' from 'inference_pio.models.qwen3_vl_2b.plugin' (C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\qwen3_vl_2b\\plugin.py)"
+    }
+  },
+  "glm_4_7": {
+    "benchmark_comparison": {
+      "status": "cross_import_error",
+      "execution_time": 0.0,
+      "error": "Cross-model import error (expected): cannot import name 'create_qwen3_vl_2b_plugin' from 'inference_pio.models.qwen3_vl_2b.plugin' (C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\qwen3_vl_2b\\plugin.py)"
+    }
+  },
+  "qwen3_4b_instruct_2507": {
+    "benchmark_comparison": {
+      "status": "cross_import_error",
+      "execution_time": 0.0,
+      "error": "Cross-model import error (expected): cannot import name 'create_qwen3_vl_2b_plugin' from 'inference_pio.models.qwen3_vl_2b.plugin' (C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\qwen3_vl_2b\\plugin.py)"
+    }
+  },
+  "qwen3_coder_30b": {
+    "benchmark_comparison": {
+      "status": "cross_import_error",
+      "execution_time": 0.0,
+      "error": "Cross-model import error (expected): cannot import name 'create_qwen3_vl_2b_plugin' from 'inference_pio.models.qwen3_vl_2b.plugin' (C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\qwen3_vl_2b\\plugin.py)"
+    }
+  }
+}

@@ -1,0 +1,4 @@
+Model: qwen3_vl_2b
+Category: benchmark_throughput
+Execution time: 0.00s
+============================================================

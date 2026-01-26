@@ -1,0 +1,146 @@
+{
+  "glm_4_7": {
+    "model": "glm_4_7",
+    "category": "memory_usage",
+    "timestamp": 1768700628.9379365,
+    "results": [
+      {
+        "test_method": "test_memory_efficiency_with_kv_cache",
+        "status": "failed",
+        "error": "Failed to run test_memory_efficiency_with_kv_cache: 0.0 not greater than 0",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\run_complete_benchmark_suite.py\", line 175, in run_benchmark_for_model\n    method()\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\glm_4_7\\benchmarks\\benchmark_memory_usage.py\", line 222, in test_memory_efficiency_with_kv_cache\n    self.assertGreater(memory_without_cache, 0)\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 1269, in assertGreater\n    self.fail(self._formatMessage(msg, standardMsg))\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 715, in fail\n    raise self.failureException(msg)\nAssertionError: 0.0 not greater than 0\n"
+      },
+      {
+        "test_method": "test_memory_usage_after_initialization",
+        "status": "passed",
+        "output": "\nGLM-4.7-Flash-Flash Memory Usage After Initialization:\n  Baseline: 636.20 MB\n  After init: 636.20 MB\n  Increase: 0.00 MB\n"
+      },
+      {
+        "test_method": "test_memory_usage_after_model_loading",
+        "status": "failed",
+        "error": "Failed to run test_memory_usage_after_model_loading: 636.1953125 not greater than 636.1953125",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\run_complete_benchmark_suite.py\", line 175, in run_benchmark_for_model\n    method()\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\glm_4_7\\benchmarks\\benchmark_memory_usage.py\", line 115, in test_memory_usage_after_model_loading\n    self.assertGreater(post_load_memory, post_init_memory)\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 1269, in assertGreater\n    self.fail(self._formatMessage(msg, standardMsg))\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 715, in fail\n    raise self.failureException(msg)\nAssertionError: 636.1953125 not greater than 636.1953125\n"
+      },
+      {
+        "test_method": "test_memory_usage_baseline",
+        "status": "passed",
+        "output": "\nGLM-4.7-Flash-Flash Baseline Memory Usage:\n  Baseline: 636.20 MB\n"
+      },
+      {
+        "test_method": "test_memory_usage_full_workflow",
+        "status": "failed",
+        "error": "Failed to run test_memory_usage_full_workflow: 636.1953125 not greater than 636.1953125",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\run_complete_benchmark_suite.py\", line 175, in run_benchmark_for_model\n    method()\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\glm_4_7\\benchmarks\\benchmark_memory_usage.py\", line 130, in test_memory_usage_full_workflow\n    self.assertGreater(results['total_peak_memory'], results['baseline_memory'])\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 1269, in assertGreater\n    self.fail(self._formatMessage(msg, standardMsg))\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 715, in fail\n    raise self.failureException(msg)\nAssertionError: 636.1953125 not greater than 636.1953125\n"
+      },
+      {
+        "test_method": "test_memory_usage_with_different_batch_sizes",
+        "status": "failed",
+        "error": "Failed to run test_memory_usage_with_different_batch_sizes: 0.0 not greater than 0",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\run_complete_benchmark_suite.py\", line 175, in run_benchmark_for_model\n    method()\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\glm_4_7\\benchmarks\\benchmark_memory_usage.py\", line 162, in test_memory_usage_with_different_batch_sizes\n    self.assertGreater(memory, 0)\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 1269, in assertGreater\n    self.fail(self._formatMessage(msg, standardMsg))\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 715, in fail\n    raise self.failureException(msg)\nAssertionError: 0.0 not greater than 0\n"
+      },
+      {
+        "test_method": "test_memory_usage_with_different_sequence_lengths",
+        "status": "failed",
+        "error": "Failed to run test_memory_usage_with_different_sequence_lengths: 0.0 not greater than 0",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\run_complete_benchmark_suite.py\", line 175, in run_benchmark_for_model\n    method()\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\glm_4_7\\benchmarks\\benchmark_memory_usage.py\", line 191, in test_memory_usage_with_different_sequence_lengths\n    self.assertGreater(memory, 0)\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 1269, in assertGreater\n    self.fail(self._formatMessage(msg, standardMsg))\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 715, in fail\n    raise self.failureException(msg)\nAssertionError: 0.0 not greater than 0\n"
+      }
+    ],
+    "status": "partial"
+  },
+  "qwen3_4b_instruct_2507": {
+    "model": "qwen3_4b_instruct_2507",
+    "category": "memory_usage",
+    "timestamp": 1768700629.0679495,
+    "results": [
+      {
+        "test_method": "test_memory_efficiency_with_kv_cache",
+        "status": "failed",
+        "error": "Failed to run test_memory_efficiency_with_kv_cache: 0.0 not greater than 0",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\run_complete_benchmark_suite.py\", line 175, in run_benchmark_for_model\n    method()\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\qwen3_4b_instruct_2507\\benchmarks\\benchmark_memory_usage.py\", line 222, in test_memory_efficiency_with_kv_cache\n    self.assertGreater(memory_without_cache, 0)\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 1269, in assertGreater\n    self.fail(self._formatMessage(msg, standardMsg))\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 715, in fail\n    raise self.failureException(msg)\nAssertionError: 0.0 not greater than 0\n"
+      },
+      {
+        "test_method": "test_memory_usage_after_initialization",
+        "status": "passed",
+        "output": "\nQwen3-4B-Instruct-2507 Memory Usage After Initialization:\n  Baseline: 636.21 MB\n  After init: 636.21 MB\n  Increase: 0.00 MB\n"
+      },
+      {
+        "test_method": "test_memory_usage_after_model_loading",
+        "status": "failed",
+        "error": "Failed to run test_memory_usage_after_model_loading: 636.20703125 not greater than 636.20703125",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\run_complete_benchmark_suite.py\", line 175, in run_benchmark_for_model\n    method()\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\qwen3_4b_instruct_2507\\benchmarks\\benchmark_memory_usage.py\", line 115, in test_memory_usage_after_model_loading\n    self.assertGreater(post_load_memory, post_init_memory)\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 1269, in assertGreater\n    self.fail(self._formatMessage(msg, standardMsg))\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 715, in fail\n    raise self.failureException(msg)\nAssertionError: 636.20703125 not greater than 636.20703125\n"
+      },
+      {
+        "test_method": "test_memory_usage_baseline",
+        "status": "passed",
+        "output": "\nQwen3-4B-Instruct-2507 Baseline Memory Usage:\n  Baseline: 636.21 MB\n"
+      },
+      {
+        "test_method": "test_memory_usage_full_workflow",
+        "status": "failed",
+        "error": "Failed to run test_memory_usage_full_workflow: 636.20703125 not greater than 636.20703125",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\run_complete_benchmark_suite.py\", line 175, in run_benchmark_for_model\n    method()\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\qwen3_4b_instruct_2507\\benchmarks\\benchmark_memory_usage.py\", line 130, in test_memory_usage_full_workflow\n    self.assertGreater(results['total_peak_memory'], results['baseline_memory'])\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 1269, in assertGreater\n    self.fail(self._formatMessage(msg, standardMsg))\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 715, in fail\n    raise self.failureException(msg)\nAssertionError: 636.20703125 not greater than 636.20703125\n"
+      },
+      {
+        "test_method": "test_memory_usage_with_different_batch_sizes",
+        "status": "failed",
+        "error": "Failed to run test_memory_usage_with_different_batch_sizes: 0.0 not greater than 0",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\run_complete_benchmark_suite.py\", line 175, in run_benchmark_for_model\n    method()\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\qwen3_4b_instruct_2507\\benchmarks\\benchmark_memory_usage.py\", line 162, in test_memory_usage_with_different_batch_sizes\n    self.assertGreater(memory, 0)\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 1269, in assertGreater\n    self.fail(self._formatMessage(msg, standardMsg))\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 715, in fail\n    raise self.failureException(msg)\nAssertionError: 0.0 not greater than 0\n"
+      },
+      {
+        "test_method": "test_memory_usage_with_different_sequence_lengths",
+        "status": "failed",
+        "error": "Failed to run test_memory_usage_with_different_sequence_lengths: 0.0 not greater than 0",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\run_complete_benchmark_suite.py\", line 175, in run_benchmark_for_model\n    method()\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\qwen3_4b_instruct_2507\\benchmarks\\benchmark_memory_usage.py\", line 191, in test_memory_usage_with_different_sequence_lengths\n    self.assertGreater(memory, 0)\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 1269, in assertGreater\n    self.fail(self._formatMessage(msg, standardMsg))\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 715, in fail\n    raise self.failureException(msg)\nAssertionError: 0.0 not greater than 0\n"
+      }
+    ],
+    "status": "partial"
+  },
+  "qwen3_coder_30b": {
+    "model": "qwen3_coder_30b",
+    "category": "memory_usage",
+    "timestamp": 1768700629.195819,
+    "results": [
+      {
+        "test_method": "test_memory_efficiency_with_kv_cache",
+        "status": "failed",
+        "error": "Failed to run test_memory_efficiency_with_kv_cache: 0.0 not greater than 0",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\run_complete_benchmark_suite.py\", line 175, in run_benchmark_for_model\n    method()\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\qwen3_coder_30b\\benchmarks\\benchmark_memory_usage.py\", line 222, in test_memory_efficiency_with_kv_cache\n    self.assertGreater(memory_without_cache, 0)\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 1269, in assertGreater\n    self.fail(self._formatMessage(msg, standardMsg))\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 715, in fail\n    raise self.failureException(msg)\nAssertionError: 0.0 not greater than 0\n"
+      },
+      {
+        "test_method": "test_memory_usage_after_initialization",
+        "status": "passed",
+        "output": "\nQwen3-Coder-30B Memory Usage After Initialization:\n  Baseline: 636.27 MB\n  After init: 636.27 MB\n  Increase: 0.00 MB\n"
+      },
+      {
+        "test_method": "test_memory_usage_after_model_loading",
+        "status": "failed",
+        "error": "Failed to run test_memory_usage_after_model_loading: 636.2734375 not greater than 636.2734375",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\run_complete_benchmark_suite.py\", line 175, in run_benchmark_for_model\n    method()\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\qwen3_coder_30b\\benchmarks\\benchmark_memory_usage.py\", line 115, in test_memory_usage_after_model_loading\n    self.assertGreater(post_load_memory, post_init_memory)\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 1269, in assertGreater\n    self.fail(self._formatMessage(msg, standardMsg))\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 715, in fail\n    raise self.failureException(msg)\nAssertionError: 636.2734375 not greater than 636.2734375\n"
+      },
+      {
+        "test_method": "test_memory_usage_baseline",
+        "status": "passed",
+        "output": "\nQwen3-Coder-30B Baseline Memory Usage:\n  Baseline: 636.27 MB\n"
+      },
+      {
+        "test_method": "test_memory_usage_full_workflow",
+        "status": "failed",
+        "error": "Failed to run test_memory_usage_full_workflow: 636.2734375 not greater than 636.2734375",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\run_complete_benchmark_suite.py\", line 175, in run_benchmark_for_model\n    method()\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\qwen3_coder_30b\\benchmarks\\benchmark_memory_usage.py\", line 130, in test_memory_usage_full_workflow\n    self.assertGreater(results['total_peak_memory'], results['baseline_memory'])\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 1269, in assertGreater\n    self.fail(self._formatMessage(msg, standardMsg))\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 715, in fail\n    raise self.failureException(msg)\nAssertionError: 636.2734375 not greater than 636.2734375\n"
+      },
+      {
+        "test_method": "test_memory_usage_with_different_batch_sizes",
+        "status": "failed",
+        "error": "Failed to run test_memory_usage_with_different_batch_sizes: 0.0 not greater than 0",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\run_complete_benchmark_suite.py\", line 175, in run_benchmark_for_model\n    method()\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\qwen3_coder_30b\\benchmarks\\benchmark_memory_usage.py\", line 162, in test_memory_usage_with_different_batch_sizes\n    self.assertGreater(memory, 0)\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 1269, in assertGreater\n    self.fail(self._formatMessage(msg, standardMsg))\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 715, in fail\n    raise self.failureException(msg)\nAssertionError: 0.0 not greater than 0\n"
+      },
+      {
+        "test_method": "test_memory_usage_with_different_sequence_lengths",
+        "status": "failed",
+        "error": "Failed to run test_memory_usage_with_different_sequence_lengths: 0.0 not greater than 0",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\run_complete_benchmark_suite.py\", line 175, in run_benchmark_for_model\n    method()\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\qwen3_coder_30b\\benchmarks\\benchmark_memory_usage.py\", line 191, in test_memory_usage_with_different_sequence_lengths\n    self.assertGreater(memory, 0)\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 1269, in assertGreater\n    self.fail(self._formatMessage(msg, standardMsg))\n  File \"C:\\Program Files\\Python312\\Lib\\unittest\\case.py\", line 715, in fail\n    raise self.failureException(msg)\nAssertionError: 0.0 not greater than 0\n"
+      }
+    ],
+    "status": "partial"
+  }
+}

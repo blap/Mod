@@ -1,0 +1,145 @@
+<?xml version="1.0" ?>
+<testsuite name="Inference-PIO Test Suite" tests="11" failures="1" errors="0" skipped="0" time="0.4063075999802095" timestamp="2026-01-25T21:01:29.983439">
+  <properties>
+    <property name="os_name" value="nt (win32)"/>
+    <property name="os_version" value="Unknown"/>
+    <property name="cpu_info" value="Unknown"/>
+    <property name="cpu_count" value="8"/>
+    <property name="memory_total" value="10.298633575439453"/>
+    <property name="python_version" value="3.12.10"/>
+    <property name="torch_version" value="2.7.1+cu128"/>
+    <property name="cuda_available" value="True"/>
+    <property name="cuda_version" value="12.8"/>
+    <property name="gpu_count" value="1"/>
+    <property name="gpu_names" value="['NVIDIA GeForce MX330']"/>
+    <property name="gpu_usage" value="None"/>
+    <property name="gpu_memory" value="1.9998779296875"/>
+  </properties>
+  <testcase name="tests/sample_reporting_test.py::test_fast_operation" classname="tests/sample_reporting_test" time="0.010377899998275097">
+    <properties>
+      <property name="tag_test_fast_operation" value="true"/>
+      <property name="tag_sample_reporting_test.py" value="true"/>
+      <property name="tag_tests" value="true"/>
+      <property name="tag_Mod" value="true"/>
+      <property name="tag_" value="true"/>
+    </properties>
+  </testcase>
+  <testcase name="tests/sample_reporting_test.py::test_medium_operation" classname="tests/sample_reporting_test" time="0.05036120000295341">
+    <properties>
+      <property name="tag_test_medium_operation" value="true"/>
+      <property name="tag_sample_reporting_test.py" value="true"/>
+      <property name="tag_tests" value="true"/>
+      <property name="tag_Mod" value="true"/>
+      <property name="tag_" value="true"/>
+    </properties>
+  </testcase>
+  <testcase name="tests/sample_reporting_test.py::test_slow_operation" classname="tests/sample_reporting_test" time="0.2007268999950611">
+    <properties>
+      <property name="tag_test_slow_operation" value="true"/>
+      <property name="tag_slow" value="true"/>
+      <property name="tag_pytestmark" value="true"/>
+      <property name="tag_sample_reporting_test.py" value="true"/>
+      <property name="tag_tests" value="true"/>
+      <property name="tag_Mod" value="true"/>
+      <property name="tag_" value="true"/>
+    </properties>
+  </testcase>
+  <testcase name="tests/sample_reporting_test.py::test_failing_operation" classname="tests/sample_reporting_test" time="0.02070669999375241">
+    <failure message="def test_failing_operation():
+        &quot;&quot;&quot;A test that will fail to demonstrate error reporting.&quot;&quot;&quot;
+        time.sleep(0.02)
+&gt;       assert 2 + 2 == 5, &quot;This is intentionally wrong to show error reporting&quot;
+E       AssertionError: This is intentionally wrong to show error reporting
+E       assert (2 + 2) == 5
+
+tests\sample_reporting_test.py:37: AssertionError"/>
+    <properties>
+      <property name="tag_test_failing_operation" value="true"/>
+      <property name="tag_sample_reporting_test.py" value="true"/>
+      <property name="tag_tests" value="true"/>
+      <property name="tag_Mod" value="true"/>
+      <property name="tag_" value="true"/>
+    </properties>
+  </testcase>
+  <testcase name="tests/sample_reporting_test.py::test_unit_feature" classname="tests/sample_reporting_test" time="0.030786799994530156">
+    <properties>
+      <property name="tag_test_unit_feature" value="true"/>
+      <property name="tag_unit" value="true"/>
+      <property name="tag_pytestmark" value="true"/>
+      <property name="tag_sample_reporting_test.py" value="true"/>
+      <property name="tag_tests" value="true"/>
+      <property name="tag_Mod" value="true"/>
+      <property name="tag_" value="true"/>
+      <property name="tag_unit" value="true"/>
+    </properties>
+  </testcase>
+  <testcase name="tests/sample_reporting_test.py::test_integration_component" classname="tests/sample_reporting_test" time="0.04072900000028312">
+    <properties>
+      <property name="tag_test_integration_component" value="true"/>
+      <property name="tag_integration" value="true"/>
+      <property name="tag_pytestmark" value="true"/>
+      <property name="tag_sample_reporting_test.py" value="true"/>
+      <property name="tag_tests" value="true"/>
+      <property name="tag_Mod" value="true"/>
+      <property name="tag_" value="true"/>
+      <property name="tag_integration" value="true"/>
+    </properties>
+  </testcase>
+  <testcase name="tests/sample_reporting_test.py::test_parametrized[1-2]" classname="tests/sample_reporting_test" time="0.010550699997111224">
+    <properties>
+      <property name="tag_test_parametrized[1-2]" value="true"/>
+      <property name="tag_parametrize" value="true"/>
+      <property name="tag_pytestmark" value="true"/>
+      <property name="tag_1-2" value="true"/>
+      <property name="tag_sample_reporting_test.py" value="true"/>
+      <property name="tag_tests" value="true"/>
+      <property name="tag_Mod" value="true"/>
+      <property name="tag_" value="true"/>
+    </properties>
+  </testcase>
+  <testcase name="tests/sample_reporting_test.py::test_parametrized[2-4]" classname="tests/sample_reporting_test" time="0.01081720000365749">
+    <properties>
+      <property name="tag_test_parametrized[2-4]" value="true"/>
+      <property name="tag_parametrize" value="true"/>
+      <property name="tag_pytestmark" value="true"/>
+      <property name="tag_2-4" value="true"/>
+      <property name="tag_sample_reporting_test.py" value="true"/>
+      <property name="tag_tests" value="true"/>
+      <property name="tag_Mod" value="true"/>
+      <property name="tag_" value="true"/>
+    </properties>
+  </testcase>
+  <testcase name="tests/sample_reporting_test.py::test_parametrized[3-6]" classname="tests/sample_reporting_test" time="0.010452499998791609">
+    <properties>
+      <property name="tag_test_parametrized[3-6]" value="true"/>
+      <property name="tag_parametrize" value="true"/>
+      <property name="tag_pytestmark" value="true"/>
+      <property name="tag_3-6" value="true"/>
+      <property name="tag_sample_reporting_test.py" value="true"/>
+      <property name="tag_tests" value="true"/>
+      <property name="tag_Mod" value="true"/>
+      <property name="tag_" value="true"/>
+    </properties>
+  </testcase>
+  <testcase name="tests/sample_reporting_test.py::test_with_exception" classname="tests/sample_reporting_test" time="0.020443099994736258">
+    <properties>
+      <property name="tag_test_with_exception" value="true"/>
+      <property name="tag_sample_reporting_test.py" value="true"/>
+      <property name="tag_tests" value="true"/>
+      <property name="tag_Mod" value="true"/>
+      <property name="tag_" value="true"/>
+    </properties>
+  </testcase>
+  <testcase name="tests/sample_reporting_test.py::test_performance_metric" classname="tests/sample_reporting_test" time="0.0003556000010576099">
+    <properties>
+      <property name="tag_test_performance_metric" value="true"/>
+      <property name="tag_performance" value="true"/>
+      <property name="tag_pytestmark" value="true"/>
+      <property name="tag_sample_reporting_test.py" value="true"/>
+      <property name="tag_tests" value="true"/>
+      <property name="tag_Mod" value="true"/>
+      <property name="tag_" value="true"/>
+      <property name="tag_performance" value="true"/>
+    </properties>
+  </testcase>
+</testsuite>

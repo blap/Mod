@@ -43,6 +43,7 @@ ENV/
 .coverage
 htmlcov/
 .cov/
+test_results/
 
 # Logs
 *.log
@@ -86,3 +87,32 @@ prof/
 
 # Pre-commit
 .pre-commit/
+
+# Temporary benchmark files
+*benchmark_test.py
+*run_*_benchmark*.py
+*simple_test.py
+*test_fix.py
+
+# Debug and temporary files
+*debug_*.py
+*temp_*.py
+*.log
+errors.log
+temp_fix.py
+debug_*.log
+*.tmp
+*.temp
+
+# Plugin temporary files
+*plugin_temp_*.py
+*temp_plugin_*.py
+
+# Development tools that are temporary
+dev_tools/debug_*
+dev_tools/temp_*
+
+# Temporary test files
+test_plugin_fixes.py
+test_simple.py
+validate_real_data.py

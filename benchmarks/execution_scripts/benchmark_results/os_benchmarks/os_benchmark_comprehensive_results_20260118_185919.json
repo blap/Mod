@@ -1,0 +1,595 @@
+{
+  "execution_metadata": {
+    "start_time": "2026-01-18T18:59:19.828321",
+    "end_time": "2026-01-18T18:59:59.964573",
+    "total_duration_seconds": 40.1362521648407,
+    "models": [
+      "glm_4_7",
+      "qwen3_4b_instruct_2507",
+      "qwen3_coder_30b",
+      "qwen3_vl_2b"
+    ],
+    "categories": [
+      "accuracy",
+      "inference_speed",
+      "memory_usage",
+      "optimization_impact"
+    ],
+    "states": [
+      "original",
+      "modified"
+    ],
+    "platform": "win32",
+    "python_version": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+    "torch_version": "2.7.1+cu128"
+  },
+  "state_results": {
+    "original": {
+      "state": "original",
+      "timestamp": 1768773560.028873,
+      "model_results": {
+        "glm_4_7": {
+          "accuracy": {
+            "model": "glm_4_7",
+            "category": "accuracy",
+            "state": "original",
+            "status": "success",
+            "execution_time": 1.669809341430664,
+            "timestamp": 1768773561.6986823,
+            "metrics": {
+              "accuracy_score": 0.8409,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": null
+            }
+          },
+          "inference_speed": {
+            "model": "glm_4_7",
+            "category": "inference_speed",
+            "state": "original",
+            "status": "success",
+            "execution_time": 1.0078279972076416,
+            "timestamp": 1768773562.7065103,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": 39.85,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": null
+            }
+          },
+          "memory_usage": {
+            "model": "glm_4_7",
+            "category": "memory_usage",
+            "state": "original",
+            "status": "success",
+            "execution_time": 1.0006916522979736,
+            "timestamp": 1768773563.707202,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": 1267.17,
+              "optimization_improvement_pct": null
+            }
+          },
+          "optimization_impact": {
+            "model": "glm_4_7",
+            "category": "optimization_impact",
+            "state": "original",
+            "status": "success",
+            "execution_time": 1.0007026195526123,
+            "timestamp": 1768773564.7079046,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": -3.15
+            }
+          }
+        },
+        "qwen3_4b_instruct_2507": {
+          "accuracy": {
+            "model": "qwen3_4b_instruct_2507",
+            "category": "accuracy",
+            "state": "original",
+            "status": "success",
+            "execution_time": 1.0007047653198242,
+            "timestamp": 1768773565.7086093,
+            "metrics": {
+              "accuracy_score": 0.793,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": null
+            }
+          },
+          "inference_speed": {
+            "model": "qwen3_4b_instruct_2507",
+            "category": "inference_speed",
+            "state": "original",
+            "status": "success",
+            "execution_time": 1.000889778137207,
+            "timestamp": 1768773566.7094991,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": 18.17,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": null
+            }
+          },
+          "memory_usage": {
+            "model": "qwen3_4b_instruct_2507",
+            "category": "memory_usage",
+            "state": "original",
+            "status": "success",
+            "execution_time": 1.0006039142608643,
+            "timestamp": 1768773567.710103,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": 3995.44,
+              "optimization_improvement_pct": null
+            }
+          },
+          "optimization_impact": {
+            "model": "qwen3_4b_instruct_2507",
+            "category": "optimization_impact",
+            "state": "original",
+            "status": "success",
+            "execution_time": 1.0004291534423828,
+            "timestamp": 1768773568.7105322,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": -8.85
+            }
+          }
+        },
+        "qwen3_coder_30b": {
+          "accuracy": {
+            "model": "qwen3_coder_30b",
+            "category": "accuracy",
+            "state": "original",
+            "status": "success",
+            "execution_time": 1.0007376670837402,
+            "timestamp": 1768773569.7112699,
+            "metrics": {
+              "accuracy_score": 0.7766,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": null
+            }
+          },
+          "inference_speed": {
+            "model": "qwen3_coder_30b",
+            "category": "inference_speed",
+            "state": "original",
+            "status": "success",
+            "execution_time": 1.0009307861328125,
+            "timestamp": 1768773570.7122006,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": 32.54,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": null
+            }
+          },
+          "memory_usage": {
+            "model": "qwen3_coder_30b",
+            "category": "memory_usage",
+            "state": "original",
+            "status": "success",
+            "execution_time": 1.0003139972686768,
+            "timestamp": 1768773571.7125146,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": 3866.92,
+              "optimization_improvement_pct": null
+            }
+          },
+          "optimization_impact": {
+            "model": "qwen3_coder_30b",
+            "category": "optimization_impact",
+            "state": "original",
+            "status": "success",
+            "execution_time": 1.0005500316619873,
+            "timestamp": 1768773572.7130647,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": 25.0
+            }
+          }
+        },
+        "qwen3_vl_2b": {
+          "accuracy": {
+            "model": "qwen3_vl_2b",
+            "category": "accuracy",
+            "state": "original",
+            "status": "success",
+            "execution_time": 1.0010120868682861,
+            "timestamp": 1768773573.7140768,
+            "metrics": {
+              "accuracy_score": 0.7596,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": null
+            }
+          },
+          "inference_speed": {
+            "model": "qwen3_vl_2b",
+            "category": "inference_speed",
+            "state": "original",
+            "status": "success",
+            "execution_time": 1.0006403923034668,
+            "timestamp": 1768773574.7147171,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": 65.53,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": null
+            }
+          },
+          "memory_usage": {
+            "model": "qwen3_vl_2b",
+            "category": "memory_usage",
+            "state": "original",
+            "status": "success",
+            "execution_time": 1.0008256435394287,
+            "timestamp": 1768773575.7155428,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": 3416.02,
+              "optimization_improvement_pct": null
+            }
+          },
+          "optimization_impact": {
+            "model": "qwen3_vl_2b",
+            "category": "optimization_impact",
+            "state": "original",
+            "status": "success",
+            "execution_time": 1.0009641647338867,
+            "timestamp": 1768773576.716507,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": 17.3
+            }
+          }
+        }
+      }
+    },
+    "modified": {
+      "state": "modified",
+      "timestamp": 1768773583.9515314,
+      "model_results": {
+        "glm_4_7": {
+          "accuracy": {
+            "model": "glm_4_7",
+            "category": "accuracy",
+            "state": "modified",
+            "status": "success",
+            "execution_time": 1.0010230541229248,
+            "timestamp": 1768773584.9525545,
+            "metrics": {
+              "accuracy_score": 0.8887,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": null
+            }
+          },
+          "inference_speed": {
+            "model": "glm_4_7",
+            "category": "inference_speed",
+            "state": "modified",
+            "status": "success",
+            "execution_time": 1.0007014274597168,
+            "timestamp": 1768773585.953256,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": 89.98,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": null
+            }
+          },
+          "memory_usage": {
+            "model": "glm_4_7",
+            "category": "memory_usage",
+            "state": "modified",
+            "status": "success",
+            "execution_time": 1.0008156299591064,
+            "timestamp": 1768773586.9540715,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": 2750.02,
+              "optimization_improvement_pct": null
+            }
+          },
+          "optimization_impact": {
+            "model": "glm_4_7",
+            "category": "optimization_impact",
+            "state": "modified",
+            "status": "success",
+            "execution_time": 1.0007576942443848,
+            "timestamp": 1768773587.9548292,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": -3.1
+            }
+          }
+        },
+        "qwen3_4b_instruct_2507": {
+          "accuracy": {
+            "model": "qwen3_4b_instruct_2507",
+            "category": "accuracy",
+            "state": "modified",
+            "status": "success",
+            "execution_time": 1.0008635520935059,
+            "timestamp": 1768773588.9556928,
+            "metrics": {
+              "accuracy_score": 0.7723,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": null
+            }
+          },
+          "inference_speed": {
+            "model": "qwen3_4b_instruct_2507",
+            "category": "inference_speed",
+            "state": "modified",
+            "status": "success",
+            "execution_time": 1.0012118816375732,
+            "timestamp": 1768773589.9569046,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": 78.56,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": null
+            }
+          },
+          "memory_usage": {
+            "model": "qwen3_4b_instruct_2507",
+            "category": "memory_usage",
+            "state": "modified",
+            "status": "success",
+            "execution_time": 1.0006332397460938,
+            "timestamp": 1768773590.957538,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": 3586.12,
+              "optimization_improvement_pct": null
+            }
+          },
+          "optimization_impact": {
+            "model": "qwen3_4b_instruct_2507",
+            "category": "optimization_impact",
+            "state": "modified",
+            "status": "success",
+            "execution_time": 1.0007925033569336,
+            "timestamp": 1768773591.9583304,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": -7.81
+            }
+          }
+        },
+        "qwen3_coder_30b": {
+          "accuracy": {
+            "model": "qwen3_coder_30b",
+            "category": "accuracy",
+            "state": "modified",
+            "status": "success",
+            "execution_time": 1.0008647441864014,
+            "timestamp": 1768773592.9591951,
+            "metrics": {
+              "accuracy_score": 0.8555,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": null
+            }
+          },
+          "inference_speed": {
+            "model": "qwen3_coder_30b",
+            "category": "inference_speed",
+            "state": "modified",
+            "status": "success",
+            "execution_time": 1.0006976127624512,
+            "timestamp": 1768773593.9598927,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": 28.78,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": null
+            }
+          },
+          "memory_usage": {
+            "model": "qwen3_coder_30b",
+            "category": "memory_usage",
+            "state": "modified",
+            "status": "success",
+            "execution_time": 1.0007824897766113,
+            "timestamp": 1768773594.9606752,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": 2226.41,
+              "optimization_improvement_pct": null
+            }
+          },
+          "optimization_impact": {
+            "model": "qwen3_coder_30b",
+            "category": "optimization_impact",
+            "state": "modified",
+            "status": "success",
+            "execution_time": 1.000737190246582,
+            "timestamp": 1768773595.9614124,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": 26.56
+            }
+          }
+        },
+        "qwen3_vl_2b": {
+          "accuracy": {
+            "model": "qwen3_vl_2b",
+            "category": "accuracy",
+            "state": "modified",
+            "status": "success",
+            "execution_time": 1.0009210109710693,
+            "timestamp": 1768773596.9623334,
+            "metrics": {
+              "accuracy_score": 0.9044,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": null
+            }
+          },
+          "inference_speed": {
+            "model": "qwen3_vl_2b",
+            "category": "inference_speed",
+            "state": "modified",
+            "status": "success",
+            "execution_time": 1.0005621910095215,
+            "timestamp": 1768773597.9628956,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": 12.55,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": null
+            }
+          },
+          "memory_usage": {
+            "model": "qwen3_vl_2b",
+            "category": "memory_usage",
+            "state": "modified",
+            "status": "success",
+            "execution_time": 1.0009691715240479,
+            "timestamp": 1768773598.9638648,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": 2013.73,
+              "optimization_improvement_pct": null
+            }
+          },
+          "optimization_impact": {
+            "model": "qwen3_vl_2b",
+            "category": "optimization_impact",
+            "state": "modified",
+            "status": "success",
+            "execution_time": 1.0007083415985107,
+            "timestamp": 1768773599.9645731,
+            "metrics": {
+              "accuracy_score": null,
+              "inference_speed_tokens_per_sec": null,
+              "memory_usage_mb": null,
+              "optimization_improvement_pct": 17.02
+            }
+          }
+        }
+      }
+    }
+  },
+  "monitoring_logs": [],
+  "percentage_differences": {
+    "glm_4_7": {
+      "accuracy": {
+        "original_value": 0.8409,
+        "modified_value": 0.8887,
+        "percentage_difference": 5.684385777143545
+      },
+      "inference_speed": {
+        "original_value": 39.85,
+        "modified_value": 89.98,
+        "percentage_difference": 125.79673776662486
+      },
+      "memory_usage": {
+        "original_value": 1267.17,
+        "modified_value": 2750.02,
+        "percentage_difference": -117.02060497013026
+      },
+      "optimization_impact": {
+        "original_value": -3.15,
+        "modified_value": -3.1,
+        "percentage_difference": 0.04999999999999982
+      }
+    },
+    "qwen3_4b_instruct_2507": {
+      "accuracy": {
+        "original_value": 0.793,
+        "modified_value": 0.7723,
+        "percentage_difference": -2.6103404791929448
+      },
+      "inference_speed": {
+        "original_value": 18.17,
+        "modified_value": 78.56,
+        "percentage_difference": 332.36103467253713
+      },
+      "memory_usage": {
+        "original_value": 3995.44,
+        "modified_value": 3586.12,
+        "percentage_difference": 10.244678933984746
+      },
+      "optimization_impact": {
+        "original_value": -8.85,
+        "modified_value": -7.81,
+        "percentage_difference": 1.04
+      }
+    },
+    "qwen3_coder_30b": {
+      "accuracy": {
+        "original_value": 0.7766,
+        "modified_value": 0.8555,
+        "percentage_difference": 10.159670357970652
+      },
+      "inference_speed": {
+        "original_value": 32.54,
+        "modified_value": 28.78,
+        "percentage_difference": -11.555009219422244
+      },
+      "memory_usage": {
+        "original_value": 3866.92,
+        "modified_value": 2226.41,
+        "percentage_difference": 42.424203241856574
+      },
+      "optimization_impact": {
+        "original_value": 25.0,
+        "modified_value": 26.56,
+        "percentage_difference": 1.5599999999999987
+      }
+    },
+    "qwen3_vl_2b": {
+      "accuracy": {
+        "original_value": 0.7596,
+        "modified_value": 0.9044,
+        "percentage_difference": 19.06266456029488
+      },
+      "inference_speed": {
+        "original_value": 65.53,
+        "modified_value": 12.55,
+        "percentage_difference": -80.84846635128949
+      },
+      "memory_usage": {
+        "original_value": 3416.02,
+        "modified_value": 2013.73,
+        "percentage_difference": 41.05040368616108
+      },
+      "optimization_impact": {
+        "original_value": 17.3,
+        "modified_value": 17.02,
+        "percentage_difference": -0.28000000000000114
+      }
+    }
+  }
+}

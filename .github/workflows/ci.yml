@@ -24,9 +24,8 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -r requirements-dev.txt
-        pip install -e .
+        pip install -e ".[dev]"
+        pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
     - name: Lint with flake8
       run: |
@@ -45,11 +44,43 @@ jobs:
       run: |
         mypy src
 
-    - name: Run tests
+    - name: Run unit tests
       run: |
-        python -m pytest tests/unit -v --cov=src --cov-report=xml
+        python -m pytest tests/unit -v --cov=src --cov-report=xml --cov-report=html:htmlcov
+
+    - name: Run integration tests
+      run: |
+        python -m pytest tests/integration -v
+
+    - name: Validate configuration
+      run: |
+        python -c "
+        from src.qwen3_vl.config import Qwen3VLConfig
+        config = Qwen3VLConfig()
+        print('Configuration validation passed')
+        print(f'Model dimensions: {config.hidden_size}')
+        print(f'Number of layers: {config.num_hidden_layers}')
+        print(f'Number of attention heads: {config.num_attention_heads}')
+        "
 
     - name: Build package
       run: |
         python -m build
         ls -la dist/
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-${{ matrix.python-version }}
+        path: |
+          htmlcov/
+          coverage.xml
+        retention-days: 30

@@ -1,0 +1,4 @@
+Model: qwen3_vl_2b
+Category: benchmark_optimization_impact
+Execution time: 0.01s
+============================================================

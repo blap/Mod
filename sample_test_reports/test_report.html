@@ -1,0 +1,346 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inference-PIO Test Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3 {
+            color: #333;
+        }
+        .summary-card {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        .card {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px;
+            min-width: 200px;
+            text-align: center;
+        }
+        .passed { color: #28a745; }
+        .failed { color: #dc3545; }
+        .skipped { color: #ffc107; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .success { background-color: #d4edda; }
+        .failure { background-color: #f8d7da; }
+        .details {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+            display: none;
+        }
+        .toggle-details {
+            cursor: pointer;
+            color: #007bff;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Inference-PIO Test Report</h1>
+        
+        <h2>Summary</h2>
+        <div class="summary-card">
+            <div class="card">
+                <h3>Total Tests</h3>
+                <p>11</p>
+            </div>
+            <div class="card passed">
+                <h3>Passed</h3>
+                <p>10</p>
+            </div>
+            <div class="card failed">
+                <h3>Failed</h3>
+                <p>1</p>
+            </div>
+            <div class="card skipped">
+                <h3>Skipped</h3>
+                <p>0</p>
+            </div>
+            <div class="card">
+                <h3>Pass Rate</h3>
+                <p>90.91%</p>
+            </div>
+            <div class="card">
+                <h3>Execution Time</h3>
+                <p>0.41s</p>
+            </div>
+        </div>
+
+        <h2>System Information</h2>
+        <table>
+            <tr><th>Property</th><th>Value</th></tr>
+            <tr><td>OS</td><td>nt (win32)</td></tr>
+            <tr><td>Python Version</td><td>3.12.10</td></tr>
+            <tr><td>Torch Version</td><td>2.7.1+cu128</td></tr>
+            <tr><td>CUDA Available</td><td>Yes</td></tr>
+            <tr><td>CPU Count</td><td>8</td></tr>
+            <tr><td>Memory Total</td><td>10.30 GB</td></tr>
+        </table>
+
+        <h2>Performance Metrics</h2>
+        <table>
+            <tr><th>Metric</th><th>Value</th></tr>
+            <tr><td>Average Duration</td><td>0.04s</td></tr>
+            <tr><td>Min Duration</td><td>0.00s</td></tr>
+            <tr><td>Max Duration</td><td>0.20s</td></tr>
+            <tr><td>CPU Usage</td><td>14.4%</td></tr>
+            <tr><td>Memory Usage</td><td>50.9%</td></tr>
+        </table>
+
+        <h2>Test Results</h2>
+        <table>
+            <tr>
+                <th>Test Name</th>
+                <th>Status</th>
+                <th>Duration (s)</th>
+                <th>Error Message</th>
+                <th>Details</th>
+            </tr>
+        
+            <tr class="success">
+                <td>tests/sample_reporting_test.py::test_fast_operation</td>
+                <td>PASS</td>
+                <td>0.01</td>
+                <td></td>
+                <td>
+                    <span class="toggle-details" onclick="toggleDetails('tests/sample_reporting_test.py::test_fast_operation')">View Details</span>
+                    <div id="details-tests/sample_reporting_test.py::test_fast_operation" class="details">
+                        <strong>Full Error:</strong><br>
+                        None<br><br>
+                        <strong>Traceback:</strong><br>
+                        None<br><br>
+                        <strong>Tags:</strong> test_fast_operation, sample_reporting_test.py, tests, Mod, 
+                    </div>
+                </td>
+            </tr>
+            
+            <tr class="success">
+                <td>tests/sample_reporting_test.py::test_medium_operation</td>
+                <td>PASS</td>
+                <td>0.05</td>
+                <td></td>
+                <td>
+                    <span class="toggle-details" onclick="toggleDetails('tests/sample_reporting_test.py::test_medium_operation')">View Details</span>
+                    <div id="details-tests/sample_reporting_test.py::test_medium_operation" class="details">
+                        <strong>Full Error:</strong><br>
+                        None<br><br>
+                        <strong>Traceback:</strong><br>
+                        None<br><br>
+                        <strong>Tags:</strong> test_medium_operation, sample_reporting_test.py, tests, Mod, 
+                    </div>
+                </td>
+            </tr>
+            
+            <tr class="success">
+                <td>tests/sample_reporting_test.py::test_slow_operation</td>
+                <td>PASS</td>
+                <td>0.20</td>
+                <td></td>
+                <td>
+                    <span class="toggle-details" onclick="toggleDetails('tests/sample_reporting_test.py::test_slow_operation')">View Details</span>
+                    <div id="details-tests/sample_reporting_test.py::test_slow_operation" class="details">
+                        <strong>Full Error:</strong><br>
+                        None<br><br>
+                        <strong>Traceback:</strong><br>
+                        None<br><br>
+                        <strong>Tags:</strong> test_slow_operation, slow, pytestmark, sample_reporting_test.py, tests, Mod, 
+                    </div>
+                </td>
+            </tr>
+            
+            <tr class="failure">
+                <td>tests/sample_reporting_test.py::test_failing_operation</td>
+                <td>FAIL</td>
+                <td>0.02</td>
+                <td>def test_failing_operation():
+        """A test that will fail to demonstrate error reporting."""
+  ...</td>
+                <td>
+                    <span class="toggle-details" onclick="toggleDetails('tests/sample_reporting_test.py::test_failing_operation')">View Details</span>
+                    <div id="details-tests/sample_reporting_test.py::test_failing_operation" class="details">
+                        <strong>Full Error:</strong><br>
+                        def test_failing_operation():
+        """A test that will fail to demonstrate error reporting."""
+        time.sleep(0.02)
+>       assert 2 + 2 == 5, "This is intentionally wrong to show error reporting"
+E       AssertionError: This is intentionally wrong to show error reporting
+E       assert (2 + 2) == 5
+
+tests\sample_reporting_test.py:37: AssertionError<br><br>
+                        <strong>Traceback:</strong><br>
+                        None<br><br>
+                        <strong>Tags:</strong> test_failing_operation, sample_reporting_test.py, tests, Mod, 
+                    </div>
+                </td>
+            </tr>
+            
+            <tr class="success">
+                <td>tests/sample_reporting_test.py::test_unit_feature</td>
+                <td>PASS</td>
+                <td>0.03</td>
+                <td></td>
+                <td>
+                    <span class="toggle-details" onclick="toggleDetails('tests/sample_reporting_test.py::test_unit_feature')">View Details</span>
+                    <div id="details-tests/sample_reporting_test.py::test_unit_feature" class="details">
+                        <strong>Full Error:</strong><br>
+                        None<br><br>
+                        <strong>Traceback:</strong><br>
+                        None<br><br>
+                        <strong>Tags:</strong> test_unit_feature, unit, pytestmark, sample_reporting_test.py, tests, Mod, , unit
+                    </div>
+                </td>
+            </tr>
+            
+            <tr class="success">
+                <td>tests/sample_reporting_test.py::test_integration_component</td>
+                <td>PASS</td>
+                <td>0.04</td>
+                <td></td>
+                <td>
+                    <span class="toggle-details" onclick="toggleDetails('tests/sample_reporting_test.py::test_integration_component')">View Details</span>
+                    <div id="details-tests/sample_reporting_test.py::test_integration_component" class="details">
+                        <strong>Full Error:</strong><br>
+                        None<br><br>
+                        <strong>Traceback:</strong><br>
+                        None<br><br>
+                        <strong>Tags:</strong> test_integration_component, integration, pytestmark, sample_reporting_test.py, tests, Mod, , integration
+                    </div>
+                </td>
+            </tr>
+            
+            <tr class="success">
+                <td>tests/sample_reporting_test.py::test_parametrized[1-2]</td>
+                <td>PASS</td>
+                <td>0.01</td>
+                <td></td>
+                <td>
+                    <span class="toggle-details" onclick="toggleDetails('tests/sample_reporting_test.py::test_parametrized[1-2]')">View Details</span>
+                    <div id="details-tests/sample_reporting_test.py::test_parametrized[1-2]" class="details">
+                        <strong>Full Error:</strong><br>
+                        None<br><br>
+                        <strong>Traceback:</strong><br>
+                        None<br><br>
+                        <strong>Tags:</strong> test_parametrized[1-2], parametrize, pytestmark, 1-2, sample_reporting_test.py, tests, Mod, 
+                    </div>
+                </td>
+            </tr>
+            
+            <tr class="success">
+                <td>tests/sample_reporting_test.py::test_parametrized[2-4]</td>
+                <td>PASS</td>
+                <td>0.01</td>
+                <td></td>
+                <td>
+                    <span class="toggle-details" onclick="toggleDetails('tests/sample_reporting_test.py::test_parametrized[2-4]')">View Details</span>
+                    <div id="details-tests/sample_reporting_test.py::test_parametrized[2-4]" class="details">
+                        <strong>Full Error:</strong><br>
+                        None<br><br>
+                        <strong>Traceback:</strong><br>
+                        None<br><br>
+                        <strong>Tags:</strong> test_parametrized[2-4], parametrize, pytestmark, 2-4, sample_reporting_test.py, tests, Mod, 
+                    </div>
+                </td>
+            </tr>
+            
+            <tr class="success">
+                <td>tests/sample_reporting_test.py::test_parametrized[3-6]</td>
+                <td>PASS</td>
+                <td>0.01</td>
+                <td></td>
+                <td>
+                    <span class="toggle-details" onclick="toggleDetails('tests/sample_reporting_test.py::test_parametrized[3-6]')">View Details</span>
+                    <div id="details-tests/sample_reporting_test.py::test_parametrized[3-6]" class="details">
+                        <strong>Full Error:</strong><br>
+                        None<br><br>
+                        <strong>Traceback:</strong><br>
+                        None<br><br>
+                        <strong>Tags:</strong> test_parametrized[3-6], parametrize, pytestmark, 3-6, sample_reporting_test.py, tests, Mod, 
+                    </div>
+                </td>
+            </tr>
+            
+            <tr class="success">
+                <td>tests/sample_reporting_test.py::test_with_exception</td>
+                <td>PASS</td>
+                <td>0.02</td>
+                <td></td>
+                <td>
+                    <span class="toggle-details" onclick="toggleDetails('tests/sample_reporting_test.py::test_with_exception')">View Details</span>
+                    <div id="details-tests/sample_reporting_test.py::test_with_exception" class="details">
+                        <strong>Full Error:</strong><br>
+                        None<br><br>
+                        <strong>Traceback:</strong><br>
+                        None<br><br>
+                        <strong>Tags:</strong> test_with_exception, sample_reporting_test.py, tests, Mod, 
+                    </div>
+                </td>
+            </tr>
+            
+            <tr class="success">
+                <td>tests/sample_reporting_test.py::test_performance_metric</td>
+                <td>PASS</td>
+                <td>0.00</td>
+                <td></td>
+                <td>
+                    <span class="toggle-details" onclick="toggleDetails('tests/sample_reporting_test.py::test_performance_metric')">View Details</span>
+                    <div id="details-tests/sample_reporting_test.py::test_performance_metric" class="details">
+                        <strong>Full Error:</strong><br>
+                        None<br><br>
+                        <strong>Traceback:</strong><br>
+                        None<br><br>
+                        <strong>Tags:</strong> test_performance_metric, performance, pytestmark, sample_reporting_test.py, tests, Mod, , performance
+                    </div>
+                </td>
+            </tr>
+            
+        </table>
+    </div>
+
+    <script>
+        function toggleDetails(testName) {
+            const detailsDiv = document.getElementById('details-' + testName);
+            detailsDiv.style.display = detailsDiv.style.display === 'none' ? 'block' : 'none';
+        }
+    </script>
+</body>
+</html>
+        

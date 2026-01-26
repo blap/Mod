@@ -1,0 +1,4 @@
+Model: qwen3_4b_instruct_2507
+Category: benchmark_memory_usage
+Execution time: 0.00s
+============================================================

@@ -1,0 +1,206 @@
+INFERENC-PIO COMPREHENSIVE MOCK BENCHMARK EXECUTION REPORT
+======================================================================
+
+EXECUTION OVERVIEW:
+  Start Time: 2026-01-18T07:21:24.000367
+  End Time:   2026-01-18T07:21:26.821114
+  Duration:   2.82 seconds
+  Platform:   win32
+
+SYSTEM INFORMATION:
+  CPU Cores:  8
+  Total RAM:  10.3 GB
+  CUDA:       Yes
+
+TEST CONFIGURATION:
+  Models: 4
+    - glm_4_7
+    - qwen3_4b_instruct_2507
+    - qwen3_coder_30b
+    - qwen3_vl_2b
+  Categories: 7
+    - accuracy
+
+    - comparison
+
+    - inference_speed
+
+    - memory_usage
+
+    - optimization_impact
+
+    - power_efficiency
+
+    - throughput
+
+EXECUTION SUMMARY:
+  Successful: 22
+  Failed:     6
+  Total:      28
+  Success Rate: 78.6%
+
+DETAILED RESULTS BY MODEL:
+
+GLM_4_7:
+  ACCURACY:
+    Status: SUCCESS
+    Execution Time: 43.08s
+    Memory Usage: 1.4369709604902123 GB
+    Accuracy Score: 0.9170867044609157
+    Output: Accuracy test completed for glm_4_7. Score: 0.917
+  COMPARISON:
+    Status: SUCCESS
+    Execution Time: 63.61s
+    Memory Usage: 7.379383981594343 GB
+    Output: Comparison test completed for glm_4_7
+  INFERENCE_SPEED:
+    Status: SUCCESS
+    Execution Time: 107.33s
+    Memory Usage: 1.4280251297207598 GB
+    Output: Inference speed test for glm_4_7. Avg time: 107.33s
+  MEMORY_USAGE:
+    Status: SUCCESS
+    Execution Time: 53.64s
+    Memory Usage: 4.919596614345124 GB
+    Output: Memory usage test for glm_4_7. Peak usage: 4.92GB
+  OPTIMIZATION_IMPACT:
+    Status: SUCCESS
+    Execution Time: 76.03s
+    Memory Usage: 4.031630019367969 GB
+    Output: Optimization_Impact test completed for glm_4_7
+  POWER_EFFICIENCY:
+    Status: FAILED
+    Execution Time: 24.89s
+    Memory Usage: 7.155064386553332 GB
+    Power Consumption: 54.06149451940056 W
+    Output: Power efficiency test for glm_4_7. Consumption: 54.06W
+  THROUGHPUT:
+    Status: SUCCESS
+    Execution Time: 54.51s
+    Memory Usage: 7.80873036287824 GB
+    Throughput: 31.82079218649231 tokens/sec
+    Output: Throughput test for glm_4_7. Rate: 31.82 tokens/sec
+
+
+QWEN3_4B_INSTRUCT_2507:
+  ACCURACY:
+    Status: SUCCESS
+    Execution Time: 22.93s
+    Memory Usage: 6.015966843563491 GB
+    Accuracy Score: 0.9204208100372849
+    Output: Accuracy test completed for qwen3_4b_instruct_2507. Score: 0.920
+  COMPARISON:
+    Status: SUCCESS
+    Execution Time: 111.32s
+    Memory Usage: 1.5606704020275548 GB
+    Output: Comparison test completed for qwen3_4b_instruct_2507
+  INFERENCE_SPEED:
+    Status: SUCCESS
+    Execution Time: 35.41s
+    Memory Usage: 5.798093472995441 GB
+    Output: Inference speed test for qwen3_4b_instruct_2507. Avg time: 35.41s
+  MEMORY_USAGE:
+    Status: SUCCESS
+    Execution Time: 16.04s
+    Memory Usage: 2.701594564650976 GB
+    Output: Memory usage test for qwen3_4b_instruct_2507. Peak usage: 2.70GB
+  OPTIMIZATION_IMPACT:
+    Status: SUCCESS
+    Execution Time: 75.54s
+    Memory Usage: 2.4551672601431256 GB
+    Output: Optimization_Impact test completed for qwen3_4b_instruct_2507
+  POWER_EFFICIENCY:
+    Status: SUCCESS
+    Execution Time: 108.73s
+    Memory Usage: 1.5678999439667876 GB
+    Power Consumption: 118.60711887908002 W
+    Output: Power efficiency test for qwen3_4b_instruct_2507. Consumption: 118.61W
+  THROUGHPUT:
+    Status: SUCCESS
+    Execution Time: 18.43s
+    Memory Usage: 6.687649042479804 GB
+    Throughput: 22.40927770472261 tokens/sec
+    Output: Throughput test for qwen3_4b_instruct_2507. Rate: 22.41 tokens/sec
+
+
+QWEN3_CODER_30B:
+  ACCURACY:
+    Status: SUCCESS
+    Execution Time: 83.31s
+    Memory Usage: 5.912951022814281 GB
+    Accuracy Score: 0.8233476008038247
+    Output: Accuracy test completed for qwen3_coder_30b. Score: 0.823
+  COMPARISON:
+    Status: FAILED
+    Execution Time: 119.90s
+    Memory Usage: 1.1316986926769825 GB
+    Output: Comparison test completed for qwen3_coder_30b
+  INFERENCE_SPEED:
+    Status: SUCCESS
+    Execution Time: 12.29s
+    Memory Usage: 4.59591111016401 GB
+    Output: Inference speed test for qwen3_coder_30b. Avg time: 12.29s
+  MEMORY_USAGE:
+    Status: FAILED
+    Execution Time: 53.22s
+    Memory Usage: 3.7699033178370036 GB
+    Output: Memory usage test for qwen3_coder_30b. Peak usage: 3.77GB
+  OPTIMIZATION_IMPACT:
+    Status: FAILED
+    Execution Time: 26.01s
+    Memory Usage: 6.723329886839568 GB
+    Output: Optimization_Impact test completed for qwen3_coder_30b
+  POWER_EFFICIENCY:
+    Status: SUCCESS
+    Execution Time: 13.68s
+    Memory Usage: 4.298396496027257 GB
+    Power Consumption: 105.48378675739775 W
+    Output: Power efficiency test for qwen3_coder_30b. Consumption: 105.48W
+  THROUGHPUT:
+    Status: SUCCESS
+    Execution Time: 11.18s
+    Memory Usage: 1.0735266608277811 GB
+    Throughput: 6.415729041211088 tokens/sec
+    Output: Throughput test for qwen3_coder_30b. Rate: 6.42 tokens/sec
+
+
+QWEN3_VL_2B:
+  ACCURACY:
+    Status: SUCCESS
+    Execution Time: 74.05s
+    Memory Usage: 7.714377445102214 GB
+    Accuracy Score: 0.8487509287344678
+    Output: Accuracy test completed for qwen3_vl_2b. Score: 0.849
+  COMPARISON:
+    Status: FAILED
+    Execution Time: 65.54s
+    Memory Usage: 4.9050183467671795 GB
+    Output: Comparison test completed for qwen3_vl_2b
+  INFERENCE_SPEED:
+    Status: FAILED
+    Execution Time: 107.83s
+    Memory Usage: 6.030743719597281 GB
+    Output: Inference speed test for qwen3_vl_2b. Avg time: 107.83s
+  MEMORY_USAGE:
+    Status: SUCCESS
+    Execution Time: 92.61s
+    Memory Usage: 4.410904394405604 GB
+    Output: Memory usage test for qwen3_vl_2b. Peak usage: 4.41GB
+  OPTIMIZATION_IMPACT:
+    Status: SUCCESS
+    Execution Time: 40.45s
+    Memory Usage: 3.514406191843579 GB
+    Output: Optimization_Impact test completed for qwen3_vl_2b
+  POWER_EFFICIENCY:
+    Status: SUCCESS
+    Execution Time: 62.89s
+    Memory Usage: 1.0253006841188235 GB
+    Power Consumption: 110.23303874628333 W
+    Output: Power efficiency test for qwen3_vl_2b. Consumption: 110.23W
+  THROUGHPUT:
+    Status: SUCCESS
+    Execution Time: 38.04s
+    Memory Usage: 6.339944660461009 GB
+    Throughput: 18.096201707482535 tokens/sec
+    Output: Throughput test for qwen3_vl_2b. Rate: 18.10 tokens/sec
+

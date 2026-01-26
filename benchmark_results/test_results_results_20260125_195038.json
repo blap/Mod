@@ -1,0 +1,57 @@
+{
+  "timestamp": "2026-01-25T19:50:38.328010",
+  "results": [
+    {
+      "name": "inference_speed_20tokens",
+      "value": 1939.1097107958606,
+      "unit": "tokens/sec",
+      "model_name": "MockModel",
+      "category": "performance",
+      "metadata": {
+        "input_length": 20,
+        "num_iterations": 10,
+        "total_time": 0.10314011573791504,
+        "avg_time_per_inference": 0.010314011573791504
+      }
+    },
+    {
+      "name": "inference_speed_100tokens",
+      "value": 9444.418424513176,
+      "unit": "tokens/sec",
+      "model_name": "MockModel",
+      "category": "performance",
+      "metadata": {
+        "input_length": 100,
+        "num_iterations": 10,
+        "total_time": 0.10588264465332031,
+        "avg_time_per_inference": 0.010588264465332032
+      }
+    },
+    {
+      "name": "memory_usage",
+      "value": 0.0,
+      "unit": "MB",
+      "model_name": "MockModel",
+      "category": "performance",
+      "metadata": {
+        "baseline_memory_mb": 393.875,
+        "memory_after_load_mb": 393.875,
+        "memory_increase_mb": 0.0,
+        "memory_after_inference_mb": 393.875
+      }
+    },
+    {
+      "name": "accuracy_score",
+      "value": 0.0,
+      "unit": "ratio",
+      "model_name": "MockModel",
+      "category": "accuracy",
+      "metadata": {
+        "prompt": "The capital of France is",
+        "expected_answer": "Paris",
+        "generated_text": "The capital of France is This is a generated response.",
+        "accuracy_score": 0.0
+      }
+    }
+  ]
+}

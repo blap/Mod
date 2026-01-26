@@ -1,0 +1,90 @@
+{
+  "glm_4_7": {
+    "accuracy": {
+      "original_value": 0.9254,
+      "modified_value": 0.9221,
+      "percentage_difference": -0.3566025502485379
+    },
+    "inference_speed": {
+      "original_value": 29.07,
+      "modified_value": 83.27,
+      "percentage_difference": 186.44650842793254
+    },
+    "memory_usage": {
+      "original_value": 3217.95,
+      "modified_value": 3125.84,
+      "percentage_difference": 2.8623813297285436
+    },
+    "optimization_impact": {
+      "original_value": 24.35,
+      "modified_value": 5.59,
+      "percentage_difference": -18.76
+    }
+  },
+  "qwen3_4b_instruct_2507": {
+    "accuracy": {
+      "original_value": 0.8293,
+      "modified_value": 0.8208,
+      "percentage_difference": -1.0249608103219658
+    },
+    "inference_speed": {
+      "original_value": 38.56,
+      "modified_value": 98.93,
+      "percentage_difference": 156.56120331950208
+    },
+    "memory_usage": {
+      "original_value": 2832.65,
+      "modified_value": 1270.5,
+      "percentage_difference": 55.14800628386847
+    },
+    "optimization_impact": {
+      "original_value": -6.21,
+      "modified_value": 24.48,
+      "percentage_difference": 30.69
+    }
+  },
+  "qwen3_coder_30b": {
+    "accuracy": {
+      "original_value": 0.84,
+      "modified_value": 0.7444,
+      "percentage_difference": -11.380952380952383
+    },
+    "inference_speed": {
+      "original_value": 13.08,
+      "modified_value": 79.4,
+      "percentage_difference": 507.03363914373097
+    },
+    "memory_usage": {
+      "original_value": 3481.04,
+      "modified_value": 1672.93,
+      "percentage_difference": 51.9416611127709
+    },
+    "optimization_impact": {
+      "original_value": 5.49,
+      "modified_value": 5.23,
+      "percentage_difference": -0.2599999999999998
+    }
+  },
+  "qwen3_vl_2b": {
+    "accuracy": {
+      "original_value": 0.7434,
+      "modified_value": 0.7241,
+      "percentage_difference": -2.5961797148237804
+    },
+    "inference_speed": {
+      "original_value": 62.57,
+      "modified_value": 98.43,
+      "percentage_difference": 57.31181077193545
+    },
+    "memory_usage": {
+      "original_value": 3338.65,
+      "modified_value": 3342.49,
+      "percentage_difference": -0.11501654860496581
+    },
+    "optimization_impact": {
+      "original_value": 23.38,
+      "modified_value": 9.12,
+      "percentage_difference": -14.26
+    }
+  }
+}

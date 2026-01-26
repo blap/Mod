@@ -1,0 +1,252 @@
+{
+  "timestamp": "2026-01-25T21:01:29.983439",
+  "system_info": {
+    "os_name": "nt (win32)",
+    "os_version": "Unknown",
+    "cpu_info": "Unknown",
+    "cpu_count": 8,
+    "memory_total": 10.298633575439453,
+    "python_version": "3.12.10",
+    "torch_version": "2.7.1+cu128",
+    "cuda_available": true,
+    "cuda_version": "12.8",
+    "gpu_count": 1,
+    "gpu_names": [
+      "NVIDIA GeForce MX330"
+    ],
+    "gpu_usage": null,
+    "gpu_memory": 1.9998779296875
+  },
+  "metrics": {
+    "total_tests": 11,
+    "passed_tests": 10,
+    "failed_tests": 1,
+    "skipped_tests": 0,
+    "execution_time": 0.4063075999802095,
+    "start_time": 1769385688.5532649,
+    "end_time": 1769385688.9810205,
+    "average_duration": 0.03693705454365541,
+    "min_duration": 0.0003556000010576099,
+    "max_duration": 0.2007268999950611,
+    "cpu_usage": 14.4,
+    "memory_usage": 50.9,
+    "gpu_usage": null,
+    "gpu_memory": 1.9998779296875
+  },
+  "test_results": [
+    {
+      "name": "tests/sample_reporting_test.py::test_fast_operation",
+      "duration": 0.010377899998275097,
+      "success": true,
+      "error_message": null,
+      "traceback_info": null,
+      "start_time": 1769385688.5532649,
+      "end_time": 1769385688.5636427,
+      "tags": [
+        "test_fast_operation",
+        "sample_reporting_test.py",
+        "tests",
+        "Mod",
+        ""
+      ],
+      "metadata": {}
+    },
+    {
+      "name": "tests/sample_reporting_test.py::test_medium_operation",
+      "duration": 0.05036120000295341,
+      "success": true,
+      "error_message": null,
+      "traceback_info": null,
+      "start_time": 1769385688.564939,
+      "end_time": 1769385688.6153002,
+      "tags": [
+        "test_medium_operation",
+        "sample_reporting_test.py",
+        "tests",
+        "Mod",
+        ""
+      ],
+      "metadata": {}
+    },
+    {
+      "name": "tests/sample_reporting_test.py::test_slow_operation",
+      "duration": 0.2007268999950611,
+      "success": true,
+      "error_message": null,
+      "traceback_info": null,
+      "start_time": 1769385688.6165159,
+      "end_time": 1769385688.8172429,
+      "tags": [
+        "test_slow_operation",
+        "slow",
+        "pytestmark",
+        "sample_reporting_test.py",
+        "tests",
+        "Mod",
+        ""
+      ],
+      "metadata": {}
+    },
+    {
+      "name": "tests/sample_reporting_test.py::test_failing_operation",
+      "duration": 0.02070669999375241,
+      "success": false,
+      "error_message": "def test_failing_operation():\n        \"\"\"A test that will fail to demonstrate error reporting.\"\"\"\n        time.sleep(0.02)\n>       assert 2 + 2 == 5, \"This is intentionally wrong to show error reporting\"\nE       AssertionError: This is intentionally wrong to show error reporting\nE       assert (2 + 2) == 5\n\ntests\\sample_reporting_test.py:37: AssertionError",
+      "traceback_info": null,
+      "start_time": 1769385688.8237088,
+      "end_time": 1769385688.8444154,
+      "tags": [
+        "test_failing_operation",
+        "sample_reporting_test.py",
+        "tests",
+        "Mod",
+        ""
+      ],
+      "metadata": {}
+    },
+    {
+      "name": "tests/sample_reporting_test.py::test_unit_feature",
+      "duration": 0.030786799994530156,
+      "success": true,
+      "error_message": null,
+      "traceback_info": null,
+      "start_time": 1769385688.8509364,
+      "end_time": 1769385688.8817232,
+      "tags": [
+        "test_unit_feature",
+        "unit",
+        "pytestmark",
+        "sample_reporting_test.py",
+        "tests",
+        "Mod",
+        "",
+        "unit"
+      ],
+      "metadata": {}
+    },
+    {
+      "name": "tests/sample_reporting_test.py::test_integration_component",
+      "duration": 0.04072900000028312,
+      "success": true,
+      "error_message": null,
+      "traceback_info": null,
+      "start_time": 1769385688.882775,
+      "end_time": 1769385688.923504,
+      "tags": [
+        "test_integration_component",
+        "integration",
+        "pytestmark",
+        "sample_reporting_test.py",
+        "tests",
+        "Mod",
+        "",
+        "integration"
+      ],
+      "metadata": {}
+    },
+    {
+      "name": "tests/sample_reporting_test.py::test_parametrized[1-2]",
+      "duration": 0.010550699997111224,
+      "success": true,
+      "error_message": null,
+      "traceback_info": null,
+      "start_time": 1769385688.9246502,
+      "end_time": 1769385688.935201,
+      "tags": [
+        "test_parametrized[1-2]",
+        "parametrize",
+        "pytestmark",
+        "1-2",
+        "sample_reporting_test.py",
+        "tests",
+        "Mod",
+        ""
+      ],
+      "metadata": {}
+    },
+    {
+      "name": "tests/sample_reporting_test.py::test_parametrized[2-4]",
+      "duration": 0.01081720000365749,
+      "success": true,
+      "error_message": null,
+      "traceback_info": null,
+      "start_time": 1769385688.936927,
+      "end_time": 1769385688.9477444,
+      "tags": [
+        "test_parametrized[2-4]",
+        "parametrize",
+        "pytestmark",
+        "2-4",
+        "sample_reporting_test.py",
+        "tests",
+        "Mod",
+        ""
+      ],
+      "metadata": {}
+    },
+    {
+      "name": "tests/sample_reporting_test.py::test_parametrized[3-6]",
+      "duration": 0.010452499998791609,
+      "success": true,
+      "error_message": null,
+      "traceback_info": null,
+      "start_time": 1769385688.949014,
+      "end_time": 1769385688.9594665,
+      "tags": [
+        "test_parametrized[3-6]",
+        "parametrize",
+        "pytestmark",
+        "3-6",
+        "sample_reporting_test.py",
+        "tests",
+        "Mod",
+        ""
+      ],
+      "metadata": {}
+    },
+    {
+      "name": "tests/sample_reporting_test.py::test_with_exception",
+      "duration": 0.020443099994736258,
+      "success": true,
+      "error_message": null,
+      "traceback_info": null,
+      "start_time": 1769385688.9605772,
+      "end_time": 1769385688.9810205,
+      "tags": [
+        "test_with_exception",
+        "sample_reporting_test.py",
+        "tests",
+        "Mod",
+        ""
+      ],
+      "metadata": {}
+    },
+    {
+      "name": "tests/sample_reporting_test.py::test_performance_metric",
+      "duration": 0.0003556000010576099,
+      "success": true,
+      "error_message": null,
+      "traceback_info": null,
+      "start_time": 1769385688.980665,
+      "end_time": 1769385688.9810205,
+      "tags": [
+        "test_performance_metric",
+        "performance",
+        "pytestmark",
+        "sample_reporting_test.py",
+        "tests",
+        "Mod",
+        "",
+        "performance"
+      ],
+      "metadata": {}
+    }
+  ],
+  "summary": {
+    "total_tests": 11,
+    "passed": 10,
+    "failed": 1,
+    "skipped": 0,
+    "pass_rate": 90.9090909090909
+  }
+}

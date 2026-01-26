@@ -1,108 +1,94 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools"
+requires = [
+    "setuptools>=45",
+    "wheel",
+    "torch>=2.0.0",
+    "pybind11"
+]
+build-backend = "setuptools.build_meta"
 
 [project]
-name = "qwen3-vl"
+name = "inference-pio"
 version = "1.0.0"
-authors = [
-    {name = "Qwen3-VL Development Team", email = "qwen3-vl@example.com"},
-]
-description = "Qwen3-VL-2B-Instruct: A multimodal large language model with optimized performance"
+description = "Inference-PIO: Self-Contained Plugin Architecture for Advanced Model Inference"
 readme = "README.md"
-license = {text = "MIT"}
-requires-python = ">=3.8"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Inference-PIO Team", email = "inference-pio@maintainers.com"}
+]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules"
 ]
+requires-python = ">=3.8"
 dependencies = [
     "torch>=2.0.0",
     "torchvision>=0.15.0",
-    "transformers>=4.30.0",
-    "tokenizers>=0.13.0",
-    "sentencepiece",
     "numpy>=1.21.0",
-    "pillow>=8.0.0",
-    "accelerate>=0.20.0",
+    "transformers>=4.35.0",
+    "tokenizers>=0.14.0",
+    "sentencepiece",
+    "protobuf",
+    "accelerate",
+    "datasets",
+    "evaluate",
     "bitsandbytes",
-    "scipy>=1.7.0",
-    "matplotlib",
+    "scipy",
     "pandas",
-    "tqdm>=4.64.0",
-    "datasets>=2.0.0",
-    "evaluate>=0.4.0",
-    "scikit-learn",
-    "sortedcontainers",
-    "safetensors>=0.3.0",
-    "huggingface_hub>=0.14.0",
-    "pydantic>=1.10.0",
-    "requests>=2.28.0",
-    "psutil>=5.8.0",
+    "matplotlib",
+    "seaborn",
+    "psutil",
+    "pybind11",
+    "dependency-injector>=4.0.0",
+    "pyyaml>=6.0",
+    "toml>=0.10.0",
+    "flash-attn>=2.4.0",
+    "xformers>=0.0.23",
+    "einops>=0.7.0"
 ]
 
 [project.optional-dependencies]
 dev = [
-    "black>=22.0.0",
-    "flake8>=4.0.0",
-    "isort>=5.10.0",
-    "mypy>=0.950",
-    "pre-commit>=2.19.0",
-    "pytest>=6.0.0",
-    "pytest-mock>=3.6.0",
-    "pytest-cov>=2.0",
-    "pytest-benchmark>=4.0.0",
+    "black",
+    "flake8",
+    "mypy",
+    "pre-commit",
+    "isort",
+    "pylint",
+    "autoflake",
+    "yapf",
 ]
-torch = [
-    "torch>=2.0.0",
-    "torchvision>=0.15.0",
+perf_regression = [
+    "pytest>=7.0.0",
+    "requests>=2.25.0",
 ]
-power = [
-    "psutil>=5.8.0",
+cuda = [
+    "ninja",  # For faster builds
 ]
-test = [
-    "pytest>=6.0.0",
-    "pytest-mock>=3.6.0",
-    "pytest-cov>=2.0",
-    "pytest-benchmark>=4.0.0",
+vision = [
+    "Pillow",
+    "opencv-python",
+    "timm"
 ]
-perf = [
-    "memory-profiler>=0.60.0",
-    "nvidia-ml-py3>=11.495.0",
+multimodal = [
+    "Pillow",
+    "opencv-python",
+    "timm"
 ]
-all-dev = [
-    "black>=22.0.0",
-    "flake8>=4.0.0",
-    "isort>=5.10.0",
-    "mypy>=0.950",
-    "pre-commit>=2.19.0",
-    "pytest>=6.0.0",
-    "pytest-mock>=3.6.0",
-    "pytest-cov>=2.0",
-    "pytest-benchmark>=4.0.0",
-    "memory-profiler>=0.60.0",
-    "nvidia-ml-py3>=11.495.0",
-]
-
-[project.scripts]
-qwen3-vl-infer = "src.qwen3_vl.inference.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/example/qwen3-vl"
-Repository = "https://github.com/example/qwen3-vl"
-
-[tool.setuptools.packages.find]
-where = ["src"]
-include = ["qwen3_vl*"]
+Homepage = "https://github.com/inference-pio/inference-pio"
+Repository = "https://github.com/inference-pio/inference-pio"
 
 [tool.black]
 line-length = 88
@@ -132,40 +118,110 @@ use_parentheses = true
 ensure_newline_before_comments = true
 line_length = 88
 
+[tool.flake8]
+max-line-length = 88
+extend-ignore = [
+    "E203",  # whitespace before ':'
+    "W503",  # line break before binary operator
+]
+exclude = [
+    ".git",
+    "__pycache__",
+    ".mypy_cache",
+    "venv",
+    "node_modules",
+    ".tox",
+    ".eggs",
+    "build",
+    "dist",
+    "src/inference_pio.egg-info"
+]
+per-file-ignores = [
+    "__init__.py:F401",  # imported but unused in __init__.py files
+]
+
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 warn_unused_ignores = true
-ignore_missing_imports = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
 check_untyped_defs = true
-no_implicit_reexport = true
+disallow_untyped_decorators = true
+ignore_missing_imports = true
+exclude = [
+    "src/inference_pio.egg-info",
+    ".git",
+    "__pycache__",
+    ".mypy_cache",
+    "venv",
+    "build",
+    "dist"
+]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py", "*_test.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
+testpaths = [
+    "tests/unit",
+    "tests/integration",
+    "tests/performance",
+    "src/inference_pio/tests",
+    "src/inference_pio/common/tests",
+    "src/inference_pio/models/glm_4_7_flash/tests",
+    "src/inference_pio/models/qwen3_4b_instruct_2507/tests",
+    "src/inference_pio/models/qwen3_coder_30b/tests",
+    "src/inference_pio/models/qwen3_vl_2b/tests"
+]
+python_files = [
+    "test_*.py",
+    "*_test.py",
+    "tests/*.py",
+    "tests/*/*.py",
+    "tests/*/*/*.py"
+]
+python_classes = [
+    "Test*",
+    "*Tests"
+]
+python_functions = [
+    "test_*",
+    "test*",
+    "*test*"
+]
 addopts = [
-    "-v",
-    "--cov=src",
-    "--cov-report=html",
-    "--cov-report=term-missing",
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "-W",
+    "ignore::DeprecationWarning",
+    "--generate-reports",
+    "--reports-dir=test_reports"
 ]
 markers = [
     "slow: marks tests as slow",
-    "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
+    "integration: marks tests as integration tests",
+    "performance: marks tests as performance tests",
+    "model: marks tests related to specific models",
+    "common: marks tests related to common components"
 ]
 
+
 [tool.coverage.run]
-source = ["src/"]
+source = [
+    "src/"
+]
 omit = [
     "*/tests/*",
-    "*/test_*.py",
+    "*/test_*",
     "*/__pycache__/*",
     "*/venv/*",
     "*/env/*",
+    "*/.env/*",
+    "*/.venv/*",
+    "*/build/*",
+    "*/dist/*",
+    "*/.git/*"
 ]
 
 [tool.coverage.report]
@@ -174,4 +230,5 @@ exclude_lines = [
     "def __repr__",
     "raise AssertionError",
     "raise NotImplementedError",
+    "if __name__ == .__main__.:"
 ]

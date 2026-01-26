@@ -1,0 +1,152 @@
+{
+  "glm_4_7": {
+    "model": "glm_4_7",
+    "category": "accuracy",
+    "timestamp": 1768700621.5755458,
+    "results": [
+      {
+        "test_method": "test_known_fact_accuracy",
+        "status": "passed",
+        "output": "\nGLM-4.7-Flash-Flash Known Fact Accuracy:\n  Correct: 0/3\n  Accuracy: 0.00%\n"
+      },
+      {
+        "test_method": "test_model_confidence_calibration",
+        "status": "failed",
+        "error": "Failed to run test_model_confidence_calibration: too many indices for tensor of dimension 1",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\run_complete_benchmark_suite.py\", line 175, in run_benchmark_for_model\n    method()\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\glm_4_7\\benchmarks\\benchmark_accuracy.py\", line 222, in test_model_confidence_calibration\n    last_token_probs = torch.softmax(logits[0, -1, :], dim=-1)\n                                     ~~~~~~^^^^^^^^^^\nIndexError: too many indices for tensor of dimension 1\n"
+      },
+      {
+        "test_method": "test_numerical_stability",
+        "status": "passed",
+        "output": "\nGLM-4.7-Flash-Flash Numerical Stability: Passed all 10 iterations\n"
+      },
+      {
+        "test_method": "test_perplexity_calculation",
+        "status": "failed",
+        "error": "Failed to run test_perplexity_calculation: too many indices for tensor of dimension 1",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\run_complete_benchmark_suite.py\", line 175, in run_benchmark_for_model\n    method()\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\glm_4_7\\benchmarks\\benchmark_accuracy.py\", line 46, in test_perplexity_calculation\n    shift_logits = logits[..., :-1, :].contiguous()\n                   ~~~~~~^^^^^^^^^^^^^\nIndexError: too many indices for tensor of dimension 1\n"
+      },
+      {
+        "test_method": "test_reproducibility",
+        "status": "passed",
+        "output": "\nGLM-4.7-Flash-Flash Reproducibility Test:\n  Result 1: Generated response to: The capital of Franc...\n  Result 2: Generated response to: The capital of Franc...\n"
+      },
+      {
+        "test_method": "test_sequence_completeness",
+        "status": "passed",
+        "output": ""
+      },
+      {
+        "test_method": "test_token_probability_distribution",
+        "status": "passed",
+        "output": "\nGLM-4.7-Flash-Flash Probability Distribution Test:\n  Probabilities sum to ~1: True\n"
+      },
+      {
+        "test_method": "test_tokenization_consistency",
+        "status": "passed",
+        "output": ""
+      }
+    ],
+    "status": "partial"
+  },
+  "qwen3_4b_instruct_2507": {
+    "model": "qwen3_4b_instruct_2507",
+    "category": "accuracy",
+    "timestamp": 1768700622.2046947,
+    "results": [
+      {
+        "test_method": "test_known_fact_accuracy",
+        "status": "passed",
+        "output": "\nQwen3-4B-Instruct-2507 Known Fact Accuracy:\n  Correct: 0/3\n  Accuracy: 0.00%\n"
+      },
+      {
+        "test_method": "test_model_confidence_calibration",
+        "status": "failed",
+        "error": "Failed to run test_model_confidence_calibration: too many indices for tensor of dimension 1",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\run_complete_benchmark_suite.py\", line 175, in run_benchmark_for_model\n    method()\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\qwen3_4b_instruct_2507\\benchmarks\\benchmark_accuracy.py\", line 222, in test_model_confidence_calibration\n    last_token_probs = torch.softmax(logits[0, -1, :], dim=-1)\n                                     ~~~~~~^^^^^^^^^^\nIndexError: too many indices for tensor of dimension 1\n"
+      },
+      {
+        "test_method": "test_numerical_stability",
+        "status": "passed",
+        "output": "\nQwen3-4B-Instruct-2507 Numerical Stability: Passed all 10 iterations\n"
+      },
+      {
+        "test_method": "test_perplexity_calculation",
+        "status": "failed",
+        "error": "Failed to run test_perplexity_calculation: too many indices for tensor of dimension 1",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\run_complete_benchmark_suite.py\", line 175, in run_benchmark_for_model\n    method()\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\qwen3_4b_instruct_2507\\benchmarks\\benchmark_accuracy.py\", line 46, in test_perplexity_calculation\n    shift_logits = logits[..., :-1, :].contiguous()\n                   ~~~~~~^^^^^^^^^^^^^\nIndexError: too many indices for tensor of dimension 1\n"
+      },
+      {
+        "test_method": "test_reproducibility",
+        "status": "passed",
+        "output": "\nQwen3-4B-Instruct-2507 Reproducibility Test:\n  Result 1: Generated response to: The capital of Franc...\n  Result 2: Generated response to: The capital of Franc...\n"
+      },
+      {
+        "test_method": "test_sequence_completeness",
+        "status": "passed",
+        "output": ""
+      },
+      {
+        "test_method": "test_token_probability_distribution",
+        "status": "passed",
+        "output": "\nQwen3-4B-Instruct-2507 Probability Distribution Test:\n  Probabilities sum to ~1: True\n"
+      },
+      {
+        "test_method": "test_tokenization_consistency",
+        "status": "passed",
+        "output": ""
+      }
+    ],
+    "status": "partial"
+  },
+  "qwen3_coder_30b": {
+    "model": "qwen3_coder_30b",
+    "category": "accuracy",
+    "timestamp": 1768700622.756272,
+    "results": [
+      {
+        "test_method": "test_known_fact_accuracy",
+        "status": "passed",
+        "output": "\nQwen3-Coder-30B Known Fact Accuracy:\n  Correct: 0/3\n  Accuracy: 0.00%\n"
+      },
+      {
+        "test_method": "test_model_confidence_calibration",
+        "status": "failed",
+        "error": "Failed to run test_model_confidence_calibration: too many indices for tensor of dimension 1",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\run_complete_benchmark_suite.py\", line 175, in run_benchmark_for_model\n    method()\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\qwen3_coder_30b\\benchmarks\\benchmark_accuracy.py\", line 222, in test_model_confidence_calibration\n    last_token_probs = torch.softmax(logits[0, -1, :], dim=-1)\n                                     ~~~~~~^^^^^^^^^^\nIndexError: too many indices for tensor of dimension 1\n"
+      },
+      {
+        "test_method": "test_numerical_stability",
+        "status": "passed",
+        "output": "\nQwen3-Coder-30B Numerical Stability: Passed all 10 iterations\n"
+      },
+      {
+        "test_method": "test_perplexity_calculation",
+        "status": "failed",
+        "error": "Failed to run test_perplexity_calculation: too many indices for tensor of dimension 1",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\run_complete_benchmark_suite.py\", line 175, in run_benchmark_for_model\n    method()\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\Mod\\src\\inference_pio\\models\\qwen3_coder_30b\\benchmarks\\benchmark_accuracy.py\", line 46, in test_perplexity_calculation\n    shift_logits = logits[..., :-1, :].contiguous()\n                   ~~~~~~^^^^^^^^^^^^^\nIndexError: too many indices for tensor of dimension 1\n"
+      },
+      {
+        "test_method": "test_reproducibility",
+        "status": "passed",
+        "output": "\nQwen3-Coder-30B Reproducibility Test:\n  Result 1: Generated response to: The capital of Franc...\n  Result 2: Generated response to: The capital of Franc...\n"
+      },
+      {
+        "test_method": "test_sequence_completeness",
+        "status": "passed",
+        "output": ""
+      },
+      {
+        "test_method": "test_token_probability_distribution",
+        "status": "passed",
+        "output": "\nQwen3-Coder-30B Probability Distribution Test:\n  Probabilities sum to ~1: True\n"
+      },
+      {
+        "test_method": "test_tokenization_consistency",
+        "status": "passed",
+        "output": ""
+      }
+    ],
+    "status": "partial"
+  }
+}

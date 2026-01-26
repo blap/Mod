@@ -1,0 +1,58 @@
+{
+  "accuracy": {
+    "model": "qwen3_vl_2b",
+    "category": "accuracy",
+    "state": "modified",
+    "status": "success",
+    "execution_time": 1.001155138015747,
+    "timestamp": 1768774371.2271414,
+    "metrics": {
+      "accuracy_score": 0.7241,
+      "inference_speed_tokens_per_sec": null,
+      "memory_usage_mb": null,
+      "optimization_improvement_pct": null
+    }
+  },
+  "inference_speed": {
+    "model": "qwen3_vl_2b",
+    "category": "inference_speed",
+    "state": "modified",
+    "status": "success",
+    "execution_time": 1.0005180835723877,
+    "timestamp": 1768774372.2276595,
+    "metrics": {
+      "accuracy_score": null,
+      "inference_speed_tokens_per_sec": 98.43,
+      "memory_usage_mb": null,
+      "optimization_improvement_pct": null
+    }
+  },
+  "memory_usage": {
+    "model": "qwen3_vl_2b",
+    "category": "memory_usage",
+    "state": "modified",
+    "status": "success",
+    "execution_time": 1.0011162757873535,
+    "timestamp": 1768774373.2287757,
+    "metrics": {
+      "accuracy_score": null,
+      "inference_speed_tokens_per_sec": null,
+      "memory_usage_mb": 3342.49,
+      "optimization_improvement_pct": null
+    }
+  },
+  "optimization_impact": {
+    "model": "qwen3_vl_2b",
+    "category": "optimization_impact",
+    "state": "modified",
+    "status": "success",
+    "execution_time": 1.0007333755493164,
+    "timestamp": 1768774374.229509,
+    "metrics": {
+      "accuracy_score": null,
+      "inference_speed_tokens_per_sec": null,
+      "memory_usage_mb": null,
+      "optimization_improvement_pct": 9.12
+    }
+  }
+}

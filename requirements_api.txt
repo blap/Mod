@@ -1,0 +1,20 @@
+# API Dependencies for Inference-PIO Plugin System
+# Includes FastAPI and related packages for serving plugin-based models
+
+fastapi>=0.104.1
+uvicorn[standard]>=0.24.0
+pydantic>=2.5.0
+torch>=2.0.0
+transformers>=4.36.0
+pillow>=9.0.0
+numpy>=1.21.0
+accelerate>=0.25.0
+tokenizers>=0.14.0
+sentencepiece>=0.1.99
+safetensors>=0.4.1
+pyyaml>=6.0.1
+huggingface-hub>=0.19.4
+python-multipart>=0.0.6
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+python-dotenv>=1.0.0

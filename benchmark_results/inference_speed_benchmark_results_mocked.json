@@ -1,0 +1,116 @@
+{
+  "glm_4_7": {
+    "model": "glm_4_7",
+    "category": "inference_speed",
+    "timestamp": 1768700625.3254247,
+    "results": [
+      {
+        "test_method": "test_batch_inference_speed",
+        "status": "passed",
+        "output": "\nGLM-4.7-Flash-Flash Batch Size 1 Inference Speed:\n  Avg time per batch: 0.0106s\n  Tokens per second: 2837.36\n\nGLM-4.7-Flash-Flash Batch Size 2 Inference Speed:\n  Avg time per batch: 0.0103s\n  Tokens per second: 5797.35\n\nGLM-4.7-Flash-Flash Batch Size 4 Inference Speed:\n  Avg time per batch: 0.0106s\n  Tokens per second: 11274.30\n"
+      },
+      {
+        "test_method": "test_generation_speed",
+        "status": "passed",
+        "output": "\nGLM-4.7-Flash-Flash Generation Speed:\n  Total time: 0.0504s\n  Generated text length: 46 chars\n  Characters per second: 912.11\n"
+      },
+      {
+        "test_method": "test_inference_speed_long_input",
+        "status": "passed",
+        "output": "\nGLM-4.7-Flash-Flash Long Input (100 tokens) Inference Speed:\n  Total time: 0.0319s\n  Avg time per inference: 0.0106s\n  Tokens per second: 9408.98\n"
+      },
+      {
+        "test_method": "test_inference_speed_medium_input",
+        "status": "passed",
+        "output": "\nGLM-4.7-Flash-Flash Medium Input (50 tokens) Inference Speed:\n  Total time: 0.0522s\n  Avg time per inference: 0.0104s\n  Tokens per second: 4788.00\n"
+      },
+      {
+        "test_method": "test_inference_speed_short_input",
+        "status": "passed",
+        "output": "\nGLM-4.7-Flash-Flash Short Input (20 tokens) Inference Speed:\n  Total time: 0.0522s\n  Avg time per inference: 0.0104s\n  Tokens per second: 1914.62\n"
+      },
+      {
+        "test_method": "test_variable_length_inference_speed",
+        "status": "passed",
+        "output": "  Length 10: 954.06 tokens/sec\n  Length 25: 2410.15 tokens/sec\n  Length 50: 4703.44 tokens/sec\n  Length 75: 6993.51 tokens/sec\n  Length 100: 9443.30 tokens/sec\n"
+      }
+    ],
+    "status": "success"
+  },
+  "qwen3_4b_instruct_2507": {
+    "model": "qwen3_4b_instruct_2507",
+    "category": "inference_speed",
+    "timestamp": 1768700626.1948535,
+    "results": [
+      {
+        "test_method": "test_batch_inference_speed",
+        "status": "passed",
+        "output": "\nQwen3-4B-Instruct-2507 Batch Size 1 Inference Speed:\n  Avg time per batch: 0.0106s\n  Tokens per second: 2828.96\n\nQwen3-4B-Instruct-2507 Batch Size 2 Inference Speed:\n  Avg time per batch: 0.0105s\n  Tokens per second: 5688.04\n\nQwen3-4B-Instruct-2507 Batch Size 4 Inference Speed:\n  Avg time per batch: 0.0107s\n  Tokens per second: 11177.01\n"
+      },
+      {
+        "test_method": "test_generation_speed",
+        "status": "passed",
+        "output": "\nQwen3-4B-Instruct-2507 Generation Speed:\n  Total time: 0.0507s\n  Generated text length: 46 chars\n  Characters per second: 907.84\n"
+      },
+      {
+        "test_method": "test_inference_speed_long_input",
+        "status": "passed",
+        "output": "\nQwen3-4B-Instruct-2507 Long Input (100 tokens) Inference Speed:\n  Total time: 0.0317s\n  Avg time per inference: 0.0106s\n  Tokens per second: 9452.59\n"
+      },
+      {
+        "test_method": "test_inference_speed_medium_input",
+        "status": "passed",
+        "output": "\nQwen3-4B-Instruct-2507 Medium Input (50 tokens) Inference Speed:\n  Total time: 0.0525s\n  Avg time per inference: 0.0105s\n  Tokens per second: 4760.35\n"
+      },
+      {
+        "test_method": "test_inference_speed_short_input",
+        "status": "passed",
+        "output": "\nQwen3-4B-Instruct-2507 Short Input (20 tokens) Inference Speed:\n  Total time: 0.0531s\n  Avg time per inference: 0.0106s\n  Tokens per second: 1881.70\n"
+      },
+      {
+        "test_method": "test_variable_length_inference_speed",
+        "status": "passed",
+        "output": "  Length 10: 946.30 tokens/sec\n  Length 25: 2398.81 tokens/sec\n  Length 50: 4808.40 tokens/sec\n  Length 75: 7124.88 tokens/sec\n  Length 100: 9367.09 tokens/sec\n"
+      }
+    ],
+    "status": "success"
+  },
+  "qwen3_coder_30b": {
+    "model": "qwen3_coder_30b",
+    "category": "inference_speed",
+    "timestamp": 1768700627.066542,
+    "results": [
+      {
+        "test_method": "test_batch_inference_speed",
+        "status": "passed",
+        "output": "\nQwen3-Coder-30B Batch Size 1 Inference Speed:\n  Avg time per batch: 0.0104s\n  Tokens per second: 2871.55\n\nQwen3-Coder-30B Batch Size 2 Inference Speed:\n  Avg time per batch: 0.0104s\n  Tokens per second: 5764.63\n\nQwen3-Coder-30B Batch Size 4 Inference Speed:\n  Avg time per batch: 0.0104s\n  Tokens per second: 11539.46\n"
+      },
+      {
+        "test_method": "test_generation_speed",
+        "status": "passed",
+        "output": "\nQwen3-Coder-30B Generation Speed:\n  Total time: 0.0507s\n  Generated text length: 46 chars\n  Characters per second: 907.52\n"
+      },
+      {
+        "test_method": "test_inference_speed_long_input",
+        "status": "passed",
+        "output": "\nQwen3-Coder-30B Long Input (100 tokens) Inference Speed:\n  Total time: 0.0316s\n  Avg time per inference: 0.0105s\n  Tokens per second: 9504.72\n"
+      },
+      {
+        "test_method": "test_inference_speed_medium_input",
+        "status": "passed",
+        "output": "\nQwen3-Coder-30B Medium Input (50 tokens) Inference Speed:\n  Total time: 0.0528s\n  Avg time per inference: 0.0106s\n  Tokens per second: 4734.00\n"
+      },
+      {
+        "test_method": "test_inference_speed_short_input",
+        "status": "passed",
+        "output": "\nQwen3-Coder-30B Short Input (20 tokens) Inference Speed:\n  Total time: 0.0530s\n  Avg time per inference: 0.0106s\n  Tokens per second: 1886.84\n"
+      },
+      {
+        "test_method": "test_variable_length_inference_speed",
+        "status": "passed",
+        "output": "  Length 10: 963.51 tokens/sec\n  Length 25: 2419.05 tokens/sec\n  Length 50: 4816.24 tokens/sec\n  Length 75: 7173.07 tokens/sec\n  Length 100: 9428.86 tokens/sec\n"
+      }
+    ],
+    "status": "success"
+  }
+}

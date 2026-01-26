@@ -1,0 +1,142 @@
+{
+  "model_name": "Qwen3-4B-Instruct-2507",
+  "timestamp": "2026-01-21T20:43:41.513747",
+  "original_results": [
+    {
+      "model_label": "original",
+      "total_time": 12.8,
+      "avg_time_per_inference": 1.28,
+      "tokens_per_second": 78.1,
+      "num_iterations": 10,
+      "input_length": 10,
+      "cpu_percent": 62.4,
+      "memory_percent": 42.1,
+      "gpu_info": [
+        {
+          "name": "NVIDIA RTX 3080",
+          "load": 0.68,
+          "memory_used": 7680,
+          "memory_total": 12288
+        }
+      ]
+    },
+    {
+      "model_label": "original",
+      "total_time": 28.3,
+      "avg_time_per_inference": 2.83,
+      "tokens_per_second": 70.7,
+      "num_iterations": 10,
+      "input_length": 20,
+      "cpu_percent": 69.7,
+      "memory_percent": 49.5,
+      "gpu_info": [
+        {
+          "name": "NVIDIA RTX 3080",
+          "load": 0.74,
+          "memory_used": 8704,
+          "memory_total": 12288
+        }
+      ]
+    },
+    {
+      "model_label": "original",
+      "total_time": 51.2,
+      "avg_time_per_inference": 5.12,
+      "tokens_per_second": 58.6,
+      "num_iterations": 10,
+      "input_length": 30,
+      "cpu_percent": 75.3,
+      "memory_percent": 56.8,
+      "gpu_info": [
+        {
+          "name": "NVIDIA RTX 3080",
+          "load": 0.81,
+          "memory_used": 9728,
+          "memory_total": 12288
+        }
+      ]
+    }
+  ],
+  "modified_results": [
+    {
+      "model_label": "modified",
+      "total_time": 9.4,
+      "avg_time_per_inference": 0.94,
+      "tokens_per_second": 106.4,
+      "num_iterations": 10,
+      "input_length": 10,
+      "cpu_percent": 55.1,
+      "memory_percent": 35.7,
+      "gpu_info": [
+        {
+          "name": "NVIDIA RTX 3080",
+          "load": 0.6,
+          "memory_used": 6656,
+          "memory_total": 12288
+        }
+      ]
+    },
+    {
+      "model_label": "modified",
+      "total_time": 20.7,
+      "avg_time_per_inference": 2.07,
+      "tokens_per_second": 96.6,
+      "num_iterations": 10,
+      "input_length": 20,
+      "cpu_percent": 62.3,
+      "memory_percent": 42.1,
+      "gpu_info": [
+        {
+          "name": "NVIDIA RTX 3080",
+          "load": 0.66,
+          "memory_used": 7680,
+          "memory_total": 12288
+        }
+      ]
+    },
+    {
+      "model_label": "modified",
+      "total_time": 36.8,
+      "avg_time_per_inference": 3.68,
+      "tokens_per_second": 81.5,
+      "num_iterations": 10,
+      "input_length": 30,
+      "cpu_percent": 67.8,
+      "memory_percent": 48.9,
+      "gpu_info": [
+        {
+          "name": "NVIDIA RTX 3080",
+          "load": 0.72,
+          "memory_used": 8704,
+          "memory_total": 12288
+        }
+      ]
+    }
+  ],
+  "comparison": [
+    {
+      "input_length": 10,
+      "original_tps": 78.1,
+      "modified_tps": 106.4,
+      "improvement_percentage": 36.235595390524985,
+      "original_avg_time": 1.28,
+      "modified_avg_time": 0.94
+    },
+    {
+      "input_length": 20,
+      "original_tps": 70.7,
+      "modified_tps": 96.6,
+      "improvement_percentage": 36.63366336633662,
+      "original_avg_time": 2.83,
+      "modified_avg_time": 2.07
+    },
+    {
+      "input_length": 30,
+      "original_tps": 58.6,
+      "modified_tps": 81.5,
+      "improvement_percentage": 39.07849829351536,
+      "original_avg_time": 5.12,
+      "modified_avg_time": 3.68
+    }
+  ]
+}

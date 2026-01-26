@@ -1,0 +1,280 @@
+{
+  "summary": {
+    "total_models": 4,
+    "start_time": 1768735733.8209903,
+    "end_time": 1768735733.8209903,
+    "duration": 0.0
+  },
+  "individual_results": {
+    "glm_4_7": {
+      "model": "glm_4_7",
+      "timestamp": 1768735733.8209903,
+      "metrics": {
+        "inference_speed": {
+          "unoptimized_tokens_per_second": 15.09698060629886,
+          "optimized_tokens_per_second": 16.174439254215574,
+          "improvement_percentage": 7.136914830950825
+        },
+        "memory_usage": {
+          "unoptimized_peak_mb": 1922.2411070961746,
+          "optimized_peak_mb": 1488.474797599807,
+          "unoptimized_avg_mb": 1671.5140061705868,
+          "optimized_avg_mb": 1353.1589069089155,
+          "improvement_percentage": 19.045912752536125
+        },
+        "accuracy_preservation": {
+          "similarity_score": 0.97857395817502,
+          "preserved": true
+        }
+      },
+      "raw_data": {
+        "unoptimized": {
+          "inference_speed": {
+            "total_time_seconds": 5.0,
+            "avg_time_per_inference_seconds": 1.3247682117082054,
+            "tokens_per_second": 15.09698060629886,
+            "iterations_completed": 10
+          },
+          "memory_usage": {
+            "initial_memory_mb": 500.0,
+            "peak_memory_mb": 1922.2411070961746,
+            "avg_memory_mb": 1671.5140061705868,
+            "memory_increase_mb": 1171.5140061705868,
+            "memory_readings_mb": [
+              1671.5140061705868,
+              1671.5140061705868,
+              1671.5140061705868,
+              1671.5140061705868,
+              1671.5140061705868
+            ]
+          }
+        },
+        "optimized": {
+          "inference_speed": {
+            "total_time_seconds": 5.0,
+            "avg_time_per_inference_seconds": 1.236518910217389,
+            "tokens_per_second": 16.174439254215574,
+            "iterations_completed": 10
+          },
+          "memory_usage": {
+            "initial_memory_mb": 500.0,
+            "peak_memory_mb": 1488.474797599807,
+            "avg_memory_mb": 1353.1589069089155,
+            "memory_increase_mb": 853.1589069089155,
+            "memory_readings_mb": [
+              1353.1589069089155,
+              1353.1589069089155,
+              1353.1589069089155,
+              1353.1589069089155,
+              1353.1589069089155
+            ]
+          }
+        }
+      }
+    },
+    "qwen3_4b_instruct_2507": {
+      "model": "qwen3_4b_instruct_2507",
+      "timestamp": 1768735733.8209903,
+      "metrics": {
+        "inference_speed": {
+          "unoptimized_tokens_per_second": 12.970380636646363,
+          "optimized_tokens_per_second": 23.304704041102227,
+          "improvement_percentage": 79.6763309725652
+        },
+        "memory_usage": {
+          "unoptimized_peak_mb": 2339.9177001128583,
+          "optimized_peak_mb": 1581.962233848459,
+          "unoptimized_avg_mb": 2034.7110435763987,
+          "optimized_avg_mb": 1438.1474853167808,
+          "improvement_percentage": 29.31932571668957
+        },
+        "accuracy_preservation": {
+          "similarity_score": 0.9771503637902543,
+          "preserved": true
+        }
+      },
+      "raw_data": {
+        "unoptimized": {
+          "inference_speed": {
+            "total_time_seconds": 5.0,
+            "avg_time_per_inference_seconds": 1.5419747932063175,
+            "tokens_per_second": 12.970380636646363,
+            "iterations_completed": 10
+          },
+          "memory_usage": {
+            "initial_memory_mb": 500.0,
+            "peak_memory_mb": 2339.9177001128583,
+            "avg_memory_mb": 2034.7110435763987,
+            "memory_increase_mb": 1534.7110435763987,
+            "memory_readings_mb": [
+              2034.7110435763987,
+              2034.7110435763987,
+              2034.7110435763987,
+              2034.7110435763987,
+              2034.7110435763987
+            ]
+          }
+        },
+        "optimized": {
+          "inference_speed": {
+            "total_time_seconds": 5.0,
+            "avg_time_per_inference_seconds": 0.858195837403738,
+            "tokens_per_second": 23.304704041102227,
+            "iterations_completed": 10
+          },
+          "memory_usage": {
+            "initial_memory_mb": 500.0,
+            "peak_memory_mb": 1581.962233848459,
+            "avg_memory_mb": 1438.1474853167808,
+            "memory_increase_mb": 938.1474853167808,
+            "memory_readings_mb": [
+              1438.1474853167808,
+              1438.1474853167808,
+              1438.1474853167808,
+              1438.1474853167808,
+              1438.1474853167808
+            ]
+          }
+        }
+      }
+    },
+    "qwen3_coder_30b": {
+      "model": "qwen3_coder_30b",
+      "timestamp": 1768735733.8209903,
+      "metrics": {
+        "inference_speed": {
+          "unoptimized_tokens_per_second": 17.64021868040188,
+          "optimized_tokens_per_second": 15.538665501976359,
+          "improvement_percentage": -11.91341908227207
+        },
+        "memory_usage": {
+          "unoptimized_peak_mb": 2304.7359662999875,
+          "optimized_peak_mb": 1519.6893539247026,
+          "unoptimized_avg_mb": 2004.1182315652068,
+          "optimized_avg_mb": 1381.535776295184,
+          "improvement_percentage": 31.065156010470947
+        },
+        "accuracy_preservation": {
+          "similarity_score": 0.9646514657592359,
+          "preserved": true
+        }
+      },
+      "raw_data": {
+        "unoptimized": {
+          "inference_speed": {
+            "total_time_seconds": 5.0,
+            "avg_time_per_inference_seconds": 1.1337727928633796,
+            "tokens_per_second": 17.64021868040188,
+            "iterations_completed": 10
+          },
+          "memory_usage": {
+            "initial_memory_mb": 500.0,
+            "peak_memory_mb": 2304.7359662999875,
+            "avg_memory_mb": 2004.1182315652068,
+            "memory_increase_mb": 1504.1182315652068,
+            "memory_readings_mb": [
+              2004.1182315652068,
+              2004.1182315652068,
+              2004.1182315652068,
+              2004.1182315652068,
+              2004.1182315652068
+            ]
+          }
+        },
+        "optimized": {
+          "inference_speed": {
+            "total_time_seconds": 5.0,
+            "avg_time_per_inference_seconds": 1.2871118177720091,
+            "tokens_per_second": 15.538665501976359,
+            "iterations_completed": 10
+          },
+          "memory_usage": {
+            "initial_memory_mb": 500.0,
+            "peak_memory_mb": 1519.6893539247026,
+            "avg_memory_mb": 1381.535776295184,
+            "memory_increase_mb": 881.535776295184,
+            "memory_readings_mb": [
+              1381.535776295184,
+              1381.535776295184,
+              1381.535776295184,
+              1381.535776295184,
+              1381.535776295184
+            ]
+          }
+        }
+      }
+    },
+    "qwen3_vl_2b": {
+      "model": "qwen3_vl_2b",
+      "timestamp": 1768735733.8209903,
+      "metrics": {
+        "inference_speed": {
+          "unoptimized_tokens_per_second": 10.91330458667874,
+          "optimized_tokens_per_second": 23.550680436958558,
+          "improvement_percentage": 115.79788459038846
+        },
+        "memory_usage": {
+          "unoptimized_peak_mb": 2512.6844763451572,
+          "optimized_peak_mb": 1523.8274644085047,
+          "unoptimized_avg_mb": 2184.9430229088325,
+          "optimized_avg_mb": 1385.2976949168224,
+          "improvement_percentage": 36.59799452927774
+        },
+        "accuracy_preservation": {
+          "similarity_score": 0.9642474425258433,
+          "preserved": true
+        }
+      },
+      "raw_data": {
+        "unoptimized": {
+          "inference_speed": {
+            "total_time_seconds": 5.0,
+            "avg_time_per_inference_seconds": 1.8326254748184048,
+            "tokens_per_second": 10.91330458667874,
+            "iterations_completed": 10
+          },
+          "memory_usage": {
+            "initial_memory_mb": 500.0,
+            "peak_memory_mb": 2512.6844763451572,
+            "avg_memory_mb": 2184.9430229088325,
+            "memory_increase_mb": 1684.9430229088325,
+            "memory_readings_mb": [
+              2184.9430229088325,
+              2184.9430229088325,
+              2184.9430229088325,
+              2184.9430229088325,
+              2184.9430229088325
+            ]
+          }
+        },
+        "optimized": {
+          "inference_speed": {
+            "total_time_seconds": 5.0,
+            "avg_time_per_inference_seconds": 0.849232363096125,
+            "tokens_per_second": 23.550680436958558,
+            "iterations_completed": 10
+          },
+          "memory_usage": {
+            "initial_memory_mb": 500.0,
+            "peak_memory_mb": 1523.8274644085047,
+            "avg_memory_mb": 1385.2976949168224,
+            "memory_increase_mb": 885.2976949168224,
+            "memory_readings_mb": [
+              1385.2976949168224,
+              1385.2976949168224,
+              1385.2976949168224,
+              1385.2976949168224,
+              1385.2976949168224
+            ]
+          }
+        }
+      }
+    }
+  },
+  "aggregated_metrics": {
+    "avg_speed_improvement": 47.674427827908104,
+    "avg_memory_improvement": 29.007097252243597,
+    "accuracy_preserved_models": 4,
+    "total_models_evaluated": 4
+  }
+}
