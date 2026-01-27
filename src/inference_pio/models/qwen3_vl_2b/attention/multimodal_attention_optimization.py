@@ -13,12 +13,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ....common.multimodal_attention_optimization import (
-    Qwen3VL2BMultimodalAttentionOptimizer as BaseQwen3VL2BMultimodalAttentionOptimizer,
-    Qwen3VL2BAttentionManager as BaseQwen3VL2BAttentionManager,
-    create_qwen3_vl_multimodal_attention_optimizer,
-    apply_multimodal_attention_optimizations_to_model,
-    get_multimodal_attention_optimization_report
+from ....common.generic_multimodal_attention_optimization import (
+    GenericMultimodalAttentionOptimizer as BaseQwen3VL2BMultimodalAttentionOptimizer,
+    GenericMultimodalAttentionManager as BaseQwen3VL2BAttentionManager,
+    create_generic_multimodal_attention_optimizer as create_qwen3_vl_multimodal_attention_optimizer,
+    apply_generic_multimodal_attention_optimizations_to_model as apply_multimodal_attention_optimizations_to_model,
+    get_generic_multimodal_attention_optimization_report as get_multimodal_attention_optimization_report
 )
 from ..config import Qwen3VL2BConfig
 

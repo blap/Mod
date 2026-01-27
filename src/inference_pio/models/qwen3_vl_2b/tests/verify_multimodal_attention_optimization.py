@@ -120,9 +120,9 @@ def verify_multimodal_attention_optimization():
     # Test 8: Check that the common module has been updated
     total_tests += 1
     try:
-        from src.inference_pio.common.multimodal_attention_optimization import (
-            Qwen3VL2BMultimodalAttentionOptimizer as BaseOptimizer,
-            Qwen3VL2BAttentionManager as BaseManager
+        from src.inference_pio.common.generic_multimodal_attention_optimization import (
+            GenericMultimodalAttentionOptimizer as BaseOptimizer,
+            GenericMultimodalAttentionManager as BaseManager
         )
         print("[OK] Test 8: Common multimodal attention optimization module exists")
         success_count += 1

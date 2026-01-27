@@ -43,6 +43,7 @@ class Qwen3VL2BConfig:
     vision_patch_size: int = 14
     vision_image_size: int = 448
     vision_layer_norm_eps: float = 1e-6
+    layer_norm_eps: float = 1e-6
     use_vision_flash_attention: bool = True
     
     # Data type for model computations
@@ -53,6 +54,9 @@ class Qwen3VL2BConfig:
     use_cache: bool = True
     low_cpu_mem_usage: bool = True
     max_memory: Optional[Dict] = None  # Will be set dynamically based on available GPU memory
+    enable_disk_offloading: bool = False
+    offload_folder: str = "offload"
+    enable_intelligent_pagination: bool = False
     
     # Hardware optimization settings
     use_tensor_parallelism: bool = False
@@ -132,6 +136,17 @@ class Qwen3VL2BConfig:
     cross_modal_similarity_method: str = 'cosine'  # Method for similarity computation ('cosine', 'dot_product', 'euclidean')
     cross_modal_alignment_method: str = 'qwen3_vl_specific'  # Default alignment method ('contrastive', 'attention', 'learned_projection', 'similarity_based', 'qwen3_vl_specific')
 
+    # Legacy/Alias attributes for compatibility
+    contrastive_margin: float = 0.2
+    enable_dynamic_alignment: bool = True
+    alignment_frequency: int = 10
+    alignment_threshold: float = 0.8
+    use_attention_alignment: bool = True
+    use_learned_alignment: bool = True
+    alignment_projection_dim: int = 512
+    enable_similarity_alignment: bool = True
+    similarity_method: str = 'cosine'
+
     # Qwen3-VL specific optimization settings
     use_qwen3_vl_attention_optimizations: bool = True  # Enable Qwen3-VL specific attention optimizations
     use_qwen3_vl_kv_cache_optimizations: bool = True  # Enable Qwen3-VL specific KV-cache optimizations
@@ -153,6 +168,60 @@ class Qwen3VL2BConfig:
     kernel_fusion_patterns: Optional[Dict[str, bool]] = None
     multimodal_preserve_modalities: Optional[List[str]] = None
     multimodal_preserve_components: Optional[List[str]] = None
+
+    # System-wide optimization flags (added for compatibility)
+    linear_bias_optimization_enabled: bool = False
+    enable_continuous_nas: bool = False
+    enable_sequence_parallelism: bool = False
+    enable_vision_language_parallelism: bool = False
+    enable_async_multimodal_processing: bool = False
+    async_max_concurrent_requests: int = 4
+    async_buffer_size: int = 100
+    async_batch_timeout: float = 0.1
+    enable_async_batching: bool = True
+    async_processing_device: Optional[str] = None
+    enable_image_tokenization: bool = True
+    enable_image_patch_caching: bool = True
+    enable_image_batch_processing: bool = True
+    enable_memory_efficient_image_processing: bool = True
+    enable_image_quantization: bool = False
+    image_quantization_bits: int = 8
+    enable_image_compression: bool = True
+    image_compression_ratio: float = 0.5
+    image_token_dim: int = 1024
+    max_image_tokens: int = 1024
+    image_size: int = 448
+    patch_size: int = 14
+    use_quantization: bool = False
+    enable_intelligent_multimodal_caching: bool = False
+    intelligent_multimodal_cache_size_gb: float = 2.0
+    intelligent_multimodal_cache_eviction_policy: str = 'predictive'
+    intelligent_multimodal_cache_enable_similarity: bool = True
+    intelligent_multimodal_cache_similarity_threshold: float = 0.85
+    intelligent_multimodal_cache_enable_ttl: bool = True
+    intelligent_multimodal_cache_default_ttl: float = 7200.0
+    intelligent_multimodal_cache_enable_compression: bool = True
+    intelligent_multimodal_cache_compression_ratio: float = 0.6
+    enable_multimodal_preprocessing_pipeline: bool = False
+    multimodal_pipeline_cache_size: int = 1000
+    enable_multimodal_pipeline_caching: bool = True
+    max_text_length: int = 32768
+    enable_visual_resource_compression: bool = False
+    visual_compression_method: str = 'quantization'
+    visual_compression_ratio: float = 0.5
+    visual_quantization_bits: int = 8
+    visual_enable_compression_cache: bool = True
+    visual_compression_cache_size: int = 1000
+    visual_enable_adaptive_compression: bool = True
+    use_snn_conversion: bool = False
+    use_cuda_kernels: bool = False
+    use_prefix_caching: bool = False
+    use_kv_cache_compression: bool = False
+    use_bias_removal_optimization: bool = False
+    use_fused_layer_norm: bool = False
+    use_structured_pruning: bool = False
+    use_tensor_decomposition: bool = False
+    use_adaptive_batching: bool = False
     vision_language_visual_device_mapping: Optional[List[int]] = None
     vision_language_textual_device_mapping: Optional[List[int]] = None
 
@@ -185,6 +254,29 @@ class Qwen3VL2BConfig:
     qwen3_coder_attention_sparsity_ratio: float = 0.0  # Placeholder for compatibility
     qwen3_coder_kv_cache_compression_ratio: float = 0.0  # Placeholder for compatibility
     qwen3_coder_syntax_attention_scaling: float = 0.0  # Placeholder for compatibility
+
+    # Multimodal Attention Optimization Parameters
+    use_multimodal_attention_optimization: bool = True
+    multimodal_attention_temperature: float = 1.0
+    multimodal_attention_lambda: float = 0.1
+    multimodal_attention_window_size: int = 512
+    multimodal_attention_use_flash: bool = True
+    multimodal_attention_use_sparse: bool = False
+    multimodal_attention_use_sliding_window: bool = False
+    multimodal_attention_use_mqa_gqa: bool = True
+    multimodal_attention_use_paged: bool = False
+    multimodal_attention_cross_modal_fusion_method: str = 'gated'
+    multimodal_attention_cross_modal_alignment_method: str = 'contrastive'
+    multimodal_attention_enable_dynamic_fusion: bool = True
+    multimodal_attention_enable_adaptive_compression: bool = True
+    multimodal_attention_compression_ratio: float = 0.8
+    multimodal_attention_enable_tensor_fusion: bool = True
+    multimodal_attention_tensor_fusion_method: str = 'bilinear'
+    multimodal_attention_enable_quantization: bool = False
+    multimodal_attention_quantization_bits: int = 8
+    multimodal_attention_enable_lora: bool = False
+    multimodal_attention_lora_rank: int = 16
+    multimodal_attention_lora_alpha: float = 32.0
 
     def __post_init__(self):
         """Post-initialization to set default values for lists and other fields."""

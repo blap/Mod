@@ -586,6 +586,13 @@ def create_image_tokenizer(model_path: Optional[str] = None,
     """
     if config is None:
         config = ImageTokenizationConfig()
+    elif isinstance(config, dict):
+        # Convert dict to ImageTokenizationConfig
+        config_obj = ImageTokenizationConfig()
+        for k, v in config.items():
+            if hasattr(config_obj, k):
+                setattr(config_obj, k, v)
+        config = config_obj
 
     logger.info(f"Creating image tokenizer with config: {config}")
 
