@@ -146,6 +146,8 @@ except ImportError:
     def estimate_energy_savings(model, input_shape):
         return {"energy_estimate": "not_available"}
 
+from ...common.hardware_analyzer import get_system_profile
+from ...plugin_system.cpu_plugin import create_generic_cpu_plugin
 
 logger = logging.getLogger(__name__)
 
@@ -183,6 +185,11 @@ class GLM47FlashModel(nn.Module):
             "max_memory": config.max_memory
         }
 
+        # Hardware Analysis and Adaptive Configuration
+        self._system_profile = get_system_profile()
+        self._processor_plugin = create_generic_cpu_plugin()
+        self._processor_plugin.initialize({"num_threads": self._system_profile.get_cpu_allocation()})
+
         # Initialize NAS controller if enabled
         self._nas_controller = None
         self._model_adapter = None
@@ -216,16 +223,27 @@ class GLM47FlashModel(nn.Module):
             self._nas_controller = get_nas_controller(nas_config)
             self._model_adapter = get_model_adapter(self._model, self._nas_controller) if self._model else None
 
-        # Initialize advanced disk offloading system if enabled
+        # Initialize advanced disk offloading system if enabled or weak hardware
         self._disk_offloader = None
         self._tensor_offloader = None
-        if getattr(config, 'enable_disk_offloading', False):
+
+        enable_offloading = getattr(config, 'enable_disk_offloading', False)
+        if self._system_profile.is_weak_hardware:
+            enable_offloading = True
+            logger.info("Weak hardware detected. Forcing disk offloading enabled for GLM-4.7.")
+
+        if enable_offloading:
             self._initialize_disk_offloading()
 
         # Initialize intelligent pagination system for unimodal text data if enabled
         self._pagination_system = None
         self._unimodal_pager = None
-        if getattr(config, 'enable_intelligent_pagination', False):
+
+        enable_pagination = getattr(config, 'enable_intelligent_pagination', False)
+        if self._system_profile.is_weak_hardware:
+            enable_pagination = True
+
+        if enable_pagination:
             self._initialize_pagination_system()
 
         # Initialize the model
@@ -262,12 +280,22 @@ class GLM47FlashModel(nn.Module):
         try:
             logger.info("Initializing advanced disk offloading system for GLM-4.7-Flash model...")
 
+            # Adjust settings for weak hardware
+            max_memory_ratio = getattr(self.config, 'max_memory_ratio', 0.8)
+            page_size_mb = getattr(self.config, 'page_size_mb', 16)
+            eviction_policy = getattr(self.config, 'eviction_policy', 'predictive')
+
+            if self._system_profile.is_weak_hardware:
+                max_memory_ratio = 0.95 # Use almost all RAM
+                page_size_mb = 8
+                eviction_policy = 'lru'
+
             # Create disk offloader with advanced settings
             self._disk_offloader = create_disk_offloader(
-                max_memory_ratio=getattr(self.config, 'max_memory_ratio', 0.8),
+                max_memory_ratio=max_memory_ratio,
                 offload_directory=getattr(self.config, 'offload_directory', None),
-                page_size_mb=getattr(self.config, 'page_size_mb', 16),
-                eviction_policy=getattr(self.config, 'eviction_policy', 'predictive'),
+                page_size_mb=page_size_mb,
+                eviction_policy=eviction_policy,
                 enable_clustering=getattr(self.config, 'enable_clustering', True),
                 cluster_count=getattr(self.config, 'cluster_count', 5),
                 enable_adaptive=getattr(self.config, 'enable_adaptive_offloading', True)
@@ -397,10 +425,22 @@ class GLM47FlashModel(nn.Module):
 
                 # Add device_map if specified (avoid disk offloading issues)
                 device_map = self._memory_config.get("device_map", "auto")
+
+                # Hybrid VRAM strategy for weak hardware
+                if self._system_profile.is_weak_hardware:
+                    device_map = "auto"
+                    safe_limit_mb = int(self._system_profile.safe_vram_limit_gb * 1024)
+                    if safe_limit_mb > 0:
+                        load_kwargs["max_memory"] = {0: f"{safe_limit_mb}MB"}
+                        logger.info(f"GLM-4.7: Applying safe VRAM limit: {safe_limit_mb} MB")
+                    else:
+                        load_kwargs["device_map"] = "cpu"
+                        logger.info("GLM-4.7: VRAM too low. Forcing CPU.")
+
                 if device_map and device_map not in ["disk", "disk_0"]:  # Avoid invalid "disk" device
                     load_kwargs["device_map"] = device_map
 
-                # Add max_memory if specified (but avoid disk-related issues)
+                # Add max_memory if specified (but avoid disk-related issues) - overrides auto
                 max_memory = self._memory_config.get("max_memory")
                 if max_memory:
                     # Only add max_memory if it doesn't cause disk offloading issues

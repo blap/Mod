@@ -86,6 +86,10 @@ except ImportError:
     # Define a dummy function if not available
     def estimate_energy_savings(model, input_shape):
         return {"energy_estimate": "not_available"}
+
+from ...common.hardware_analyzer import get_system_profile
+from ...plugin_system.cpu_plugin import create_generic_cpu_plugin
+
 from ...common.optimization_integration import (
     apply_qwen_optimizations,
     legacy_apply_flash_attention,
@@ -153,6 +157,11 @@ class Qwen3Coder30BModel(nn.Module):
             "max_memory": config.max_memory
         }
 
+        # Hardware Analysis and Adaptive Configuration
+        self._system_profile = get_system_profile()
+        self._processor_plugin = create_generic_cpu_plugin()
+        self._processor_plugin.initialize({"num_threads": self._system_profile.get_cpu_allocation()})
+
         # Initialize NAS controller if enabled
         self._nas_controller = None
         self._model_adapter = None
@@ -186,16 +195,27 @@ class Qwen3Coder30BModel(nn.Module):
             self._nas_controller = get_nas_controller(nas_config)
             self._model_adapter = get_model_adapter(self._model, self._nas_controller) if self._model else None
 
-        # Initialize advanced disk offloading system if enabled
+        # Initialize advanced disk offloading system if enabled or weak hardware
         self._disk_offloader = None
         self._tensor_offloader = None
-        if getattr(config, 'enable_disk_offloading', False):
+
+        enable_offloading = getattr(config, 'enable_disk_offloading', False)
+        if self._system_profile.is_weak_hardware:
+            enable_offloading = True
+            logger.info("Weak hardware detected. Forcing disk offloading enabled for Qwen3-Coder-30B.")
+
+        if enable_offloading:
             self._initialize_disk_offloading()
 
-        # Initialize intelligent pagination system for unimodal text data if enabled
+        # Initialize intelligent pagination system for unimodal text data if enabled or weak hardware
         self._pagination_system = None
         self._unimodal_pager = None
-        if getattr(config, 'enable_intelligent_pagination', False):
+
+        enable_pagination = getattr(config, 'enable_intelligent_pagination', False)
+        if self._system_profile.is_weak_hardware:
+            enable_pagination = True
+
+        if enable_pagination:
             self._initialize_pagination_system()
 
         # Initialize the model
@@ -232,12 +252,24 @@ class Qwen3Coder30BModel(nn.Module):
         try:
             logger.info("Initializing advanced disk offloading system for Qwen3-Coder-30B model...")
 
+            # Adjust settings for weak hardware - Critical for 30B model
+            max_memory_ratio = getattr(self.config, 'max_memory_ratio', 0.8)
+            page_size_mb = getattr(self.config, 'page_size_mb', 16)
+            eviction_policy = getattr(self.config, 'eviction_policy', 'predictive')
+
+            if self._system_profile.is_weak_hardware:
+                # For a giant model like 30B on weak hardware, we need aggressive offloading
+                max_memory_ratio = 0.98 # Use practically all available RAM
+                page_size_mb = 16 # Keep larger chunks to avoid too much IO overhead
+                eviction_policy = 'sequential' # Assume sequential access for layer-wise execution
+                logger.info("Configuring aggressive offloading for Qwen3-Coder-30B on weak hardware")
+
             # Create disk offloader with advanced settings
             self._disk_offloader = create_disk_offloader(
-                max_memory_ratio=getattr(self.config, 'max_memory_ratio', 0.8),
+                max_memory_ratio=max_memory_ratio,
                 offload_directory=getattr(self.config, 'offload_directory', None),
-                page_size_mb=getattr(self.config, 'page_size_mb', 16),
-                eviction_policy=getattr(self.config, 'eviction_policy', 'predictive'),
+                page_size_mb=page_size_mb,
+                eviction_policy=eviction_policy,
                 enable_clustering=getattr(self.config, 'enable_clustering', True),
                 cluster_count=getattr(self.config, 'cluster_count', 5),
                 enable_adaptive=getattr(self.config, 'enable_adaptive_offloading', True)
@@ -361,7 +393,20 @@ class Qwen3Coder30BModel(nn.Module):
                 "low_cpu_mem_usage": self._memory_config.get("low_cpu_mem_usage", True),
             }
 
-            # Add max_memory if specified
+            # Hybrid VRAM strategy for weak hardware - prioritize KV cache
+            if self._system_profile.is_weak_hardware:
+                load_kwargs["device_map"] = "auto"
+                safe_limit_mb = int(self._system_profile.safe_vram_limit_gb * 1024)
+                if safe_limit_mb > 0:
+                    # For 30B model, we want to maximize KV cache space in VRAM if possible
+                    # but model weights are huge. We might only fit 1 layer.
+                    load_kwargs["max_memory"] = {0: f"{safe_limit_mb}MB"}
+                    logger.info(f"Qwen3-Coder-30B: Applying safe VRAM limit: {safe_limit_mb} MB")
+                else:
+                    load_kwargs["device_map"] = "cpu"
+                    logger.info("Qwen3-Coder-30B: VRAM too low. Forcing CPU.")
+
+            # Add max_memory if specified (overrides auto)
             if self._memory_config.get("max_memory"):
                 load_kwargs["max_memory"] = self._memory_config["max_memory"]
 

@@ -22,6 +22,9 @@ except ImportError:
     AutoTokenizer = None
     AutoImageProcessor = None
 
+from ...common.hardware_analyzer import get_system_profile
+from ...plugin_system.cpu_plugin import create_generic_cpu_plugin
+
 logger = logging.getLogger(__name__)
 
 
@@ -76,17 +79,35 @@ class Qwen3VL2BModel(nn.Module):
             self._nas_controller = get_nas_controller(nas_config)
             self._model_adapter = get_model_adapter(self._model, self._nas_controller) if self._model else None
 
-        # Initialize advanced disk offloading system if enabled
+        # Hardware Analysis and Adaptive Configuration
+        self._system_profile = get_system_profile()
+        self._processor_plugin = create_generic_cpu_plugin()
+        self._processor_plugin.initialize({"num_threads": self._system_profile.get_cpu_allocation()})
+
+        # Initialize advanced disk offloading system if enabled or required by weak hardware
         self._disk_offloader = None
         self._tensor_offloader = None
         self._multimodal_offloader = None
-        if getattr(config, 'enable_disk_offloading', False):
+
+        # Force enable disk offloading if hardware is weak
+        enable_offloading = getattr(config, 'enable_disk_offloading', False)
+        if self._system_profile.is_weak_hardware:
+            enable_offloading = True
+            logger.info("Weak hardware detected. Forcing disk offloading enabled.")
+
+        if enable_offloading:
             self._initialize_disk_offloading()
 
-        # Initialize intelligent pagination system for multimodal data if enabled
+        # Initialize intelligent pagination system for multimodal data if enabled or required
         self._pagination_system = None
         self._multimodal_pager = None
-        if getattr(config, 'enable_intelligent_pagination', False):
+
+        enable_pagination = getattr(config, 'enable_intelligent_pagination', False)
+        if self._system_profile.is_weak_hardware:
+            enable_pagination = True
+            logger.info("Weak hardware detected. Forcing intelligent pagination enabled.")
+
+        if enable_pagination:
             self._initialize_pagination_system()
 
         # Initialize the model
@@ -197,7 +218,31 @@ class Qwen3VL2BModel(nn.Module):
                 "low_cpu_mem_usage": self._memory_config.get("low_cpu_mem_usage", True),
             }
 
-            # Add max_memory if specified
+            # Adjust device_map for weak hardware
+            if self._system_profile.is_weak_hardware:
+                if self._system_profile.safe_vram_limit_gb > 2.0:
+                     # Hybrid strategy: Let accelerate/transformers handle splitting based on max_memory
+                     load_kwargs["device_map"] = "auto"
+                     # Construct max_memory dict
+                     max_mem = {0: f"{int(self._system_profile.safe_vram_limit_gb * 1024)}MB"}
+                     # Add CPU memory limit too? Typically 'cpu' key
+                     # max_mem['cpu'] = ...
+                     load_kwargs["max_memory"] = max_mem
+                     logger.info(f"Applying safe VRAM limit: {self._system_profile.safe_vram_limit_gb:.2f} GB")
+                else:
+                    # Very weak GPU, prefer CPU/Disk offload primarily
+                    # But user asked to use VRAM if it helps. Even 1GB helps.
+                    # So we still use "auto" with strict limits.
+                    load_kwargs["device_map"] = "auto"
+                    safe_limit_mb = int(self._system_profile.safe_vram_limit_gb * 1024)
+                    if safe_limit_mb > 0:
+                        load_kwargs["max_memory"] = {0: f"{safe_limit_mb}MB"}
+                        logger.info(f"Applying minimal VRAM limit: {safe_limit_mb} MB")
+                    else:
+                        load_kwargs["device_map"] = "cpu"
+                        logger.info("VRAM too low or unavailable. Forcing CPU.")
+
+            # Add max_memory if specified manually in config (overrides auto detection if set)
             if self._memory_config.get("max_memory"):
                 load_kwargs["max_memory"] = self._memory_config["max_memory"]
 
@@ -740,15 +785,27 @@ class Qwen3VL2BModel(nn.Module):
         try:
             logger.info("Initializing advanced disk offloading system for Qwen3-VL-2B model...")
 
-            from .disk_offloading import create_disk_offloader, TensorOffloadingManager, MultimodalOffloadingManager
+            # Updated import path to common
+            from ...common.disk_offloading import create_disk_offloader, TensorOffloadingManager, MultimodalOffloadingManager
+
+            # Adjust settings for weak hardware
+            max_memory_ratio = getattr(self.config, 'max_memory_ratio', 0.8)
+            page_size_mb = getattr(self.config, 'page_size_mb', 16)
+            eviction_policy = getattr(self.config, 'eviction_policy', 'predictive')
             
+            if self._system_profile.is_weak_hardware:
+                max_memory_ratio = 0.9  # Use more RAM before offloading
+                page_size_mb = 8        # Smaller pages for granular control
+                eviction_policy = 'lru' # Simpler policy for lower overhead on weak CPUs
+                logger.info("Adjusted disk offloading settings for weak hardware")
+
             # Create disk offloader with advanced settings
             try:
                 self._disk_offloader = create_disk_offloader(
-                    max_memory_ratio=getattr(self.config, 'max_memory_ratio', 0.8),
+                    max_memory_ratio=max_memory_ratio,
                     offload_directory=getattr(self.config, 'offload_directory', None),
-                    page_size_mb=getattr(self.config, 'page_size_mb', 16),
-                    eviction_policy=getattr(self.config, 'eviction_policy', 'predictive'),
+                    page_size_mb=page_size_mb,
+                    eviction_policy=eviction_policy,
                     enable_clustering=getattr(self.config, 'enable_clustering', True),
                     cluster_count=getattr(self.config, 'cluster_count', 5),
                     enable_adaptive=getattr(self.config, 'enable_adaptive_offloading', True)
@@ -757,10 +814,10 @@ class Qwen3VL2BModel(nn.Module):
                 logger.warning(f"Failed to create disk offloader with advanced settings: {e}, using basic settings")
                 # Create with basic settings
                 self._disk_offloader = create_disk_offloader(
-                    max_memory_ratio=getattr(self.config, 'max_memory_ratio', 0.8),
+                    max_memory_ratio=max_memory_ratio,
                     offload_directory=getattr(self.config, 'offload_directory', None),
-                    page_size_mb=getattr(self.config, 'page_size_mb', 16),
-                    eviction_policy=getattr(self.config, 'eviction_policy', 'lru')
+                    page_size_mb=page_size_mb,
+                    eviction_policy='lru'
                 )
 
             # Create tensor offloading manager
@@ -791,13 +848,22 @@ class Qwen3VL2BModel(nn.Module):
         try:
             logger.info("Initializing intelligent pagination system for Qwen3-VL-2B model...")
 
-            from .tensor_pagination import create_multimodal_pagination_system, DataType
+            # Updated import path to common
+            from ...common.tensor_pagination import create_multimodal_pagination_system, DataType
+
+            # Adjust settings for weak hardware
+            page_size_mb = getattr(self.config, 'pagination_page_size_mb', 16)
+            eviction_policy = getattr(self.config, 'pagination_eviction_policy', 'intelligent')
+
+            if self._system_profile.is_weak_hardware:
+                page_size_mb = 4  # Very small pages
+                eviction_policy = 'lru'
             
             # Create pagination system with advanced settings
             self._pagination_system, self._multimodal_pager = create_multimodal_pagination_system(
                 swap_directory=getattr(self.config, 'pagination_swap_directory', './tensor_swap'),
-                page_size_mb=getattr(self.config, 'pagination_page_size_mb', 16),
-                eviction_policy=getattr(self.config, 'pagination_eviction_policy', 'intelligent'),
+                page_size_mb=page_size_mb,
+                eviction_policy=eviction_policy,
                 max_memory_ratio=getattr(self.config, 'pagination_max_memory_ratio', 0.8)
             )
 
