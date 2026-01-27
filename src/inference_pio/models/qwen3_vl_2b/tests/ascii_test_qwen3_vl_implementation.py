@@ -67,7 +67,14 @@ def test_qwen3_vl_model_creation():
     config.model_path = "dummy_path"  # Use a dummy path to avoid download
     
     # Mock the AutoModelForVision2Seq.from_pretrained to avoid downloading
-    with patch('transformers.AutoModelForVision2Seq.from_pretrained') as mock_model_fn, \
+    # Handle the fact that AutoModelForVision2Seq might not exist or be an alias
+    try:
+        from transformers import AutoModelForVision2Seq
+        target_class = 'transformers.AutoModelForVision2Seq.from_pretrained'
+    except ImportError:
+        target_class = 'transformers.AutoModelForCausalLM.from_pretrained'
+
+    with patch(target_class) as mock_model_fn, \
          patch('transformers.AutoTokenizer.from_pretrained') as mock_tokenizer_fn, \
          patch('transformers.AutoImageProcessor.from_pretrained') as mock_image_processor_fn:
         
