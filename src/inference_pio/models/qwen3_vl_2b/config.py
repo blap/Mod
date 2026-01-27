@@ -149,6 +149,13 @@ class Qwen3VL2BConfig:
     qwen3_vl_memory_efficient_inference: bool = True  # Enable memory-efficient inference optimizations
     qwen3_vl_compute_efficient_inference: bool = True  # Enable compute-efficient inference optimizations
 
+    # Kernel Fusion Patterns
+    kernel_fusion_patterns: Optional[Dict[str, bool]] = None
+    multimodal_preserve_modalities: Optional[List[str]] = None
+    multimodal_preserve_components: Optional[List[str]] = None
+    vision_language_visual_device_mapping: Optional[List[int]] = None
+    vision_language_textual_device_mapping: Optional[List[int]] = None
+
     # Additional Qwen3-VL specific attributes that may be set by profiles
     use_glm_attention_patterns: bool = False  # Placeholder for compatibility
     use_glm_ffn_optimization: bool = False  # Placeholder for compatibility

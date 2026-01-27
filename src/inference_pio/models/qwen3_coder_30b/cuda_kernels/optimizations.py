@@ -111,34 +111,24 @@ class Qwen3CoderAttentionKernel(nn.Module):
 
 class Qwen3CoderMLPKernel(nn.Module):
     """
-    Optimized MLP (feed-forward) kernel for Qwen3-Coder-30B model.
+    Optimized MLP (feed-forward) kernel for Qwen3-Coder-30B model with SwiGLU fusion.
     """
     def __init__(self, hidden_size: int, intermediate_size: int):
         super().__init__()
-        self.gelu_kernel = Qwen3CoderGELUKernel()
+        # Optimization: SwiGLU (SiLU * Gate)
+        # Note: Qwen models typically use SiLU (Swish) instead of GELU for SwiGLU
+        self.act_fn = nn.SiLU()
         self.up_proj = nn.Linear(hidden_size, intermediate_size, bias=False)
         self.down_proj = nn.Linear(intermediate_size, hidden_size, bias=False)
         self.gate_proj = nn.Linear(hidden_size, intermediate_size, bias=False)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Apply optimized MLP computation.
+        Apply optimized MLP computation with SwiGLU.
 
-        Args:
-            x: Input tensor
-
-        Returns:
-            MLP output
+        Logic: F.silu(gate_proj(x)) * up_proj(x)
         """
-        # Apply gate projection and GELU activation
-        gate = self.gelu_kernel(self.gate_proj(x))
-        up = self.up_proj(x)
-
-        # Element-wise multiplication
-        result = gate * up
-
-        # Down projection
-        return self.down_proj(result)
+        return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
 
 
 class Qwen3CoderLayerNormKernel(nn.Module):
