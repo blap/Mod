@@ -36,6 +36,9 @@ class SystemProfile:
     processor_architecture: str
     cpu_brand: str
     instruction_sets: List[str]
+    secondary_gpu_detected: str = "None"
+    hybrid_capability: bool = False
+    ipex_available: bool = False
 
     def get_cpu_allocation(self) -> int:
         """
@@ -90,6 +93,22 @@ class HardwareAnalyzer:
         total_vram_gb = 0.0
         available_vram_gb = 0.0
         gpu_name = "None"
+        secondary_gpu_detected = "None"
+        hybrid_capability = False
+        ipex_available = False
+
+        # Check for Intel Extension for PyTorch (IPEX)
+        try:
+            import intel_extension_for_pytorch as ipex
+            ipex_available = True
+            # Try to detect XPU devices if available
+            try:
+                if hasattr(torch, 'xpu') and torch.xpu.device_count() > 0:
+                    secondary_gpu_detected = torch.xpu.get_device_name(0)
+            except Exception:
+                pass
+        except ImportError:
+            pass
 
         if torch.cuda.is_available():
             try:
@@ -111,6 +130,12 @@ class HardwareAnalyzer:
             except Exception as e:
                 logger.warning(f"Error detecting CUDA VRAM: {e}")
 
+        # Detect Hybrid Scenario (e.g. NVIDIA + Intel Integrated/Arc or CUDA + CPU offload needed)
+        # If we have a dGPU but it's small, and a decent CPU, we are in a hybrid scenario.
+        # Also if we explicitly detected a secondary XPU.
+        if gpu_name != "None" and (ipex_available or secondary_gpu_detected != "None" or total_vram_gb < 4.0):
+             hybrid_capability = True
+
         # Disk Analysis
         # Check current working directory disk usage
         try:
@@ -130,7 +155,8 @@ class HardwareAnalyzer:
 
         # Recommendation
         if is_weak_hardware:
-            if available_vram_gb > 2.0:
+            # Lower threshold for hybrid aggressive to utilize any available VRAM (e.g. MX330 2GB)
+            if available_vram_gb > 0.5:
                 recommended_offload_strategy = "hybrid_aggressive" # Use VRAM for critical paths, offload rest
             else:
                 recommended_offload_strategy = "disk_only" # Mostly CPU/Disk
@@ -155,7 +181,10 @@ class HardwareAnalyzer:
             safe_vram_limit_gb=safe_vram_limit_gb,
             processor_architecture=processor_architecture,
             cpu_brand=cpu_brand,
-            instruction_sets=instruction_sets
+            instruction_sets=instruction_sets,
+            secondary_gpu_detected=secondary_gpu_detected,
+            hybrid_capability=hybrid_capability,
+            ipex_available=ipex_available
         )
 
         return self._profile
