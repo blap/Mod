@@ -170,7 +170,8 @@ class Qwen3_VL_2B_Instruct_Plugin(TextModelPluginInterface):
         self._cross_modal_alignment_manager = create_qwen3_vl_cross_modal_alignment(self._config)
 
         # Initialize async multimodal manager
-        self._async_multimodal_manager = Qwen3VL2BAsyncMultimodalManager()
+        # Delayed initialization until model load
+        self._async_multimodal_manager = None
 
         # Initialize caching manager
         self._caching_manager = Qwen3VL2BIntelligentCachingManager(

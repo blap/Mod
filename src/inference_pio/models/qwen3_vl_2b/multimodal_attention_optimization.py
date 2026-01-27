@@ -6,7 +6,7 @@ to the Qwen3-VL-2B specific names. New implementations should use the generic ve
 and extend it as needed.
 """
 
-from .generic_multimodal_attention_optimization import (
+from ...common.generic_multimodal_attention_optimization import (
     GenericMultimodalAttentionOptimizer as Qwen3VL2BMultimodalAttentionOptimizer,
     GenericMultimodalAttentionManager as Qwen3VL2BAttentionManager,
     create_generic_multimodal_attention_optimizer as create_qwen3_vl_multimodal_attention_optimizer,

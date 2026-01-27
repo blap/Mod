@@ -16,11 +16,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 try:
-    from transformers import AutoModelForVision2Seq, AutoTokenizer, AutoImageProcessor
+    from transformers import Qwen2VLForConditionalGeneration as AutoModelForVision2Seq, AutoTokenizer, AutoImageProcessor
 except ImportError:
-    AutoModelForVision2Seq = None
-    AutoTokenizer = None
-    AutoImageProcessor = None
+    try:
+        from transformers import AutoModel as AutoModelForVision2Seq, AutoTokenizer, AutoImageProcessor
+    except ImportError:
+        AutoModelForVision2Seq = None
+        AutoTokenizer = None
+        AutoImageProcessor = None
 
 from ...common.hardware_analyzer import get_system_profile
 from ...plugin_system.factory import get_processor_plugin
@@ -265,7 +268,7 @@ class Qwen3VL2BModel(nn.Module):
             else:
                 # Local path doesn't exist or drive doesn't exist, try HuggingFace
                 logger.warning(f"Local model path {self._model_name} not found, trying HuggingFace...")
-                model_path = "H:/Qwen3-VL-2B-Instruct"  # Local model path on drive H
+                model_path = "Qwen/Qwen2-VL-2B-Instruct"  # Use official HF repo as fallback
 
             # Load the model with appropriate settings
             self._model = AutoModelForVision2Seq.from_pretrained(
@@ -1268,14 +1271,12 @@ class Qwen3VL2BModel(nn.Module):
             # Create the async multimodal manager
             self._async_multimodal_manager = Qwen3VL2BAsyncMultimodalManager(
                 model=self._model,
-                tokenizer=self._tokenizer,
-                image_processor=self._image_processor,
-                max_concurrent_requests=max_concurrent_requests,
-                buffer_size=buffer_size,
-                batch_timeout=batch_timeout,
-                enable_batching=enable_batching,
-                device=device
+                config=self.config
             )
+
+            # Manually initialize it since we're calling constructor directly
+            if hasattr(self._async_multimodal_manager, 'initialize'):
+                self._async_multimodal_manager.initialize()
 
             logger.info(f"Async multimodal processing system initialized with max_concurrent={max_concurrent_requests}, "
                        f"buffer_size={buffer_size}, batching={enable_batching}")

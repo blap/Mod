@@ -15,8 +15,8 @@ import numpy as np
 from PIL import Image
 from collections import defaultdict, deque
 
-from .adaptive_batch_manager import AdaptiveBatchManager, BatchMetrics
-from .input_complexity_analyzer import InputComplexityAnalyzer, ComplexityMetrics
+from ...common.adaptive_batch_manager import AdaptiveBatchManager, BatchMetrics
+from ...common.input_complexity_analyzer import InputComplexityAnalyzer, ComplexityMetrics
 
 
 logger = logging.getLogger(__name__)
