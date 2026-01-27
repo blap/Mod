@@ -28,7 +28,7 @@ def get_processor_plugin(profile: SystemProfile) -> ProcessorPluginInterface:
     # Check for Intel Comet Lake i5-10210U
     if "i5-10210u" in cpu_brand or ("10210u" in cpu_brand and "intel" in cpu_brand):
         logger.info(f"Detected Intel Comet Lake CPU ({profile.cpu_brand}). Using specialized plugin.")
-        return create_intel_comet_lake_plugin()
+        return create_intel_comet_lake_plugin(profile)
 
     # Check for other Intel CPUs (Future expansion)
     # if "intel" in cpu_brand: ...
