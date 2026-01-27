@@ -23,7 +23,7 @@ except ImportError:
     AutoImageProcessor = None
 
 from ...common.hardware_analyzer import get_system_profile
-from ...plugin_system.cpu_plugin import create_generic_cpu_plugin
+from ...plugin_system.factory import get_processor_plugin
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,7 @@ class Qwen3VL2BModel(nn.Module):
 
         # Hardware Analysis and Adaptive Configuration
         self._system_profile = get_system_profile()
-        self._processor_plugin = create_generic_cpu_plugin()
+        self._processor_plugin = get_processor_plugin(self._system_profile)
         self._processor_plugin.initialize({"num_threads": self._system_profile.get_cpu_allocation()})
 
         # Initialize advanced disk offloading system if enabled or required by weak hardware

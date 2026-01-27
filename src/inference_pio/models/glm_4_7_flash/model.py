@@ -147,7 +147,7 @@ except ImportError:
         return {"energy_estimate": "not_available"}
 
 from ...common.hardware_analyzer import get_system_profile
-from ...plugin_system.cpu_plugin import create_generic_cpu_plugin
+from ...plugin_system.factory import get_processor_plugin
 
 logger = logging.getLogger(__name__)
 
@@ -187,7 +187,7 @@ class GLM47FlashModel(nn.Module):
 
         # Hardware Analysis and Adaptive Configuration
         self._system_profile = get_system_profile()
-        self._processor_plugin = create_generic_cpu_plugin()
+        self._processor_plugin = get_processor_plugin(self._system_profile)
         self._processor_plugin.initialize({"num_threads": self._system_profile.get_cpu_allocation()})
 
         # Initialize NAS controller if enabled

@@ -34,6 +34,7 @@ class SystemProfile:
     recommended_offload_strategy: str
     safe_vram_limit_gb: float
     processor_architecture: str
+    cpu_brand: str
     instruction_sets: List[str]
 
     def get_cpu_allocation(self) -> int:
@@ -66,6 +67,19 @@ class HardwareAnalyzer:
         cpu_cores_physical = psutil.cpu_count(logical=False) or 1
         cpu_cores_logical = psutil.cpu_count(logical=True) or 1
         processor_architecture = platform.machine()
+
+        # Get CPU Brand
+        cpu_brand = platform.processor()
+        # Fallback/refinement for Linux
+        if platform.system() == "Linux":
+            try:
+                command = "cat /proc/cpuinfo | grep 'model name' | head -1"
+                output = subprocess.check_output(command, shell=True).decode().strip()
+                if ":" in output:
+                    cpu_brand = output.split(":", 1)[1].strip()
+            except Exception:
+                pass
+        # Fallback for Windows (often platform.processor() is generic on some python versions, but usually ok)
 
         # RAM Analysis
         vm = psutil.virtual_memory()
@@ -140,6 +154,7 @@ class HardwareAnalyzer:
             recommended_offload_strategy=recommended_offload_strategy,
             safe_vram_limit_gb=safe_vram_limit_gb,
             processor_architecture=processor_architecture,
+            cpu_brand=cpu_brand,
             instruction_sets=instruction_sets
         )
 

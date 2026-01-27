@@ -88,7 +88,7 @@ except ImportError:
         return {"energy_estimate": "not_available"}
 
 from ...common.hardware_analyzer import get_system_profile
-from ...plugin_system.cpu_plugin import create_generic_cpu_plugin
+from ...plugin_system.factory import get_processor_plugin
 
 from ...common.optimization_integration import (
     apply_qwen_optimizations,
