@@ -43,6 +43,14 @@ class Qwen3VL2BMultimodalAttention(nn.Module):
         self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=False)
         self.o_proj = nn.Linear(self.hidden_size, self.hidden_size, bias=False)
 
+        # Optimization 7: Initialize Rotary Embedding in __init__ for caching
+        from ..rotary_embeddings import RotaryEmbedding
+        self.rotary_emb = RotaryEmbedding(
+            dim=self.head_dim,
+            max_position_embeddings=getattr(config, 'max_position_embeddings', 2048),
+            base=getattr(config, 'rope_theta', 10000.0)
+        )
+
         # Initialize weights according to Qwen3-VL-2B specifications
         self._initialize_weights()
 
@@ -69,17 +77,6 @@ class Qwen3VL2BMultimodalAttention(nn.Module):
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
         """
         Forward pass for Qwen3-VL-2B multimodal attention.
-
-        Args:
-            hidden_states: Input hidden states of shape (batch, seq_len, hidden_size)
-            attention_mask: Attention mask
-            position_ids: Position IDs for rotary embeddings
-            past_key_value: Past key-value states for caching
-            output_attentions: Whether to output attention weights
-            use_cache: Whether to use KV cache
-
-        Returns:
-            Tuple of (output, attention_weights, past_key_value)
         """
         bsz, q_len, _ = hidden_states.size()
 
@@ -99,7 +96,8 @@ class Qwen3VL2BMultimodalAttention(nn.Module):
 
         # Apply rotary embeddings if position_ids are provided
         if position_ids is not None:
-            from .rotary_embeddings import apply_rotary_pos_emb
+            from ..rotary_embeddings import apply_rotary_pos_emb
+            # Optimization 7: Reuse cached rotary embeddings
             cos, sin = self.rotary_emb(value_states, seq_len=max(position_ids.max().item() + 1, key_states.shape[-2]))
             query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids)
 
@@ -111,18 +109,38 @@ class Qwen3VL2BMultimodalAttention(nn.Module):
 
         past_key_value = (key_states, value_states) if use_cache else None
 
-        # Compute attention scores
-        attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
+        # Optimization 8: Use scaled_dot_product_attention (SDPA)
+        if not output_attentions and hasattr(F, 'scaled_dot_product_attention'):
+            # SDPA is faster and more memory efficient
+            # Prepare mask for SDPA if needed
+            # SDPA expects attn_mask to be (Batch, NumHead, TargetSeq, SourceSeq) or broadcastable
+            # Qwen usually uses additive mask, SDPA supports this or boolean
 
-        # Apply attention mask if provided
-        if attention_mask is not None:
-            attn_weights = attn_weights + attention_mask
+            # Note: attention_mask passed here is typically additive (0 for keep, -inf for mask)
+            # SDPA handles this correctly if it's additive
 
-        # Apply softmax
-        attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+            attn_output = F.scaled_dot_product_attention(
+                query_states,
+                key_states,
+                value_states,
+                attn_mask=attention_mask,
+                dropout_p=0.0, # We don't apply dropout in inference usually, or self.dropout if training
+                is_causal=False # Causal masking is usually baked into attention_mask if needed
+            )
+            attn_weights = None
+        else:
+            # Compute attention scores
+            attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
 
-        # Apply attention to values
-        attn_output = torch.matmul(attn_weights, value_states)
+            # Apply attention mask if provided
+            if attention_mask is not None:
+                attn_weights = attn_weights + attention_mask
+
+            # Apply softmax
+            attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+
+            # Apply attention to values
+            attn_output = torch.matmul(attn_weights, value_states)
 
         # Reshape for output projection
         attn_output = attn_output.transpose(1, 2).contiguous()
@@ -130,9 +148,6 @@ class Qwen3VL2BMultimodalAttention(nn.Module):
 
         # Apply output projection
         attn_output = self.o_proj(attn_output)
-
-        if not output_attentions:
-            attn_weights = None
 
         return attn_output, attn_weights, past_key_value
 
@@ -166,6 +181,14 @@ class Qwen3VL2BModalitySpecificAttention(nn.Module):
         # Modality-specific normalization
         self.norm = nn.LayerNorm(self.hidden_size, eps=config.layer_norm_eps)
 
+        # Optimization 7 (part 2): Initialize Rotary Embedding in __init__ for caching
+        from ..rotary_embeddings import RotaryEmbedding
+        self.rotary_emb = RotaryEmbedding(
+            dim=self.head_dim,
+            max_position_embeddings=getattr(config, 'max_position_embeddings', 2048),
+            base=getattr(config, 'rope_theta', 10000.0)
+        )
+
         # Initialize weights according to Qwen3-VL-2B specifications
         self._initialize_weights()
 
@@ -190,17 +213,6 @@ class Qwen3VL2BModalitySpecificAttention(nn.Module):
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
         """
         Forward pass for Qwen3-VL-2B modality-specific attention.
-
-        Args:
-            hidden_states: Input hidden states of shape (batch, seq_len, hidden_size)
-            attention_mask: Attention mask
-            position_ids: Position IDs for rotary embeddings
-            past_key_value: Past key-value states for caching
-            output_attentions: Whether to output attention weights
-            use_cache: Whether to use KV cache
-
-        Returns:
-            Tuple of (output, attention_weights, past_key_value)
         """
         bsz, q_len, _ = hidden_states.size()
 
@@ -219,7 +231,8 @@ class Qwen3VL2BModalitySpecificAttention(nn.Module):
 
         # Apply rotary embeddings if position_ids are provided
         if position_ids is not None:
-            from .rotary_embeddings import apply_rotary_pos_emb
+            from ..rotary_embeddings import apply_rotary_pos_emb
+            # Optimization 7 (part 2): Reuse cached rotary embeddings
             cos, sin = self.rotary_emb(value_states, seq_len=max(position_ids.max().item() + 1, key_states.shape[-2]))
             query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids)
 
@@ -231,18 +244,30 @@ class Qwen3VL2BModalitySpecificAttention(nn.Module):
 
         past_key_value = (key_states, value_states) if use_cache else None
 
-        # Compute attention scores
-        attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
+        # Optimization 9: SDPA Modality
+        if not output_attentions and hasattr(F, 'scaled_dot_product_attention'):
+            attn_output = F.scaled_dot_product_attention(
+                query_states,
+                key_states,
+                value_states,
+                attn_mask=attention_mask,
+                dropout_p=0.0,
+                is_causal=False
+            )
+            attn_weights = None
+        else:
+            # Compute attention scores
+            attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
 
-        # Apply attention mask if provided
-        if attention_mask is not None:
-            attn_weights = attn_weights + attention_mask
+            # Apply attention mask if provided
+            if attention_mask is not None:
+                attn_weights = attn_weights + attention_mask
 
-        # Apply softmax
-        attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+            # Apply softmax
+            attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
 
-        # Apply attention to values
-        attn_output = torch.matmul(attn_weights, value_states)
+            # Apply attention to values
+            attn_output = torch.matmul(attn_weights, value_states)
 
         # Reshape for output projection
         attn_output = attn_output.transpose(1, 2).contiguous()
@@ -250,9 +275,6 @@ class Qwen3VL2BModalitySpecificAttention(nn.Module):
 
         # Apply output projection
         attn_output = self.o_proj(attn_output)
-
-        if not output_attentions:
-            attn_weights = None
 
         return attn_output, attn_weights, past_key_value
 
@@ -382,23 +404,15 @@ class Qwen3VL2BAdaptiveMultimodalAttention(nn.Module):
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
         """
         Forward pass for Qwen3-VL-2B adaptive multimodal attention.
-
-        Args:
-            hidden_states: Input hidden states of shape (batch, seq_len, hidden_size)
-            attention_mask: Attention mask
-            position_ids: Position IDs for rotary embeddings
-            past_key_value: Past key-value states for caching
-            output_attentions: Whether to output attention weights
-            use_cache: Whether to use KV cache
-
-        Returns:
-            Tuple of (output, attention_weights, past_key_value)
         """
+        # Optimization 10: Reuse Mean - Calculate mean once and reuse
+        mean_hidden = hidden_states.mean(dim=1, keepdim=True)
+
         # Assess input complexity
-        complexity_score = torch.sigmoid(self.complexity_assessment(hidden_states.mean(dim=1, keepdim=True))).squeeze(-1)
+        complexity_score = torch.sigmoid(self.complexity_assessment(mean_hidden)).squeeze(-1)
         
         # Get gate values for attention selection
-        gate_values = torch.softmax(self.gate(hidden_states.mean(dim=1, keepdim=True)), dim=-1).squeeze(1)
+        gate_values = torch.softmax(self.gate(mean_hidden), dim=-1).squeeze(1)
         
         # Use different attention mechanisms based on complexity
         if complexity_score.mean() < 0.5:  # Simple input

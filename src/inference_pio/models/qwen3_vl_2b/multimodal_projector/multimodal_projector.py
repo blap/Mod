@@ -227,11 +227,21 @@ class Qwen3VL2BProjectionLayer(nn.Module):
         else:
             language_padded = projected_language
 
-        # Concatenate projected features for multimodal fusion
-        concatenated_features = torch.cat([vision_padded, language_padded], dim=-1)
+        # Optimization 5: Split Linear - Avoid concatenation overhead
+        # Instead of torch.cat([v, l], dim=-1) -> Linear(v_dim + l_dim, out)
+        # We do: Linear(v, out_partial) + Linear(l, out_partial)
+        # This avoids creating the large intermediate concatenated tensor
 
-        # Apply multimodal projection
-        multimodal_features = self.multimodal_projection(concatenated_features)
+        # Split weights and bias
+        w_v, w_l = self.multimodal_projection.weight[:, :self.vision_dim], self.multimodal_projection.weight[:, self.vision_dim:]
+
+        # Calculate parts
+        multimodal_features = F.linear(vision_padded, w_v)
+        multimodal_features += F.linear(language_padded, w_l)
+
+        # Add bias if exists
+        if self.multimodal_projection.bias is not None:
+            multimodal_features += self.multimodal_projection.bias
 
         # Apply normalization
         if self.use_group_norm:
@@ -619,7 +629,8 @@ class Qwen3VL2BVisionLanguageProjector(nn.Module):
         # Apply MLP fusion if enabled
         if self.use_mlp_fusion:
             mlp_output = self.mlp_fusion(attended_features)
-            fused_features = attended_features + mlp_output
+            # Optimization 6: In-place Residual
+            fused_features = attended_features.add_(mlp_output)
         else:
             fused_features = attended_features
 
