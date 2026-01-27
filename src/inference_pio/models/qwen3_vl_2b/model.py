@@ -15,7 +15,12 @@ from dataclasses import dataclass
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers import AutoModelForVision2Seq, AutoTokenizer, AutoImageProcessor
+try:
+    from transformers import AutoModelForVision2Seq, AutoTokenizer, AutoImageProcessor
+except ImportError:
+    AutoModelForVision2Seq = None
+    AutoTokenizer = None
+    AutoImageProcessor = None
 
 logger = logging.getLogger(__name__)
 
