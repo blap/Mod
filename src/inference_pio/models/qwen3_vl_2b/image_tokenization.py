@@ -92,6 +92,11 @@ class ImageTokenizer:
 
         class BasicImageProcessor:
             def __call__(self, images, return_tensors="pt", **kwargs):
+                # Helper to get size from kwargs or config
+                size = kwargs.get("size", {})
+                height = size.get("height", self_obj.config.image_size)
+                width = size.get("width", self_obj.config.image_size)
+
                 # Convert PIL image to tensor
                 if isinstance(images, Image.Image):
                     # Convert to RGB if needed
@@ -99,7 +104,8 @@ class ImageTokenizer:
                         images = images.convert('RGB')
 
                     # Resize image to expected size
-                    images = images.resize((self_obj.config.image_size, self_obj.config.image_size))
+                    if images.size != (width, height):
+                        images = images.resize((width, height))
 
                     # Convert to tensor and normalize
                     image_array = np.array(images).astype(np.float32)
@@ -148,21 +154,29 @@ class ImageTokenizer:
             raise ValueError(f"Image must be PIL Image, path string, or tensor, got {type(image)}")
 
         # Process the image
-        processed = self._process_image(image, return_tensors)
+        processed = self._process_image_optimized(image, return_tensors)
 
         # Update performance metrics
         elapsed_time = time.time() - start_time
         self.total_tokenization_time += elapsed_time
         self.num_tokenization_calls += 1
 
-        logger.debug(f"Image tokenization took {elapsed_time:.4f}s for image size {image.size if hasattr(image, 'size') else image.shape}")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"Image tokenization took {elapsed_time:.4f}s for image size {image.size if hasattr(image, 'size') else image.shape}")
 
         return processed
 
     def _process_image(self, image: Union[Image.Image, torch.Tensor],
                       return_tensors: str = "pt") -> Dict[str, torch.Tensor]:
         """
-        Internal method to process an image into tokens.
+        Legacy method kept for compatibility. Redirects to optimized version.
+        """
+        return self._process_image_optimized(image, return_tensors)
+
+    def _process_image_optimized(self, image: Union[Image.Image, torch.Tensor],
+                      return_tensors: str = "pt") -> Dict[str, torch.Tensor]:
+        """
+        Internal method to process an image into tokens with optimizations.
 
         Args:
             image: Input image (PIL Image or tensor)
@@ -171,13 +185,27 @@ class ImageTokenizer:
         Returns:
             Dictionary containing processed image data
         """
+        # Prepare processing arguments
+        process_kwargs = {}
+
+        # Optimization 1: Calculate target size beforehand if compression is enabled
+        # This avoids resizing to large size then downscaling
+        if self.config.enable_compression and self.config.compression_ratio < 1.0:
+            target_size = int(self.config.image_size * (self.config.compression_ratio ** 0.5))
+            process_kwargs["size"] = {"height": target_size, "width": target_size}
+        else:
+             process_kwargs["size"] = {"height": self.config.image_size, "width": self.config.image_size}
+
         # Use the image processor to get pixel values
-        processed = self.image_processor(images=image, return_tensors=return_tensors)
+        processed = self.image_processor(images=image, return_tensors=return_tensors, **process_kwargs)
 
         # Apply optimizations based on config
         if self.config.enable_quantization:
             processed = self._quantize_image(processed)
 
+        # Compression is now largely handled during resizing (Optimization 1),
+        # but _compress_image might still be needed if not using BasicImageProcessor
+        # or for non-spatial compression
         if self.config.enable_compression:
             processed = self._compress_image(processed)
 
@@ -208,7 +236,7 @@ class ImageTokenizer:
 
     def _quantize_image(self, processed: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
-        Apply quantization to the image for efficiency.
+        Apply quantization to the image for efficiency using in-place operations (Optimization 3).
 
         Args:
             processed: Processed image data
@@ -216,22 +244,22 @@ class ImageTokenizer:
         Returns:
             Quantized image data
         """
+        pixel_values = processed['pixel_values']
+
         if self.config.quantization_bits == 8:
             # Quantize to 8-bit
-            pixel_values = processed['pixel_values']
             # Clamp values to [-1, 1] range and scale to [0, 255]
             pixel_values = torch.clamp(pixel_values, -1.0, 1.0)
-            pixel_values = ((pixel_values + 1.0) * 127.5).round().byte()
-            # Convert back to float in [0, 255] range
-            pixel_values = pixel_values.float()
-            processed['pixel_values'] = pixel_values
+            # Use in-place operations to reduce memory overhead
+            pixel_values.add_(1.0).mul_(127.5).round_().byte()
+            # Convert back to float in [0, 255] range (this creates new tensor, unavoidable for float)
+            processed['pixel_values'] = pixel_values.float()
+
         elif self.config.quantization_bits == 4:
             # Quantize to 4-bit (simplified)
-            pixel_values = processed['pixel_values']
             pixel_values = torch.clamp(pixel_values, -1.0, 1.0)
-            pixel_values = ((pixel_values + 1.0) * 7.5).round().char()  # 0-15 range
-            pixel_values = pixel_values.float()
-            processed['pixel_values'] = pixel_values
+            pixel_values.add_(1.0).mul_(7.5).round_().char()  # 0-15 range
+            processed['pixel_values'] = pixel_values.float()
 
         return processed
 
@@ -259,15 +287,21 @@ class ImageTokenizer:
 
         if self.config.compression_ratio < 1.0:
             # Apply spatial downsampling based on compression ratio
+            # Optimization: Only interpolate if dimensions don't match expectation
+            # (Allows pre-resized images from _process_image_optimized to skip this)
             _, _, height, width = pixel_values.shape
-            target_size = int(height * (self.config.compression_ratio ** 0.5))
-            if target_size < height and target_size < width:
-                pixel_values = F.interpolate(
-                    pixel_values,
-                    size=(target_size, target_size),
-                    mode='bilinear',
-                    align_corners=False
-                )
+            expected_size = int(self.config.image_size * (self.config.compression_ratio ** 0.5))
+
+            # Tolerance of 1 pixel due to rounding
+            if abs(height - expected_size) > 1 or abs(width - expected_size) > 1:
+                 # Check if we are already smaller (don't upscale)
+                 if expected_size < height and expected_size < width:
+                    pixel_values = F.interpolate(
+                        pixel_values,
+                        size=(expected_size, expected_size),
+                        mode='bilinear',
+                        align_corners=False
+                    )
 
         processed['pixel_values'] = pixel_values
         return processed
@@ -275,7 +309,7 @@ class ImageTokenizer:
     def batch_tokenize(self, images: List[Union[Image.Image, str, torch.Tensor]],
                       return_tensors: str = "pt") -> Dict[str, torch.Tensor]:
         """
-        Tokenize a batch of images efficiently.
+        Tokenize a batch of images efficiently (Optimization 2).
 
         Args:
             images: List of input images
@@ -300,26 +334,86 @@ class ImageTokenizer:
 
         start_time = time.time()
 
-        # Process all images
-        processed_list = []
-        for img in images:
-            processed = self.tokenize(img, return_tensors)
-            processed_list.append(processed['pixel_values'])
-
-        # Stack the results
-        if return_tensors == "pt":
-            batched_pixel_values = torch.stack(processed_list, dim=0)
+        # Determine target size
+        if self.config.enable_compression and self.config.compression_ratio < 1.0:
+            target_size = int(self.config.image_size * (self.config.compression_ratio ** 0.5))
         else:
-            batched_pixel_values = np.stack(processed_list, axis=0)
+            target_size = self.config.image_size
+
+        # Optimization 2: Vectorized processing for PIL images
+        pil_images = [img for img in images if isinstance(img, Image.Image)]
+        if len(pil_images) == len(images) and len(images) > 0:
+            # All are PIL images, we can optimize
+            resized_images = []
+            for img in pil_images:
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                if img.size != (target_size, target_size):
+                    resized_images.append(img.resize((target_size, target_size)))
+                else:
+                    resized_images.append(img)
+
+            # Convert to numpy stack first (faster than list of tensors)
+            try:
+                # This requires images to be same size, which we ensured above
+                # Optimization: Direct numpy stack is fast
+                image_stack = np.stack([np.array(img) for img in resized_images])
+
+                # To Tensor and Permute
+                batch_tensor = torch.from_numpy(image_stack).permute(0, 3, 1, 2).float()
+
+                # Normalize (Vectorized)
+                # In-place operations
+                batch_tensor.div_(127.5).sub_(1.0)
+
+                batched_pixel_values = batch_tensor
+            except Exception as e:
+                logger.warning(f"Vectorized batch processing failed: {e}. Falling back to loop.")
+                # Fallback to loop if numpy stack fails
+                batched_pixel_values = self._batch_tokenize_loop(images, return_tensors)
+        else:
+            # Mixed types or no images, fall back to loop
+            batched_pixel_values = self._batch_tokenize_loop(images, return_tensors)
+
+        # Apply post-processing optimizations (quantization/compression)
+        # Note: Compression (resizing) was already handled above for PIL path
+        # Quantization needs to be applied
+        if self.config.enable_quantization:
+             batched_pixel_values = self._quantize_batch(batched_pixel_values)
 
         # Update performance metrics
         elapsed_time = time.time() - start_time
         self.total_tokenization_time += elapsed_time
         self.num_tokenization_calls += 1
 
-        logger.debug(f"Batch image tokenization took {elapsed_time:.4f}s for {len(images)} images")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"Batch image tokenization took {elapsed_time:.4f}s for {len(images)} images")
 
         return {'pixel_values': batched_pixel_values}
+
+    def _batch_tokenize_loop(self, images, return_tensors):
+        """Fallback loop implementation for batch tokenization."""
+        processed_list = []
+        for img in images:
+            processed = self.tokenize(img, return_tensors)
+            processed_list.append(processed['pixel_values'])
+
+        if return_tensors == "pt":
+            return torch.cat(processed_list, dim=0) if processed_list[0].dim() == 4 else torch.stack(processed_list, dim=0)
+        else:
+            return np.concatenate(processed_list, axis=0) if processed_list[0].ndim == 4 else np.stack(processed_list, axis=0)
+
+    def _quantize_batch(self, pixel_values):
+        """Helper to quantize a batch tensor."""
+        if self.config.quantization_bits == 8:
+            pixel_values = torch.clamp(pixel_values, -1.0, 1.0)
+            pixel_values.add_(1.0).mul_(127.5).round_().byte()
+            return pixel_values.float()
+        elif self.config.quantization_bits == 4:
+            pixel_values = torch.clamp(pixel_values, -1.0, 1.0)
+            pixel_values.add_(1.0).mul_(7.5).round_().char()
+            return pixel_values.float()
+        return pixel_values
 
     def tokenize_with_patches(self, image: Union[Image.Image, str, torch.Tensor],
                              return_tensors: str = "pt") -> Dict[str, torch.Tensor]:

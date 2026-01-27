@@ -1,7 +1,7 @@
 """
-Qwen3-VL-2B Rotary Embedding Implementation
+Qwen3-VL-2B Rotary Embedding Implementation - Self-Contained Version
 
-This module implements optimized rotary embeddings for the Qwen3-VL-2B model.
+This module implements optimized rotary embeddings specifically for the Qwen3-VL-2B model.
 """
 
 import math
@@ -38,11 +38,12 @@ class Qwen3VL2BRotaryEmbedding(nn.Module):
             precision: Precision for the embedding computation
         """
         super().__init__()
+
         self.dim = dim
         self.max_position_embeddings = max_position_embeddings
         self.base = base
         self.precision = precision
-        
+
         # Calculate inverse frequencies with Qwen3-specific parameters
         inv_freq = 1.0 / (self.base ** (torch.arange(0, self.dim, 2, dtype=torch.int64).float().to(device) / self.dim))
         self.register_buffer("inv_freq", inv_freq, persistent=False)
@@ -56,18 +57,18 @@ class Qwen3VL2BRotaryEmbedding(nn.Module):
         """
         self.max_seq_len_cached = seq_len
         # Create position IDs tensor
-        t = torch.arange(self.max_seq_len_cached, device=device, dtype=torch.int64).type_as(self.inv_freq)
-        
+        t = torch.arange(self.max_seq_len_cached, device=device, dtype=self.inv_freq.dtype)
+
         # Calculate frequencies
         freqs = torch.outer(t, self.inv_freq)
-        
+
         # Pad freqs to match dimension if needed
         if freqs.size(1) < self.dim // 2:
             pad_size = self.dim // 2 - freqs.size(1)
             freqs = torch.cat([freqs, torch.zeros(freqs.size(0), pad_size, device=device, dtype=freqs.dtype)], dim=1)
-        
+
         # Calculate embeddings
-        emb = torch.cat((freqs, freqs), dim=1)
+        emb = torch.cat((freqs, freqs), dim=-1)
         self.register_buffer("cos_cached", emb.cos().to(dtype), persistent=False)
         self.register_buffer("sin_cached", emb.sin().to(dtype), persistent=False)
 
@@ -125,11 +126,11 @@ class Qwen3VL2BRotaryEmbedding(nn.Module):
         # Ensure dimensions match
         cos = cos[None, :q.shape[1], None, :]  # [1, seq_len, 1, dim]
         sin = sin[None, :q.shape[1], None, :]  # [1, seq_len, 1, dim]
-        
+
         # Apply rotary embeddings
         q_embed = (q * cos) + (self.rotate_half(q) * sin)
         k_embed = (k * cos) + (self.rotate_half(k) * sin)
-        
+
         return q_embed, k_embed
 
 
