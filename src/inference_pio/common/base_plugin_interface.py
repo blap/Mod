@@ -1158,37 +1158,37 @@ class TextModelPluginInterface(ModelPluginInterface):
         # Default implementation - can be overridden by subclasses
         return True
 
-    def get_distributed_simulation_manager(self):
+    def get_virtual_execution_manager(self):
         """
-        Get the distributed simulation manager instance.
+        Get the virtual execution manager instance.
 
         Returns:
-            Distributed simulation manager instance or None
+            Virtual execution manager instance or None
         """
         try:
-            from .distributed_simulation import DistributedSimulationManager
-            return DistributedSimulationManager
+            from .virtual_execution import VirtualExecutionManager
+            return VirtualExecutionManager
         except ImportError:
-            logger.warning("Distributed simulation module not available")
+            logger.warning("Virtual execution module not available")
             return None
 
-    def get_virtual_gpu_simulator(self):
+    def get_virtual_device_simulator(self):
         """
-        Get the virtual GPU simulator instance.
+        Get the virtual device simulator instance.
 
         Returns:
-            Virtual GPU simulator instance or None
+            Virtual device simulator instance or None
         """
         try:
-            from .virtual_gpu_simulation import VirtualGPUSimulator
-            return VirtualGPUSimulator
+            from .virtual_device import VirtualDeviceSimulator
+            return VirtualDeviceSimulator
         except ImportError:
-            logger.warning("Virtual GPU simulation module not available")
+            logger.warning("Virtual device simulation module not available")
             return None
 
-    def execute_with_distributed_simulation(self, data: Any) -> Any:
+    def execute_with_virtual_execution(self, data: Any) -> Any:
         """
-        Execute inference using distributed simulation.
+        Execute inference using virtual execution (distributed simulation).
 
         Args:
             data: Input data for inference
@@ -1199,18 +1199,18 @@ class TextModelPluginInterface(ModelPluginInterface):
         # Default implementation falls back to regular inference
         return self.infer(data)
 
-    def get_distributed_stats(self) -> Dict[str, Any]:
+    def get_virtual_execution_stats(self) -> Dict[str, Any]:
         """
-        Get statistics about distributed execution.
+        Get statistics about virtual execution.
 
         Returns:
-            Dictionary containing distributed execution statistics
+            Dictionary containing virtual execution statistics
         """
         # Default implementation - return basic stats
         return {
-            'distributed_simulation_enabled': False,
+            'virtual_execution_enabled': False,
             'num_partitions': 0,
-            'num_virtual_gpus': 0,
+            'num_virtual_devices': 0,
             'partition_strategy': 'none',
             'memory_per_partition_gb': 0.0
         }
@@ -1247,8 +1247,8 @@ class TextModelPluginInterface(ModelPluginInterface):
             Synchronization manager instance or None
         """
         try:
-            from .virtual_gpu_simulation import DistributedExecutionSimulator
-            return DistributedExecutionSimulator
+            from .virtual_device import VirtualExecutionSimulator
+            return VirtualExecutionSimulator
         except ImportError:
             logger.warning("Synchronization module not available")
             return None

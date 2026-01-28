@@ -36,8 +36,8 @@ from ...common.unimodal_model_surgery import (
 from ...common.memory_manager import MemoryManager, TensorPagingManager, MemoryPriority
 from ...common.disk_offloading import DiskOffloader, TensorOffloadingManager as DiskTensorOffloadingManager, OffloadPriority, AccessPattern
 from ...common.adaptive_batch_manager import AdaptiveBatchManager, get_adaptive_batch_manager
-from ...common.distributed_simulation import DistributedSimulationManager, PartitionConfig, PartitionStrategy
-from ...common.virtual_gpu_simulation import DistributedExecutionSimulator
+from ...common.virtual_execution import VirtualExecutionManager, PartitionConfig, PartitionStrategy
+from ...common.virtual_device import VirtualExecutionSimulator
 from ...common.tensor_compression import AdaptiveTensorCompressor, get_tensor_compressor
 from ...common.disk_pipeline import DiskBasedPipeline, PipelineStage, PipelineManager
 from ...common.unimodal_preprocessing import (
@@ -132,9 +132,9 @@ class Qwen3_4B_Instruct_2507_Plugin(TextModelPluginInterface):
         self._paging_enabled = False
         self._adaptive_batch_manager = None
         self._adaptive_batching_enabled = False
-        self._distributed_simulation_manager = None
-        self._distributed_execution_simulator = None
-        self._distributed_enabled = False
+        self._virtual_execution_manager = None
+        self._virtual_execution_simulator = None
+        self._virtual_execution_enabled = False
         self._partitions = []
         self._tensor_compressor = None
         self._compression_enabled = False
@@ -291,9 +291,9 @@ class Qwen3_4B_Instruct_2507_Plugin(TextModelPluginInterface):
         if self._pipeline_enabled and self._pipeline is not None:
             return self.execute_pipeline(data)
 
-        # Use distributed simulation if enabled
-        if self._distributed_enabled:
-            return self.execute_with_distributed_simulation(data)
+        # Use virtual execution if enabled
+        if self._virtual_execution_enabled:
+            return self.execute_with_virtual_execution(data)
 
         # Use sharding if enabled
         if self._sharding_enabled and self._model is not None:
@@ -766,9 +766,9 @@ class Qwen3_4B_Instruct_2507_Plugin(TextModelPluginInterface):
             if getattr(self._config, 'enable_adaptive_batching', False):
                 self.setup_adaptive_batching()
 
-            # Initialize distributed simulation if enabled in config
-            if getattr(self._config, 'enable_distributed_simulation', False):
-                self.setup_distributed_simulation()
+            # Initialize virtual execution if enabled in config
+            if getattr(self._config, 'enable_virtual_execution', False):
+                self.setup_virtual_execution()
 
             # Initialize tensor compression if enabled in config
             if getattr(self._config, 'enable_tensor_compression', False):
@@ -1403,27 +1403,27 @@ class Qwen3_4B_Instruct_2507_Plugin(TextModelPluginInterface):
 
         return self._adaptive_batch_manager.get_status_report()
 
-    def setup_distributed_simulation(self, **kwargs) -> bool:
+    def setup_virtual_execution(self, **kwargs) -> bool:
         """
-        Set up distributed simulation system for multi-GPU execution simulation.
+        Set up virtual execution system for multi-device simulation.
 
         Args:
-            **kwargs: Distributed simulation configuration parameters
+            **kwargs: Virtual execution configuration parameters
 
         Returns:
             True if setup was successful, False otherwise
         """
         try:
-            # Extract distributed simulation parameters from config
-            enable_distributed = getattr(self._config, 'enable_distributed_simulation',
-                                       kwargs.get('enable_distributed_simulation', False))
+            # Extract virtual execution parameters from config
+            enable_virtual = getattr(self._config, 'enable_virtual_execution',
+                                       kwargs.get('enable_virtual_execution', False))
 
-            if not enable_distributed:
-                logger.info("Distributed simulation is disabled")
+            if not enable_virtual:
+                logger.info("Virtual execution is disabled")
                 return True
 
-            num_partitions = getattr(self._config, 'num_distributed_partitions',
-                                   kwargs.get('num_distributed_partitions', 2))
+            num_partitions = getattr(self._config, 'num_virtual_partitions',
+                                   kwargs.get('num_virtual_partitions', 2))
             partition_strategy = getattr(self._config, 'partition_strategy',
                                        kwargs.get('partition_strategy', 'layer_wise'))
             memory_per_partition_gb = getattr(self._config, 'memory_per_partition_gb',
@@ -1462,51 +1462,51 @@ class Qwen3_4B_Instruct_2507_Plugin(TextModelPluginInterface):
                 tensor_parallel_size=tensor_parallel_size
             )
 
-            # Create distributed simulation manager
-            self._distributed_simulation_manager = DistributedSimulationManager(partition_config)
+            # Create virtual execution manager
+            self._virtual_execution_manager = VirtualExecutionManager(partition_config)
 
-            # Create distributed execution simulator
-            self._distributed_execution_simulator = DistributedExecutionSimulator(
+            # Create virtual execution simulator
+            self._virtual_execution_simulator = VirtualExecutionSimulator(
                 num_virtual_devices=num_partitions,
                 memory_per_device_gb=memory_per_partition_gb
             )
 
-            logger.info(f"Distributed simulation setup completed: {num_partitions} partitions, "
+            logger.info(f"Virtual execution setup completed: {num_partitions} partitions, "
                        f"strategy: {partition_strategy}, memory per partition: {memory_per_partition_gb}GB")
             return True
         except Exception as e:
-            logger.error(f"Failed to setup distributed simulation: {e}")
+            logger.error(f"Failed to setup virtual execution: {e}")
             return False
 
-    def enable_distributed_execution(self, **kwargs) -> bool:
+    def enable_virtual_execution(self, **kwargs) -> bool:
         """
-        Enable distributed execution simulation on single or multiple GPUs.
+        Enable virtual execution (distributed simulation) on single or multiple GPUs.
 
         Args:
-            **kwargs: Distributed execution configuration parameters
+            **kwargs: Virtual execution configuration parameters
 
         Returns:
-            True if distributed execution was enabled successfully, False otherwise
+            True if virtual execution was enabled successfully, False otherwise
         """
         try:
-            # Setup distributed simulation if not already done
-            if not self._distributed_simulation_manager:
-                if not self.setup_distributed_simulation(**kwargs):
-                    logger.error("Failed to setup distributed simulation")
+            # Setup virtual execution if not already done
+            if not self._virtual_execution_manager:
+                if not self.setup_virtual_execution(**kwargs):
+                    logger.error("Failed to setup virtual execution")
                     return False
 
-            # Enable distributed execution flag
-            self._distributed_enabled = True
+            # Enable virtual execution flag
+            self._virtual_execution_enabled = True
 
-            logger.info("Distributed execution enabled")
+            logger.info("Virtual execution enabled")
             return True
         except Exception as e:
-            logger.error(f"Failed to enable distributed execution: {e}")
+            logger.error(f"Failed to enable virtual execution: {e}")
             return False
 
     def partition_model_for_distributed(self, num_partitions: int = 1, **kwargs) -> bool:
         """
-        Partition the model for distributed execution.
+        Partition the model for distributed/virtual execution.
 
         Args:
             num_partitions: Number of partitions to create
@@ -1516,8 +1516,8 @@ class Qwen3_4B_Instruct_2507_Plugin(TextModelPluginInterface):
             True if partitioning was successful, False otherwise
         """
         try:
-            if not self._distributed_simulation_manager:
-                logger.error("Distributed simulation manager not initialized")
+            if not self._virtual_execution_manager:
+                logger.error("Virtual execution manager not initialized")
                 return False
 
             if not self._model:
@@ -1525,17 +1525,17 @@ class Qwen3_4B_Instruct_2507_Plugin(TextModelPluginInterface):
                 return False
 
             # Partition the model
-            self._partitions = self._distributed_simulation_manager.partition_model(self._model)
+            self._partitions = self._virtual_execution_manager.partition_model(self._model)
 
-            logger.info(f"Model partitioned into {len(self._partitions)} partitions for distributed execution")
+            logger.info(f"Model partitioned into {len(self._partitions)} partitions for virtual execution")
             return True
         except Exception as e:
-            logger.error(f"Failed to partition model for distributed execution: {e}")
+            logger.error(f"Failed to partition model for virtual execution: {e}")
             return False
 
-    def execute_with_distributed_simulation(self, data: Any) -> Any:
+    def execute_with_virtual_execution(self, data: Any) -> Any:
         """
-        Execute inference using distributed simulation.
+        Execute inference using virtual execution.
 
         Args:
             data: Input data for inference
@@ -1543,8 +1543,8 @@ class Qwen3_4B_Instruct_2507_Plugin(TextModelPluginInterface):
         Returns:
             Inference results
         """
-        if not self._distributed_enabled:
-            logger.warning("Distributed execution not enabled, falling back to regular inference")
+        if not self._virtual_execution_enabled:
+            logger.warning("Virtual execution not enabled, falling back to regular inference")
             return self.infer(data)
 
         if not self._partitions or len(self._partitions) == 0:
@@ -1575,17 +1575,17 @@ class Qwen3_4B_Instruct_2507_Plugin(TextModelPluginInterface):
             device = next(self._partitions[0].parameters()).device if self._partitions and len(self._partitions) > 0 else torch.device('cpu')
             inputs = {k: v.to(device) for k, v in inputs.items()}
 
-            # Process through partitions using distributed simulation
+            # Process through partitions using virtual execution
             current_output = inputs['input_ids']
 
             for i, partition in enumerate(self._partitions):
                 logger.debug(f"Processing partition {i}")
 
                 # Execute partition on virtual device
-                current_output = self._distributed_execution_simulator.execute_partition_on_device(
+                current_output = self._virtual_execution_simulator.execute_partition_on_device(
                     partition,
                     current_output,
-                    device_id=i % self._distributed_execution_simulator.virtual_gpu_simulator.num_virtual_devices,
+                    device_id=i % self._virtual_execution_simulator.virtual_device_simulator.num_virtual_devices,
                     partition_name=f"partition_{i}"
                 )
 
@@ -1616,32 +1616,32 @@ class Qwen3_4B_Instruct_2507_Plugin(TextModelPluginInterface):
 
             return generated_text
         except Exception as e:
-            logger.error(f"Error during distributed simulation execution: {e}")
+            logger.error(f"Error during virtual execution: {e}")
             # Fall back to regular inference
             return self.infer(data)
 
-    def get_distributed_stats(self) -> Dict[str, Any]:
+    def get_virtual_execution_stats(self) -> Dict[str, Any]:
         """
-        Get statistics about distributed execution.
+        Get statistics about virtual execution.
 
         Returns:
-            Dictionary containing distributed execution statistics
+            Dictionary containing virtual execution statistics
         """
-        if not self._distributed_simulation_manager:
+        if not self._virtual_execution_manager:
             return {
-                'distributed_simulation_enabled': False,
+                'virtual_execution_enabled': False,
                 'num_partitions': 0,
-                'num_virtual_gpus': 0,
+                'num_virtual_devices': 0,
                 'partition_strategy': 'none',
                 'memory_per_partition_gb': 0.0
             }
 
-        stats = self._distributed_simulation_manager.get_partition_stats()
-        stats['distributed_simulation_enabled'] = self._distributed_enabled
+        stats = self._virtual_execution_manager.get_partition_stats()
+        stats['virtual_execution_enabled'] = self._virtual_execution_enabled
         stats['num_partitions_actual'] = len(self._partitions)
 
-        if self._distributed_execution_simulator:
-            execution_stats = self._distributed_execution_simulator.get_stats()
+        if self._virtual_execution_simulator:
+            execution_stats = self._virtual_execution_simulator.get_stats()
             stats.update(execution_stats)
 
         return stats
@@ -1654,12 +1654,12 @@ class Qwen3_4B_Instruct_2507_Plugin(TextModelPluginInterface):
             True if synchronization was successful, False otherwise
         """
         try:
-            if not self._distributed_execution_simulator:
-                logger.warning("Distributed execution simulator not initialized")
+            if not self._virtual_execution_simulator:
+                logger.warning("Virtual execution simulator not initialized")
                 return False
 
             # Synchronize all virtual devices
-            success = self._distributed_execution_simulator.synchronize_all_devices()
+            success = self._virtual_execution_simulator.synchronize_all_devices()
 
             if success:
                 logger.debug("Partitions synchronized successfully")
@@ -1683,12 +1683,12 @@ class Qwen3_4B_Instruct_2507_Plugin(TextModelPluginInterface):
             True if synchronization was successful, False otherwise
         """
         try:
-            if not self._distributed_execution_simulator:
-                logger.warning("Distributed execution simulator not initialized")
+            if not self._virtual_execution_simulator:
+                logger.warning("Virtual execution simulator not initialized")
                 return False
 
             # Perform pipeline synchronization
-            success = self._distributed_execution_simulator.pipeline_synchronize(current_stage, num_stages)
+            success = self._virtual_execution_simulator.pipeline_synchronize(current_stage, num_stages)
 
             if success:
                 logger.debug(f"Pipeline synchronization completed for stage {current_stage}/{num_stages}")

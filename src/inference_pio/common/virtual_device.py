@@ -1,8 +1,8 @@
 """
-Virtual GPU Simulation System
+Virtual Device Simulation System
 
-This module implements a virtual GPU simulation system that allows distributing
-model execution across multiple simulated GPU devices even on a single physical GPU.
+This module implements a virtual device simulation system that allows distributing
+model execution across multiple simulated devices even on a single physical device.
 """
 
 import logging
@@ -28,11 +28,11 @@ class VirtualDeviceState(Enum):
 
 @dataclass
 class VirtualDevice:
-    """Represents a virtual GPU device."""
+    """Represents a virtual device (e.g. GPU)."""
     id: int
     memory_limit_gb: float
     compute_capability: str = "7.5"  # Default to V100-like capability
-    name: str = "Virtual_GPU"
+    name: str = "Virtual_Device"
     state: VirtualDeviceState = VirtualDeviceState.IDLE
     current_memory_usage_gb: float = 0.0
     peak_memory_usage_gb: float = 0.0
@@ -41,9 +41,9 @@ class VirtualDevice:
     utilization: float = 0.0  # Current utilization percentage
 
 
-class VirtualGPUSimulator:
+class VirtualDeviceSimulator:
     """
-    Simulates multiple GPU devices on a single physical GPU.
+    Simulates multiple devices on a single physical device.
     """
     
     def __init__(self, num_virtual_devices: int = 2, memory_per_device_gb: float = 4.0):
@@ -56,16 +56,16 @@ class VirtualGPUSimulator:
         # Initialize virtual devices
         self._initialize_virtual_devices()
         
-        logger.info(f"Virtual GPU simulator initialized with {num_virtual_devices} "
+        logger.info(f"Virtual device simulator initialized with {num_virtual_devices} "
                    f"virtual devices, each with {memory_per_device_gb}GB memory")
     
     def _initialize_virtual_devices(self):
-        """Initialize virtual GPU devices."""
+        """Initialize virtual devices."""
         for i in range(self.num_virtual_devices):
             device = VirtualDevice(
                 id=i,
                 memory_limit_gb=self.memory_per_device_gb,
-                name=f"Virtual_GPU_{i}",
+                name=f"Virtual_Device_{i}",
                 state=VirtualDeviceState.IDLE
             )
             self.virtual_devices.append(device)
@@ -340,7 +340,7 @@ class VirtualGPUSimulator:
             return stats_list
     
     def get_overall_stats(self) -> Dict[str, Any]:
-        """Get overall statistics for the virtual GPU simulator."""
+        """Get overall statistics for the virtual device simulator."""
         total_memory = sum(device.memory_limit_gb for device in self.virtual_devices)
         used_memory = sum(device.current_memory_usage_gb for device in self.virtual_devices)
         peak_memory = sum(device.peak_memory_usage_gb for device in self.virtual_devices)
@@ -361,7 +361,7 @@ class VirtualGPUSimulator:
         }
     
     def cleanup(self):
-        """Clean up resources used by the virtual GPU simulator."""
+        """Clean up resources used by the virtual device simulator."""
         # Clear all allocated tensors
         for device in self.virtual_devices:
             device.allocated_tensors.clear()
@@ -370,7 +370,7 @@ class VirtualGPUSimulator:
             device.state = VirtualDeviceState.IDLE
             device.utilization = 0.0
 
-        logger.info("Virtual GPU simulator resources cleaned up")
+        logger.info("Virtual device simulator resources cleaned up")
 
     def get_memory_pressure(self, device_id: int = None) -> float:
         """
@@ -422,13 +422,13 @@ class VirtualGPUSimulator:
         logger.debug(f"Handling high memory pressure ({pressure:.2f}) on virtual device {device_id}")
 
 
-class DistributedExecutionSimulator:
+class VirtualExecutionSimulator:
     """
-    Main class that combines virtual GPU simulation with distributed execution.
+    Main class that combines virtual device simulation with distributed execution.
     """
     
     def __init__(self, num_virtual_devices: int = 2, memory_per_device_gb: float = 4.0):
-        self.virtual_gpu_simulator = VirtualGPUSimulator(
+        self.virtual_device_simulator = VirtualDeviceSimulator(
             num_virtual_devices=num_virtual_devices,
             memory_per_device_gb=memory_per_device_gb
         )
@@ -450,27 +450,27 @@ class DistributedExecutionSimulator:
         """
         with self.execution_lock:
             # Monitor memory pressure before execution
-            memory_pressure = self.virtual_gpu_simulator.get_memory_pressure(device_id)
+            memory_pressure = self.virtual_device_simulator.get_memory_pressure(device_id)
             if memory_pressure > 0.7:  # Trigger management if memory usage is above 70%
                 logger.info(f"High memory pressure ({memory_pressure:.2f}) on virtual device {device_id} before execution, triggering management")
-                self.virtual_gpu_simulator.trigger_memory_management(0.7)
+                self.virtual_device_simulator.trigger_memory_management(0.7)
 
             # Allocate input tensor on the virtual device
             input_name = f"{partition_name}_input"
-            if not self.virtual_gpu_simulator.allocate_on_device(device_id, input_name, input_tensor):
+            if not self.virtual_device_simulator.allocate_on_device(device_id, input_name, input_tensor):
                 logger.error(f"Failed to allocate input tensor on virtual device {device_id}")
                 raise RuntimeError(f"Failed to allocate input tensor on virtual device {device_id}")
 
             # Allocate partition parameters on the virtual device
             for name, param in partition.named_parameters():
                 param_name = f"{partition_name}_{name}"
-                if not self.virtual_gpu_simulator.allocate_on_device(device_id, param_name, param):
+                if not self.virtual_device_simulator.allocate_on_device(device_id, param_name, param):
                     logger.warning(f"Failed to allocate parameter '{param_name}' on virtual device {device_id}")
                     # Continue execution even if parameter allocation fails (simulation)
 
             # Simulate computation on the virtual device
             device_compute_time = self._estimate_compute_time(partition, input_tensor)
-            self.virtual_gpu_simulator.simulate_compute(
+            self.virtual_device_simulator.simulate_compute(
                 device_id, f"execute_{partition_name}", duration_ms=device_compute_time
             )
 
@@ -485,18 +485,18 @@ class DistributedExecutionSimulator:
                 output_tensor = partition(input_tensor)
 
             # Deallocate input tensor (parameters stay allocated for subsequent runs)
-            self.virtual_gpu_simulator.deallocate_from_device(device_id, input_name)
+            self.virtual_device_simulator.deallocate_from_device(device_id, input_name)
 
             # Allocate output tensor on the virtual device
             output_name = f"{partition_name}_output"
-            if not self.virtual_gpu_simulator.allocate_on_device(device_id, output_name, output_tensor):
+            if not self.virtual_device_simulator.allocate_on_device(device_id, output_name, output_tensor):
                 logger.warning(f"Failed to allocate output tensor on virtual device {device_id}")
 
             # Monitor memory pressure after execution
-            memory_pressure = self.virtual_gpu_simulator.get_memory_pressure(device_id)
+            memory_pressure = self.virtual_device_simulator.get_memory_pressure(device_id)
             if memory_pressure > 0.8:  # Trigger management if memory usage is above 80%
                 logger.info(f"High memory pressure ({memory_pressure:.2f}) on virtual device {device_id} after execution, triggering management")
-                self.virtual_gpu_simulator.trigger_memory_management(0.8)
+                self.virtual_device_simulator.trigger_memory_management(0.8)
 
             logger.debug(f"Executed partition '{partition_name}' on virtual device {device_id}")
             return output_tensor
@@ -539,21 +539,21 @@ class DistributedExecutionSimulator:
         Returns:
             True if transfer was successful, False otherwise
         """
-        success = self.virtual_gpu_simulator.simulate_memory_transfer(
+        success = self.virtual_device_simulator.simulate_memory_transfer(
             source_device_id, dest_device_id, tensor_name, tensor
         )
         
         if success:
             # Update allocations
-            self.virtual_gpu_simulator.deallocate_from_device(source_device_id, tensor_name)
-            self.virtual_gpu_simulator.allocate_on_device(dest_device_id, tensor_name, tensor)
+            self.virtual_device_simulator.deallocate_from_device(source_device_id, tensor_name)
+            self.virtual_device_simulator.allocate_on_device(dest_device_id, tensor_name, tensor)
         
         return success
     
     def synchronize_all_devices(self) -> bool:
         """Synchronize all virtual devices."""
-        device_ids = list(range(self.virtual_gpu_simulator.num_virtual_devices))
-        return self.virtual_gpu_simulator.synchronize_devices(device_ids)
+        device_ids = list(range(self.virtual_device_simulator.num_virtual_devices))
+        return self.virtual_device_simulator.synchronize_devices(device_ids)
 
     def synchronize_subset_of_devices(self, device_ids: List[int]) -> bool:
         """
@@ -565,7 +565,7 @@ class DistributedExecutionSimulator:
         Returns:
             True if synchronization was successful, False otherwise
         """
-        return self.virtual_gpu_simulator.synchronize_devices(device_ids)
+        return self.virtual_device_simulator.synchronize_devices(device_ids)
 
     def pipeline_synchronize(self, current_stage: int, num_stages: int) -> bool:
         """
@@ -583,16 +583,16 @@ class DistributedExecutionSimulator:
         logger.debug(f"Pipeline synchronization for stage {current_stage}/{num_stages}")
 
         # Determine which devices to synchronize based on pipeline stage
-        device_ids = [current_stage % self.virtual_gpu_simulator.num_virtual_devices]
+        device_ids = [current_stage % self.virtual_device_simulator.num_virtual_devices]
 
         # If we have multiple devices per stage, add them too
-        devices_per_stage = max(1, self.virtual_gpu_simulator.num_virtual_devices // num_stages)
+        devices_per_stage = max(1, self.virtual_device_simulator.num_virtual_devices // num_stages)
         for i in range(devices_per_stage):
-            device_id = (current_stage * devices_per_stage + i) % self.virtual_gpu_simulator.num_virtual_devices
+            device_id = (current_stage * devices_per_stage + i) % self.virtual_device_simulator.num_virtual_devices
             if device_id not in device_ids:
                 device_ids.append(device_id)
 
-        return self.virtual_gpu_simulator.synchronize_devices(device_ids)
+        return self.virtual_device_simulator.synchronize_devices(device_ids)
 
     def event_based_sync(self, event_name: str, timeout: float = 1.0) -> bool:
         """
@@ -613,15 +613,15 @@ class DistributedExecutionSimulator:
         return True
     
     def get_stats(self) -> Dict[str, Any]:
-        """Get combined statistics for the distributed execution simulator."""
+        """Get combined statistics for the virtual execution simulator."""
         return {
-            "virtual_gpu_stats": self.virtual_gpu_simulator.get_overall_stats(),
-            "device_details": self.virtual_gpu_simulator.get_device_stats()
+            "virtual_device_stats": self.virtual_device_simulator.get_overall_stats(),
+            "device_details": self.virtual_device_simulator.get_device_stats()
         }
     
     def cleanup(self):
         """Clean up resources."""
-        self.virtual_gpu_simulator.cleanup()
+        self.virtual_device_simulator.cleanup()
 
     def monitor_memory_pressure(self, threshold: float = 0.8) -> bool:
         """
@@ -633,9 +633,9 @@ class DistributedExecutionSimulator:
         Returns:
             True if memory management was triggered, False otherwise
         """
-        pressure = self.virtual_gpu_simulator.get_memory_pressure()
+        pressure = self.virtual_device_simulator.get_memory_pressure()
         if pressure > threshold:
             logger.info(f"High overall memory pressure ({pressure:.2f}), triggering memory management")
-            self.virtual_gpu_simulator.trigger_memory_management(threshold)
+            self.virtual_device_simulator.trigger_memory_management(threshold)
             return True
         return False

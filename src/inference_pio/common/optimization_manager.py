@@ -26,7 +26,7 @@ class OptimizationType(Enum):
     ACTIVATION = "activation"
     MODEL_STRUCTURE = "model_structure"
     QUANTIZATION = "quantization"
-    DISTRIBUTED = "distributed"
+    VIRTUAL_EXECUTION = "virtual_execution"
 
 
 @dataclass
@@ -486,20 +486,20 @@ class KernelFusionOptimization(OptimizationInterface):
         return model  # Cannot easily revert kernel fusion
 
 
-class DistributedSimulationOptimization(OptimizationInterface):
-    """Optimization for Distributed Simulation."""
+class VirtualExecutionOptimization(OptimizationInterface):
+    """Optimization for Virtual Execution."""
 
     def apply(self, model: nn.Module) -> nn.Module:
         try:
-            from .distributed_simulation import DistributedSimulationManager
-            logger.info("Applying Distributed Simulation optimization")
+            from .virtual_execution import VirtualExecutionManager
+            logger.info("Applying Virtual Execution optimization")
             return model  # Placeholder - actual implementation would modify the model
         except ImportError:
-            logger.warning("Distributed Simulation not available")
+            logger.warning("Virtual Execution not available")
             return model
 
     def remove(self, model: nn.Module) -> nn.Module:
-        logger.info("Removing Distributed Simulation optimization")
+        logger.info("Removing Virtual Execution optimization")
         return model
 
 
@@ -536,7 +536,7 @@ def register_default_optimizations():
         ("tensor_decomposition", TensorDecompositionOptimization),
         ("snn", SNNOptimization),
         ("kernel_fusion", KernelFusionOptimization),
-        ("distributed_simulation", DistributedSimulationOptimization),
+        ("virtual_execution", VirtualExecutionOptimization),
         ("adaptive_batching", AdaptiveBatchingOptimization),
     ]
     
@@ -568,6 +568,6 @@ __all__ = [
     "TensorDecompositionOptimization",
     "SNNOptimization",
     "KernelFusionOptimization",
-    "DistributedSimulationOptimization",
+    "VirtualExecutionOptimization",
     "AdaptiveBatchingOptimization",
 ]
