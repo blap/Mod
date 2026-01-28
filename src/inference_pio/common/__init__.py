@@ -158,16 +158,16 @@ from .disk_offloading import (
     create_disk_offloader
 )
 
-from .distributed_simulation import (
-    DistributedSimulationManager,
+from .virtual_execution import (
+    VirtualExecutionManager,
     PartitionConfig,
     PartitionStrategy,
     MemorySwapManager
 )
 
-from .virtual_gpu_simulation import (
-    VirtualGPUSimulator,
-    DistributedExecutionSimulator
+from .virtual_device import (
+    VirtualDeviceSimulator,
+    VirtualExecutionSimulator
 )
 
 from .adaptive_batch_manager import (
@@ -461,13 +461,13 @@ __all__ = [
     "get_disk_offloader",
     "create_disk_offloader",
 
-    # Distributed Simulation
-    "DistributedSimulationManager",
+    # Virtual Execution
+    "VirtualExecutionManager",
     "PartitionConfig",
     "PartitionStrategy",
     "MemorySwapManager",
-    "VirtualGPUSimulator",
-    "DistributedExecutionSimulator",
+    "VirtualDeviceSimulator",
+    "VirtualExecutionSimulator",
 
     # Adaptive Batch Manager
     "AdaptiveBatchManager",

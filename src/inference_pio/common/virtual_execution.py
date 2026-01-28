@@ -1,9 +1,9 @@
 """
-Distributed Simulation System for Multi-GPU Execution
+Virtual Execution System for Multi-Device Simulation
 
-This module implements a distributed execution simulation system that partitions models 
+This module implements a virtual execution system that partitions models
 into smaller segments and executes them sequentially with intelligent memory swaps,
-simulating distributed execution even on a single GPU.
+simulating distributed execution even on a single GPU or CPU.
 """
 
 import logging
@@ -17,6 +17,7 @@ import torch.nn as nn
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import queue
 import copy
+from collections import OrderedDict
 
 
 logger = logging.getLogger(__name__)
@@ -44,8 +45,8 @@ class PartitionConfig:
 
 
 @dataclass
-class VirtualGPU:
-    """Represents a virtual GPU in the simulation."""
+class VirtualDevice:
+    """Represents a virtual device in the simulation."""
     id: int
     memory_limit_gb: float
     compute_capability: str = "7.5"  # Default to V100-like capability
@@ -55,41 +56,41 @@ class VirtualGPU:
     allocated_tensors: Dict[str, torch.Tensor] = field(default_factory=dict)
 
 
-class DistributedSimulationManager:
+class VirtualExecutionManager:
     """
-    Manages the distributed simulation system including model partitioning,
-    virtual GPU simulation, and inter-partition communication.
+    Manages the virtual execution system including model partitioning,
+    virtual device simulation, and inter-partition communication.
     """
     
     def __init__(self, config: PartitionConfig):
         self.config = config
         self.partitions: List[nn.Module] = []
-        self.virtual_gpus: List[VirtualGPU] = []
-        self.partition_mapping: Dict[int, int] = {}  # Maps partition index to virtual GPU ID
+        self.virtual_devices: List[VirtualDevice] = []
+        self.partition_mapping: Dict[int, int] = {}  # Maps partition index to virtual device ID
         self.communication_queue = queue.Queue()
         self.lock = threading.Lock()
         self.executor = ThreadPoolExecutor(max_workers=config.num_partitions)
         self.memory_swap_manager = MemorySwapManager(self)
 
-        # Initialize virtual GPUs
-        self._initialize_virtual_gpus()
+        # Initialize virtual devices
+        self._initialize_virtual_devices()
 
-        logger.info(f"Distributed simulation manager initialized with {config.num_partitions} partitions "
-                   f"and {len(self.virtual_gpus)} virtual GPUs")
+        logger.info(f"Virtual execution manager initialized with {config.num_partitions} partitions "
+                   f"and {len(self.virtual_devices)} virtual devices")
     
-    def _initialize_virtual_gpus(self):
-        """Initialize virtual GPU instances based on configuration."""
-        for i in range(min(self.config.num_partitions, 8)):  # Limit to 8 virtual GPUs for now
+    def _initialize_virtual_devices(self):
+        """Initialize virtual device instances based on configuration."""
+        for i in range(min(self.config.num_partitions, 8)):  # Limit to 8 virtual devices for now
             memory_limit = self.config.memory_budget_per_partition_gb
-            virtual_gpu = VirtualGPU(
+            virtual_device = VirtualDevice(
                 id=i,
                 memory_limit_gb=memory_limit,
                 compute_capability="7.5"
             )
-            self.virtual_gpus.append(virtual_gpu)
+            self.virtual_devices.append(virtual_device)
             
-            # Map partition to virtual GPU (round-robin assignment)
-            self.partition_mapping[i % len(self.virtual_gpus)] = i
+            # Map partition to virtual device (round-robin assignment)
+            self.partition_mapping[i % len(self.virtual_devices)] = i
     
     def partition_model(self, model: nn.Module) -> List[nn.Module]:
         """
@@ -217,36 +218,35 @@ class DistributedSimulationManager:
             raise RuntimeError("Model has not been partitioned. Call partition_model() first.")
 
         current_output = input_data
-        intermediate_results = {}
 
         # Start the memory swap scheduler
         self.memory_swap_manager.start_swap_scheduler()
 
         # Process each partition sequentially
         for i, partition in enumerate(self.partitions):
-            # Assign to virtual GPU
-            virtual_gpu_id = i % len(self.virtual_gpus)
-            virtual_gpu = self.virtual_gpus[virtual_gpu_id]
+            # Assign to virtual device
+            virtual_device_id = i % len(self.virtual_devices)
+            virtual_device = self.virtual_devices[virtual_device_id]
 
-            logger.debug(f"Processing partition {i} on virtual GPU {virtual_gpu_id}")
+            logger.debug(f"Processing partition {i} on virtual device {virtual_device_id}")
 
             # Check memory pressure and trigger swaps if needed
-            memory_pressure = self.memory_swap_manager.get_memory_pressure(virtual_gpu_id)
+            memory_pressure = self.memory_swap_manager.get_memory_pressure(virtual_device_id)
             if memory_pressure > 0.7:  # Trigger swaps if memory usage is above 70%
-                logger.info(f"High memory pressure ({memory_pressure:.2f}) on virtual GPU {virtual_gpu_id}, scheduling swaps")
+                logger.info(f"High memory pressure ({memory_pressure:.2f}) on virtual device {virtual_device_id}, scheduling swaps")
                 self.memory_swap_manager.trigger_memory_swaps_based_on_pressure(0.7)
 
-            # Simulate memory allocation on virtual GPU
+            # Simulate memory allocation on virtual device
             with self.lock:
                 # Estimate memory usage (simplified calculation)
                 memory_estimate = self._estimate_memory_usage(partition, current_output)
-                virtual_gpu.current_memory_usage_gb += memory_estimate
+                virtual_device.current_memory_usage_gb += memory_estimate
 
-                if virtual_gpu.current_memory_usage_gb > virtual_gpu.peak_memory_usage_gb:
-                    virtual_gpu.peak_memory_usage_gb = virtual_gpu.current_memory_usage_gb
+                if virtual_device.current_memory_usage_gb > virtual_device.peak_memory_usage_gb:
+                    virtual_device.peak_memory_usage_gb = virtual_device.current_memory_usage_gb
 
             # Move partition to appropriate device if needed
-            device = torch.device(f'cuda:{virtual_gpu_id % torch.cuda.device_count()}'
+            device = torch.device(f'cuda:{virtual_device_id % torch.cuda.device_count()}'
                                 if torch.cuda.is_available() and torch.cuda.device_count() > 0
                                 else 'cpu')
             partition = partition.to(device)
@@ -263,11 +263,11 @@ class DistributedSimulationManager:
             # Simulate communication/synchronization between partitions
             current_output = self._simulate_communication(partition_output, i)
 
-            # Simulate memory deallocation on virtual GPU
+            # Simulate memory deallocation on virtual device
             with self.lock:
-                virtual_gpu.current_memory_usage_gb -= memory_estimate
+                virtual_device.current_memory_usage_gb -= memory_estimate
                 # Ensure memory usage doesn't go below 0
-                virtual_gpu.current_memory_usage_gb = max(0, virtual_gpu.current_memory_usage_gb)
+                virtual_device.current_memory_usage_gb = max(0, virtual_device.current_memory_usage_gb)
 
         # Stop the memory swap scheduler
         self.memory_swap_manager.stop_swap_scheduler()
@@ -333,29 +333,29 @@ class DistributedSimulationManager:
         time.sleep(0.0003)  # Small delay to simulate pipeline coordination
     
     def get_partition_stats(self) -> Dict[str, Any]:
-        """Get statistics about the partitioning and virtual GPU usage."""
+        """Get statistics about the partitioning and virtual device usage."""
         stats = {
             "num_partitions": len(self.partitions),
-            "num_virtual_gpus": len(self.virtual_gpus),
+            "num_virtual_devices": len(self.virtual_devices),
             "partition_strategy": self.config.strategy.value,
             "memory_budget_per_partition_gb": self.config.memory_budget_per_partition_gb,
-            "virtual_gpu_stats": []
+            "virtual_device_stats": []
         }
         
-        for gpu in self.virtual_gpus:
-            gpu_stats = {
-                "id": gpu.id,
-                "memory_limit_gb": gpu.memory_limit_gb,
-                "current_memory_usage_gb": gpu.current_memory_usage_gb,
-                "peak_memory_usage_gb": gpu.peak_memory_usage_gb,
-                "active": gpu.active
+        for device in self.virtual_devices:
+            device_stats = {
+                "id": device.id,
+                "memory_limit_gb": device.memory_limit_gb,
+                "current_memory_usage_gb": device.current_memory_usage_gb,
+                "peak_memory_usage_gb": device.peak_memory_usage_gb,
+                "active": device.active
             }
-            stats["virtual_gpu_stats"].append(gpu_stats)
+            stats["virtual_device_stats"].append(device_stats)
         
         return stats
     
     def cleanup(self):
-        """Clean up resources used by the distributed simulation."""
+        """Clean up resources used by the virtual execution simulation."""
         if self.executor:
             self.executor.shutdown(wait=True)
 
@@ -366,13 +366,13 @@ class DistributedSimulationManager:
         # Clear partitions
         self.partitions.clear()
 
-        # Reset virtual GPUs
-        for gpu in self.virtual_gpus:
-            gpu.current_memory_usage_gb = 0.0
-            gpu.peak_memory_usage_gb = 0.0
-            gpu.allocated_tensors.clear()
+        # Reset virtual devices
+        for device in self.virtual_devices:
+            device.current_memory_usage_gb = 0.0
+            device.peak_memory_usage_gb = 0.0
+            device.allocated_tensors.clear()
 
-        logger.info("Distributed simulation resources cleaned up")
+        logger.info("Virtual execution resources cleaned up")
 
 
 class MemorySwapManager:
@@ -380,8 +380,8 @@ class MemorySwapManager:
     Manages intelligent memory swaps between partitions to optimize memory usage.
     """
 
-    def __init__(self, simulation_manager: DistributedSimulationManager):
-        self.simulation_manager = simulation_manager
+    def __init__(self, execution_manager: VirtualExecutionManager):
+        self.execution_manager = execution_manager
         self.swap_history: List[Dict[str, Any]] = []
         self.pending_swaps: List[Dict[str, Any]] = []
         self.active_swaps: List[Dict[str, Any]] = []
@@ -529,33 +529,33 @@ class MemorySwapManager:
                 swap_record['error'] = str(e)
                 self.swap_history.append(swap_record)
 
-    def get_memory_pressure(self, virtual_gpu_id: int = None) -> float:
+    def get_memory_pressure(self, virtual_device_id: int = None) -> float:
         """
-        Get memory pressure for a specific virtual GPU or overall.
+        Get memory pressure for a specific virtual device or overall.
 
         Args:
-            virtual_gpu_id: ID of virtual GPU to check. If None, return average pressure.
+            virtual_device_id: ID of virtual device to check. If None, return average pressure.
 
         Returns:
             Memory pressure ratio (0.0 to 1.0)
         """
-        if virtual_gpu_id is not None:
-            if virtual_gpu_id < len(self.simulation_manager.virtual_gpus):
-                gpu = self.simulation_manager.virtual_gpus[virtual_gpu_id]
-                return gpu.current_memory_usage_gb / gpu.memory_limit_gb if gpu.memory_limit_gb > 0 else 0.0
+        if virtual_device_id is not None:
+            if virtual_device_id < len(self.execution_manager.virtual_devices):
+                device = self.execution_manager.virtual_devices[virtual_device_id]
+                return device.current_memory_usage_gb / device.memory_limit_gb if device.memory_limit_gb > 0 else 0.0
             else:
                 return 0.0
         else:
-            # Return average memory pressure across all virtual GPUs
-            if not self.simulation_manager.virtual_gpus:
+            # Return average memory pressure across all virtual devices
+            if not self.execution_manager.virtual_devices:
                 return 0.0
 
             total_pressure = 0.0
-            for gpu in self.simulation_manager.virtual_gpus:
-                pressure = gpu.current_memory_usage_gb / gpu.memory_limit_gb if gpu.memory_limit_gb > 0 else 0.0
+            for device in self.execution_manager.virtual_devices:
+                pressure = device.current_memory_usage_gb / device.memory_limit_gb if device.memory_limit_gb > 0 else 0.0
                 total_pressure += pressure
 
-            return total_pressure / len(self.simulation_manager.virtual_gpus)
+            return total_pressure / len(self.execution_manager.virtual_devices)
 
     def trigger_memory_swaps_based_on_pressure(self, threshold: float = 0.8):
         """
@@ -564,23 +564,23 @@ class MemorySwapManager:
         Args:
             threshold: Memory pressure threshold (0.0 to 1.0) that triggers swaps
         """
-        for i, gpu in enumerate(self.simulation_manager.virtual_gpus):
+        for i, device in enumerate(self.execution_manager.virtual_devices):
             pressure = self.get_memory_pressure(i)
             if pressure > threshold:
-                logger.info(f"High memory pressure ({pressure:.2f}) on virtual GPU {i}, triggering swaps")
+                logger.info(f"High memory pressure ({pressure:.2f}) on virtual device {i}, triggering swaps")
 
-                # Evict some low-priority tensors from this GPU
-                self._trigger_eviction_for_gpu(i, pressure)
+                # Evict some low-priority tensors from this device
+                self._trigger_eviction_for_device(i, pressure)
 
-    def _trigger_eviction_for_gpu(self, gpu_id: int, pressure: float):
-        """Trigger eviction of tensors from a specific GPU based on pressure."""
+    def _trigger_eviction_for_device(self, device_id: int, pressure: float):
+        """Trigger eviction of tensors from a specific device based on pressure."""
         # In a real implementation, we would identify tensors to evict based on usage patterns
         # For simulation, we'll just schedule a dummy swap with appropriate priority
         priority = int(pressure * 100)  # Higher pressure = higher priority for swap
 
         # Schedule a dummy swap to simulate memory pressure relief
         self.schedule_memory_swap(
-            partition_id=gpu_id,
+            partition_id=device_id,
             tensor_name=f"dummy_tensor_for_eviction_{int(time.time())}",
             tensor=torch.randn(100, 100),  # Dummy tensor
             priority=priority,
@@ -656,6 +656,3 @@ class MemorySwapManager:
             self.swap_history.clear()
 
         logger.info("Memory swap manager cleaned up")
-
-
-from collections import OrderedDict
