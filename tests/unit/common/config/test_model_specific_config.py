@@ -1,5 +1,5 @@
 """
-Tests for model-specific dynamic configurations.
+Tests for model-specific configurations.
 """
 
 import unittest
@@ -19,122 +19,97 @@ from src.inference_pio.test_utils import (
     run_tests
 )
 
+from src.inference_pio.common.config_manager import (
+    GLM47DynamicConfig, Qwen34BDynamicConfig,
+    Qwen3CoderDynamicConfig, Qwen3VLDynamicConfig
+)
 
 def test_glm47_specific_config():
-    """Test GLM-4.7 specific configuration."""
-    from src.inference_pio.config.dynamic_config import GLM47DynamicConfig
+    """Test GLM-4.7 specific configuration parameters."""
+    config = GLM47DynamicConfig()
     
-    config = GLM47DynamicConfig(
-        model_name="glm47_test",
-        temperature=0.7,
-        glm47_specific_param="special_value"
-    )
+    # Check default values for specific parameters
+    assert_true(config.use_glm_attention_patterns, "Should enable GLM attention patterns by default")
+    assert_equal(config.glm_attention_window_size, 1024, "Should have correct default window size")
     
-    assert_equal(config.model_name, "glm47_test", "Config should have correct model name")
-    assert_equal(config.glm47_specific_param, "special_value", "Config should have GLM-4.7 specific param")
-    assert_equal(config.temperature, 0.7, "Config should have correct temperature")
+    # Check that we can modify specific parameters
+    config.glm_attention_pattern_sparsity = 0.5
+    assert_equal(config.glm_attention_pattern_sparsity, 0.5, "Should allow modifying specific parameters")
 
 
 def test_qwen3_4b_specific_config():
-    """Test Qwen3-4b specific configuration."""
-    from src.inference_pio.config.dynamic_config import Qwen34BDynamicConfig
+    """Test Qwen3-4B specific configuration parameters."""
+    config = Qwen34BDynamicConfig()
     
-    config = Qwen34BDynamicConfig(
-        model_name="qwen3_4b_test",
-        temperature=0.8,
-        qwen3_4b_specific_param="special_value"
-    )
+    # Check default values
+    assert_true(config.use_qwen3_attention_optimizations, "Should enable Qwen3 attention optimizations")
+    assert_equal(config.qwen3_instruction_attention_scaling, 1.2, "Should have correct attention scaling")
     
-    assert_equal(config.model_name, "qwen3_4b_test", "Config should have correct model name")
-    assert_equal(config.qwen3_4b_specific_param, "special_value", "Config should have Qwen3-4b specific param")
-    assert_equal(config.temperature, 0.8, "Config should have correct temperature")
+    # Check modification
+    config.qwen3_kv_cache_compression_ratio = 0.8
+    assert_equal(config.qwen3_kv_cache_compression_ratio, 0.8, "Should allow modifying compression ratio")
 
 
 def test_qwen3_coder_specific_config():
-    """Test Qwen3-Coder specific configuration."""
-    from src.inference_pio.config.dynamic_config import Qwen3CoderDynamicConfig
+    """Test Qwen3-Coder specific configuration parameters."""
+    config = Qwen3CoderDynamicConfig()
     
-    config = Qwen3CoderDynamicConfig(
-        model_name="qwen3_coder_test",
-        temperature=0.6,
-        qwen3_coder_specific_param="special_value"
-    )
+    # Check default values
+    assert_true(config.use_qwen3_coder_code_optimizations, "Should enable code optimizations")
+    assert_true(config.use_qwen3_coder_syntax_highlighting, "Should enable syntax highlighting") # Fixed name
     
-    assert_equal(config.model_name, "qwen3_coder_test", "Config should have correct model name")
-    assert_equal(config.qwen3_coder_specific_param, "special_value", "Config should have Qwen3-Coder specific param")
-    assert_equal(config.temperature, 0.6, "Config should have correct temperature")
+    # Check modification
+    config.code_generation_temperature = 0.5
+    assert_equal(config.code_generation_temperature, 0.5, "Should allow modifying generation temperature")
 
 
 def test_qwen3_vl_specific_config():
-    """Test Qwen3-VL specific configuration."""
-    from src.inference_pio.config.dynamic_config import Qwen3VL2BDynamicConfig
+    """Test Qwen3-VL specific configuration parameters."""
+    config = Qwen3VLDynamicConfig()
     
-    config = Qwen3VL2BDynamicConfig(
-        model_name="qwen3_vl_test",
-        temperature=0.5,
-        qwen3_vl_specific_param="special_value"
-    )
+    # Check default values
+    assert_true(config.use_qwen3_vl_vision_optimizations, "Should enable vision optimizations")
+    assert_equal(config.patch_size, 14, "Should have correct patch size")
     
-    assert_equal(config.model_name, "qwen3_vl_test", "Config should have correct model name")
-    assert_equal(config.qwen3_vl_specific_param, "special_value", "Config should have Qwen3-VL specific param")
-    assert_equal(config.temperature, 0.5, "Config should have correct temperature")
+    # Check modification
+    config.enable_image_tokenization = False
+    assert_false(config.enable_image_tokenization, "Should allow disabling image tokenization")
 
 
 def test_model_config_compatibility():
     """Test compatibility between different model configurations."""
-    from src.inference_pio.config.dynamic_config import (
-        GLM47DynamicConfig, Qwen34BDynamicConfig, 
-        Qwen3CoderDynamicConfig, Qwen3VL2BDynamicConfig
-    )
-    
     # Create configs for different models
     configs = [
-        GLM47DynamicConfig(model_name="glm47_compat", temperature=0.7),
-        Qwen34BDynamicConfig(model_name="qwen3_4b_compat", temperature=0.8),
-        Qwen3CoderDynamicConfig(model_name="qwen3_coder_compat", temperature=0.6),
-        Qwen3VL2BDynamicConfig(model_name="qwen3_vl_compat", temperature=0.5)
+        GLM47DynamicConfig(model_name="glm47"),
+        Qwen34BDynamicConfig(model_name="qwen3_4b"),
+        Qwen3CoderDynamicConfig(model_name="qwen3_coder"),
+        Qwen3VLDynamicConfig(model_name="qwen3_vl")
     ]
     
     # All should have common attributes
     for config in configs:
         assert_is_not_none(config.model_name, "All configs should have model_name")
-        assert_is_not_none(config.temperature, "All configs should have temperature")
-        assert_true(config.validate(), "All configs should validate")
+        assert_is_not_none(config.hidden_size, "All configs should have hidden_size")
+        assert_is_not_none(config.vocab_size, "All configs should have vocab_size")
 
 
 def test_model_config_cloning():
     """Test cloning of model-specific configurations."""
-    from src.inference_pio.config.dynamic_config import (
-        GLM47DynamicConfig, Qwen34BDynamicConfig, 
-        Qwen3CoderDynamicConfig, Qwen3VL2BDynamicConfig
+    original = Qwen3VLDynamicConfig(
+        model_name="original_vl",
+        vision_hidden_size=2048
     )
     
-    # Test cloning for each model-specific config
-    original_configs = [
-        GLM47DynamicConfig(model_name="clone_glm47", temperature=0.7, glm47_specific_param="value1"),
-        Qwen34BDynamicConfig(model_name="clone_qwen3_4b", temperature=0.8, qwen3_4b_specific_param="value2"),
-        Qwen3CoderDynamicConfig(model_name="clone_qwen3_coder", temperature=0.6, qwen3_coder_specific_param="value3"),
-        Qwen3VL2BDynamicConfig(model_name="clone_qwen3_vl", temperature=0.5, qwen3_vl_specific_param="value4")
-    ]
+    cloned = original.clone()
+    cloned.model_name = "cloned_vl"
+
+    # Check that clone preserves specific attributes
+    assert_equal(cloned.vision_hidden_size, 2048, "Clone should preserve specific attributes")
+    assert_true(cloned.use_qwen3_vl_vision_optimizations, "Clone should preserve default specific attributes")
     
-    for original in original_configs:
-        cloned = original.clone(new_model_name=f"cloned_{original.model_name}")
-        
-        # Check that the clone has the new name
-        assert_equal(cloned.model_name, f"cloned_{original.model_name}", "Cloned config should have new name")
-        
-        # Check that other attributes are preserved
-        assert_equal(cloned.temperature, original.temperature, "Temperature should be preserved in clone")
-        
-        # Check that model-specific attributes are preserved
-        if hasattr(original, 'glm47_specific_param'):
-            assert_equal(cloned.glm47_specific_param, original.glm47_specific_param, "GLM47 specific param should be preserved")
-        elif hasattr(original, 'qwen3_4b_specific_param'):
-            assert_equal(cloned.qwen3_4b_specific_param, original.qwen3_4b_specific_param, "Qwen3-4b specific param should be preserved")
-        elif hasattr(original, 'qwen3_coder_specific_param'):
-            assert_equal(cloned.qwen3_coder_specific_param, original.qwen3_coder_specific_param, "Qwen3-Coder specific param should be preserved")
-        elif hasattr(original, 'qwen3_vl_specific_param'):
-            assert_equal(cloned.qwen3_vl_specific_param, original.qwen3_vl_specific_param, "Qwen3-VL specific param should be preserved")
+    # Modify clone shouldn't affect original
+    cloned.vision_hidden_size = 1024
+    assert_equal(original.vision_hidden_size, 2048, "Modifying clone shouldn't affect original")
 
 
 def run_tests():

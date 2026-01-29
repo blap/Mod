@@ -19,145 +19,97 @@ from src.inference_pio.test_utils import (
     run_tests
 )
 
+from src.inference_pio.common.config_manager import ConfigManager, GLM47DynamicConfig
 
 def test_config_manager_registration():
     """Test that config manager can register and retrieve configurations."""
-    from src.inference_pio.config.dynamic_config import DynamicConfigManager, GLM47DynamicConfig
     
-    # Create a temporary directory for config storage
-    test_dir = tempfile.mkdtemp()
+    # Initialize the config manager (no config_dir arg)
+    config_manager = ConfigManager()
     
-    try:
-        # Initialize the config manager
-        config_manager = DynamicConfigManager(config_dir=test_dir)
-        
-        # Create a test config
-        config = GLM47DynamicConfig(model_name="test_config")
-        
-        # Register the config
-        result = config_manager.register_config("test_config", config)
-        assert_true(result, "Config registration should succeed")
-        
-        # Retrieve the config
-        retrieved = config_manager.get_config("test_config")
-        assert_is_not_none(retrieved, "Retrieved config should not be None")
-        assert_equal(retrieved.model_name, "test_config", "Retrieved config should have correct name")
-        
-        # Clean up
-        shutil.rmtree(test_dir)
-    except Exception as e:
-        # Clean up in case of error
-        shutil.rmtree(test_dir, ignore_errors=True)
-        raise e
+    # Create a test config
+    config = GLM47DynamicConfig(model_name="test_config")
+
+    # Register the config
+    result = config_manager.register_config("test_config", config)
+    assert_true(result, "Config registration should succeed")
+
+    # Retrieve the config
+    retrieved = config_manager.get_config("test_config")
+    assert_is_not_none(retrieved, "Retrieved config should not be None")
+    assert_equal(retrieved.model_name, "test_config", "Retrieved config should have correct name")
 
 
 def test_config_manager_update():
     """Test that config manager can update configurations."""
-    from src.inference_pio.config.dynamic_config import DynamicConfigManager, GLM47DynamicConfig
     
-    # Create a temporary directory for config storage
-    test_dir = tempfile.mkdtemp()
+    # Initialize the config manager
+    config_manager = ConfigManager()
     
-    try:
-        # Initialize the config manager
-        config_manager = DynamicConfigManager(config_dir=test_dir)
-        
-        # Create and register initial config
-        initial_config = GLM47DynamicConfig(model_name="update_test", temperature=0.5)
-        config_manager.register_config("update_test", initial_config)
-        
-        # Update the config
-        update_result = config_manager.update_config("update_test", {"temperature": 0.8})
-        assert_true(update_result, "Config update should succeed")
-        
-        # Retrieve and verify the updated config
-        updated_config = config_manager.get_config("update_test")
-        assert_equal(updated_config.temperature, 0.8, "Updated config should have new temperature")
-        
-        # Clean up
-        shutil.rmtree(test_dir)
-    except Exception as e:
-        # Clean up in case of error
-        shutil.rmtree(test_dir, ignore_errors=True)
-        raise e
+    # Create and register initial config
+    initial_config = GLM47DynamicConfig(model_name="update_test", temperature=0.5)
+    config_manager.register_config("update_test", initial_config)
+
+    # Update the config
+    update_result = config_manager.update_config("update_test", {"temperature": 0.8})
+    assert_true(update_result, "Config update should succeed")
+
+    # Retrieve and verify the updated config
+    updated_config = config_manager.get_config("update_test")
+    assert_equal(updated_config.temperature, 0.8, "Updated config should have new temperature")
 
 
 def test_config_manager_list_configs():
     """Test that config manager can list configurations."""
-    from src.inference_pio.config.dynamic_config import DynamicConfigManager, GLM47DynamicConfig
     
-    # Create a temporary directory for config storage
-    test_dir = tempfile.mkdtemp()
+    # Initialize the config manager
+    config_manager = ConfigManager()
     
-    try:
-        # Initialize the config manager
-        config_manager = DynamicConfigManager(config_dir=test_dir)
-        
-        # Register multiple configs
-        config1 = GLM47DynamicConfig(model_name="list_test_1")
-        config2 = GLM47DynamicConfig(model_name="list_test_2")
-        config_manager.register_config("list_test_1", config1)
-        config_manager.register_config("list_test_2", config2)
-        
-        # List configs
-        config_list = config_manager.list_configs()
-        assert_greater(len(config_list), 1, "Should have at least 2 configs")
-        assert_in("list_test_1", config_list, "Should contain first config")
-        assert_in("list_test_2", config_list, "Should contain second config")
-        
-        # Clean up
-        shutil.rmtree(test_dir)
-    except Exception as e:
-        # Clean up in case of error
-        shutil.rmtree(test_dir, ignore_errors=True)
-        raise e
+    # Register multiple configs
+    config1 = GLM47DynamicConfig(model_name="list_test_1")
+    config2 = GLM47DynamicConfig(model_name="list_test_2")
+    config_manager.register_config("list_test_1", config1)
+    config_manager.register_config("list_test_2", config2)
+
+    # List configs
+    config_list = config_manager.list_configs()
+    assert_greater(len(config_list), 1, "Should have at least 2 configs")
+    assert_in("list_test_1", config_list, "Should contain first config")
+    assert_in("list_test_2", config_list, "Should contain second config")
 
 
 def test_config_manager_delete():
     """Test that config manager can delete configurations."""
-    from src.inference_pio.config.dynamic_config import DynamicConfigManager, GLM47DynamicConfig
     
-    # Create a temporary directory for config storage
-    test_dir = tempfile.mkdtemp()
+    # Initialize the config manager
+    config_manager = ConfigManager()
     
-    try:
-        # Initialize the config manager
-        config_manager = DynamicConfigManager(config_dir=test_dir)
-        
-        # Register a config
-        config = GLM47DynamicConfig(model_name="delete_test")
-        config_manager.register_config("delete_test", config)
-        
-        # Verify it exists
-        retrieved = config_manager.get_config("delete_test")
-        assert_is_not_none(retrieved, "Config should exist before deletion")
-        
-        # Delete the config
-        delete_result = config_manager.delete_config("delete_test")
-        assert_true(delete_result, "Config deletion should succeed")
-        
-        # Verify it no longer exists
-        deleted_retrieval = config_manager.get_config("delete_test")
-        assert_is_none(deleted_retrieval, "Config should not exist after deletion")
-        
-        # Clean up
-        shutil.rmtree(test_dir)
-    except Exception as e:
-        # Clean up in case of error
-        shutil.rmtree(test_dir, ignore_errors=True)
-        raise e
+    # Register a config
+    config = GLM47DynamicConfig(model_name="delete_test")
+    config_manager.register_config("delete_test", config)
+
+    # Verify it exists
+    retrieved = config_manager.get_config("delete_test")
+    assert_is_not_none(retrieved, "Config should exist before deletion")
+
+    # Delete the config
+    delete_result = config_manager.delete_config("delete_test")
+    assert_true(delete_result, "Config deletion should succeed")
+
+    # Verify it no longer exists
+    deleted_retrieval = config_manager.get_config("delete_test")
+    assert_is_none(deleted_retrieval, "Config should not exist after deletion")
 
 
 def test_config_manager_save_load():
     """Test that config manager can save and load configurations."""
-    from src.inference_pio.config.dynamic_config import DynamicConfigManager, GLM47DynamicConfig
     
     # Create a temporary directory for config storage
     test_dir = tempfile.mkdtemp()
     
     try:
         # Initialize the config manager
-        config_manager = DynamicConfigManager(config_dir=test_dir)
+        config_manager = ConfigManager()
         
         # Create and register a config
         config = GLM47DynamicConfig(model_name="save_load_test", temperature=0.7)
@@ -169,9 +121,15 @@ def test_config_manager_save_load():
         assert_true(save_result, "Config save should succeed")
         
         # Load the config from the file
-        loaded_config = config_manager.load_config_from_file(temp_file, "json")
+        # Note: load_config registers it with a name
+        load_result = config_manager.load_config("loaded_config", temp_file, "json")
+        assert_true(load_result, "Config load should succeed")
+
+        loaded_config = config_manager.get_config("loaded_config")
         assert_is_not_none(loaded_config, "Loaded config should not be None")
-        assert_equal(loaded_config.model_name, "save_load_test", "Loaded config should have correct name")
+        # In the implementation of ConfigManager.load_config, it creates a GenericConfig currently.
+        # We verify basic properties.
+        assert_equal(loaded_config.model_name, "save_load_test", "Loaded config should have correct name from file")
         assert_equal(loaded_config.temperature, 0.7, "Loaded config should have correct temperature")
         
         # Clean up

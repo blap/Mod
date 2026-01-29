@@ -19,10 +19,10 @@ from src.inference_pio.test_utils import (
     run_tests
 )
 
+from src.inference_pio.common.optimization_profiles import PerformanceProfile, MemoryEfficientProfile, BalancedProfile, ProfileManager
 
 def test_performance_profile_creation():
     """Test creation of performance optimization profile."""
-    from src.inference_pio.optimization.profiles import PerformanceProfile
     
     profile = PerformanceProfile(
         name="test_performance", 
@@ -41,7 +41,6 @@ def test_performance_profile_creation():
 
 def test_memory_efficient_profile_creation():
     """Test creation of memory-efficient optimization profile."""
-    from src.inference_pio.optimization.profiles import MemoryEfficientProfile
     
     profile = MemoryEfficientProfile(
         name="test_memory_efficient", 
@@ -62,7 +61,6 @@ def test_memory_efficient_profile_creation():
 
 def test_balanced_profile_creation():
     """Test creation of balanced optimization profile."""
-    from src.inference_pio.optimization.profiles import BalancedProfile
     
     profile = BalancedProfile(
         name="test_balanced", 
@@ -83,126 +81,88 @@ def test_balanced_profile_creation():
 
 def test_profile_manager_registration():
     """Test that profile manager can register and retrieve optimization profiles."""
-    from src.inference_pio.optimization.profiles import ProfileManager, PerformanceProfile
     
-    # Create a temporary directory for profile storage
-    test_dir = tempfile.mkdtemp()
+    # Initialize the profile manager (no profile_dir arg)
+    profile_manager = ProfileManager()
     
-    try:
-        # Initialize the profile manager
-        profile_manager = ProfileManager(profile_dir=test_dir)
-        
-        # Create a test profile
-        profile = PerformanceProfile(
-            name="test_profile",
-            description="Test profile for registration"
-        )
-        
-        # Register the profile
-        result = profile_manager.register_profile("test_profile", profile)
-        assert_true(result, "Profile registration should succeed")
-        
-        # Retrieve the profile
-        retrieved = profile_manager.get_profile("test_profile")
-        assert_is_not_none(retrieved, "Retrieved profile should not be None")
-        assert_equal(retrieved.name, "test_profile", "Retrieved profile should have correct name")
-        
-        # Clean up
-        shutil.rmtree(test_dir)
-    except Exception as e:
-        # Clean up in case of error
-        shutil.rmtree(test_dir, ignore_errors=True)
-        raise e
+    # Create a test profile
+    profile = PerformanceProfile(
+        name="test_profile",
+        description="Test profile for registration"
+    )
+
+    # Register the profile
+    result = profile_manager.register_profile("test_profile", profile)
+    assert_true(result, "Profile registration should succeed")
+
+    # Retrieve the profile
+    retrieved = profile_manager.get_profile("test_profile")
+    assert_is_not_none(retrieved, "Retrieved profile should not be None")
+    assert_equal(retrieved.name, "test_profile", "Retrieved profile should have correct name")
 
 
 def test_profile_application_to_config():
     """Test applying optimization profiles to configurations."""
-    from src.inference_pio.optimization.profiles import PerformanceProfile
-    from src.inference_pio.config.dynamic_config import GLM47DynamicConfig
+    from src.inference_pio.common.config_manager import GLM47DynamicConfig
     
     # Create a profile and a config
     profile = PerformanceProfile(
         name="apply_test",
         description="Test profile application",
-        optimization_level=3,
-        enable_quantization=True,
-        enable_pruning=True
+        # Custom attributes applied to config
+        temperature=0.2
     )
     
     config = GLM47DynamicConfig(model_name="apply_test_config", temperature=0.7)
     
     # Apply the profile to the config
-    optimized_config = profile.apply_to_config(config)
+    profile.apply_to_config(config)
     
     # Check that the config has been modified appropriately
-    assert_equal(optimized_config.model_name, "apply_test_config", "Config name should remain unchanged")
-    # Note: The actual application logic depends on the implementation of apply_to_config
+    assert_equal(config.model_name, "apply_test_config", "Config name should remain unchanged")
+    assert_equal(config.temperature, 0.2, "Config temperature should be updated by profile")
 
 
 def test_profile_manager_list_profiles():
     """Test that profile manager can list optimization profiles."""
-    from src.inference_pio.optimization.profiles import ProfileManager, PerformanceProfile, MemoryEfficientProfile
     
-    # Create a temporary directory for profile storage
-    test_dir = tempfile.mkdtemp()
+    # Initialize the profile manager
+    profile_manager = ProfileManager()
+
+    # Register multiple profiles
+    perf_profile = PerformanceProfile(name="perf_test_1", description="Performance test 1")
+    mem_profile = MemoryEfficientProfile(name="mem_test_1", description="Memory test 1")
+    profile_manager.register_profile("perf_test_1", perf_profile)
+    profile_manager.register_profile("mem_test_1", mem_profile)
     
-    try:
-        # Initialize the profile manager
-        profile_manager = ProfileManager(profile_dir=test_dir)
-        
-        # Register multiple profiles
-        perf_profile = PerformanceProfile(name="perf_test_1", description="Performance test 1")
-        mem_profile = MemoryEfficientProfile(name="mem_test_1", description="Memory test 1")
-        profile_manager.register_profile("perf_test_1", perf_profile)
-        profile_manager.register_profile("mem_test_1", mem_profile)
-        
-        # List profiles
-        profile_list = profile_manager.list_profiles()
-        assert_greater(len(profile_list), 1, "Should have at least 2 profiles")
-        assert_in("perf_test_1", profile_list, "Should contain performance profile")
-        assert_in("mem_test_1", profile_list, "Should contain memory profile")
-        
-        # Clean up
-        shutil.rmtree(test_dir)
-    except Exception as e:
-        # Clean up in case of error
-        shutil.rmtree(test_dir, ignore_errors=True)
-        raise e
+    # List profiles
+    profile_list = profile_manager.list_profiles()
+    assert_greater(len(profile_list), 1, "Should have at least 2 profiles")
+    assert_in("perf_test_1", profile_list, "Should contain performance profile")
+    assert_in("mem_test_1", profile_list, "Should contain memory profile")
 
 
 def test_profile_manager_delete_profile():
     """Test that profile manager can delete optimization profiles."""
-    from src.inference_pio.optimization.profiles import ProfileManager, PerformanceProfile
     
-    # Create a temporary directory for profile storage
-    test_dir = tempfile.mkdtemp()
+    # Initialize the profile manager
+    profile_manager = ProfileManager()
+
+    # Register a profile
+    profile = PerformanceProfile(name="delete_test", description="Delete test")
+    profile_manager.register_profile("delete_test", profile)
+
+    # Verify it exists
+    retrieved = profile_manager.get_profile("delete_test")
+    assert_is_not_none(retrieved, "Profile should exist before deletion")
+
+    # Delete the profile
+    delete_result = profile_manager.delete_profile("delete_test")
+    assert_true(delete_result, "Profile deletion should succeed")
     
-    try:
-        # Initialize the profile manager
-        profile_manager = ProfileManager(profile_dir=test_dir)
-        
-        # Register a profile
-        profile = PerformanceProfile(name="delete_test", description="Delete test")
-        profile_manager.register_profile("delete_test", profile)
-        
-        # Verify it exists
-        retrieved = profile_manager.get_profile("delete_test")
-        assert_is_not_none(retrieved, "Profile should exist before deletion")
-        
-        # Delete the profile
-        delete_result = profile_manager.delete_profile("delete_test")
-        assert_true(delete_result, "Profile deletion should succeed")
-        
-        # Verify it no longer exists
-        deleted_retrieval = profile_manager.get_profile("delete_test")
-        assert_is_none(deleted_retrieval, "Profile should not exist after deletion")
-        
-        # Clean up
-        shutil.rmtree(test_dir)
-    except Exception as e:
-        # Clean up in case of error
-        shutil.rmtree(test_dir, ignore_errors=True)
-        raise e
+    # Verify it no longer exists
+    deleted_retrieval = profile_manager.get_profile("delete_test")
+    assert_is_none(deleted_retrieval, "Profile should not exist after deletion")
 
 
 def run_tests():
