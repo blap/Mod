@@ -7,7 +7,7 @@ This test verifies that the activation offloading system works correctly across 
 import torch
 import torch.nn as nn
 import tempfile
-from src.inference_pio.test_utils import (
+from tests.utils.test_utils import (
     assert_is_not_none,
     assert_true,
     assert_is_instance,

@@ -115,7 +115,7 @@ Implement the plugin interface in `plugin.py`.
 
 ### Test Utilities
 
-The project uses custom test utilities in `src/inference_pio/test_utils.py`.
+The project uses custom test utilities in `tests.utils.test_utils.py`.
 
 ### Running Tests
 

@@ -3,7 +3,7 @@ Test suite for Qwen3-VL-2B Projection Layers Implementation
 
 This module tests the projection layer optimizations for the Qwen3-VL-2B model.
 """
-from src.inference_pio.test_utils import (assert_equal, assert_not_equal, assert_true, assert_false, assert_is_none, assert_is_not_none, assert_in, assert_not_in, assert_greater, assert_less, assert_is_instance, assert_raises, run_tests)
+from tests.utils.test_utils import (assert_equal, assert_not_equal, assert_true, assert_false, assert_is_none, assert_is_not_none, assert_in, assert_not_in, assert_greater, assert_less, assert_is_instance, assert_raises, run_tests)
 
 
 import torch

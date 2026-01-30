@@ -178,7 +178,7 @@ def validate_input(input_data: Any) -> None:
 
 ### Custom Testing Framework
 
-Inference-PIO uses a custom-built testing framework designed for efficiency and consistency. The framework is located in `src/inference_pio/test_utils.py` and provides comprehensive assertion functions.
+Inference-PIO uses a custom-built testing framework designed for efficiency and consistency. The framework is located in `tests.utils.test_utils.py` and provides comprehensive assertion functions.
 
 ### Assertion Functions
 
@@ -219,7 +219,7 @@ The framework includes over 100 assertion functions for various testing scenario
 #### Basic Test Function
 
 ```python
-from src.inference_pio.test_utils import assert_equal, assert_true, run_tests
+from tests.utils.test_utils import assert_equal, assert_true, run_tests
 
 def test_basic_functionality():
     """Test basic arithmetic operations."""
@@ -234,7 +234,7 @@ if __name__ == '__main__':
 #### Class-Based Tests
 
 ```python
-from src.inference_pio.test_utils import assert_equal
+from tests.utils.test_utils import assert_equal
 
 class TestCalculator:
     def test_addition(self):
@@ -250,7 +250,7 @@ class TestCalculator:
 
 ```python
 import torch
-from src.inference_pio.test_utils import assert_tensor_equal, assert_tensor_shape
+from tests.utils.test_utils import assert_tensor_equal, assert_tensor_shape
 
 def test_tensor_operations():
     """Test tensor operations."""
@@ -266,7 +266,7 @@ def test_tensor_operations():
 #### Individual Test Execution
 
 ```python
-from src.inference_pio.test_utils import run_test
+from tests.utils.test_utils import run_test
 
 def test_example():
     assert 1 + 1 == 2
@@ -277,7 +277,7 @@ run_test(test_example, "test_example")
 #### Multiple Test Execution
 
 ```python
-from src.inference_pio.test_utils import run_tests
+from tests.utils.test_utils import run_tests
 
 def test_one():
     assert True

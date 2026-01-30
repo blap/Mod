@@ -5,7 +5,7 @@ This module tests that the Qwen3-VL-2B model correctly applies multimodal attent
 while other models do not.
 """
 import torch
-from src.inference_pio.test_utils import (
+from tests.utils.test_utils import (
     assert_equal, assert_not_equal, assert_true, assert_false,
     assert_is_none, assert_is_not_none, assert_in, assert_not_in,
     assert_greater, assert_less, assert_is_instance, assert_raises,

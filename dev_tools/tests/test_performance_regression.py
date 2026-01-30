@@ -4,7 +4,7 @@ Performance regression tests to ensure optimizations don't degrade functionality
 This test verifies that all optimization techniques maintain or improve performance
 without degrading core functionality.
 """
-from src.inference_pio.test_utils import (assert_equal, assert_not_equal, assert_true, assert_false, assert_is_none, assert_is_not_none, assert_in, assert_not_in, assert_greater, assert_less, assert_is_instance, assert_raises, run_tests)
+from tests.utils.test_utils import (assert_equal, assert_not_equal, assert_true, assert_false, assert_is_none, assert_is_not_none, assert_in, assert_not_in, assert_greater, assert_less, assert_is_instance, assert_raises, run_tests)
 
 
 import time

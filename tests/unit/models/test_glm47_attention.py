@@ -5,7 +5,7 @@ This module tests the attention mechanisms for the GLM-4.7 model.
 """
 
 import torch
-from src.inference_pio.test_utils import (
+from tests.utils.test_utils import (
     assert_true,
     assert_greater,
     assert_is_not_none,

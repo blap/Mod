@@ -15,7 +15,7 @@ from typing import Dict, Any
 
 # Import the test utilities from the project
 try:
-    from src.inference_pio.test_utils import (
+    from tests.utils.test_utils import (
         assert_equal, assert_true, assert_false, assert_is_not_none,
         assert_is_none, assert_in, assert_not_in, assert_raises,
         assert_greater_equal, assert_less_equal, assert_between,
@@ -29,7 +29,7 @@ except ImportError:
 
 # Import the fixture system
 try:
-    from src.inference_pio.test_fixtures import (
+    from tests.utils.fixtures import (
         FixtureManager, fixture, use_fixtures, fixture_context,
         get_fixture_manager, reset_fixture_manager, cleanup_test_resources,
         temp_dir, tensor_fixture, mock_model_fixture, config_fixture,

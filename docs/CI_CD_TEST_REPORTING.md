@@ -15,7 +15,7 @@ The CI/CD test reporting system provides:
 
 ## Components
 
-### 1. Test Report Generator (`src/inference_pio/test_reporting.py`)
+### 1. Test Report Generator (`tests.utils.reporting.py`)
 
 The core module that generates comprehensive test reports in multiple formats:
 

@@ -6,7 +6,7 @@ This module contains comprehensive tests for the Factory, Strategy, and Adapter 
 
 import torch
 import torch.nn as nn
-from src.inference_pio.test_utils import (
+from tests.utils.test_utils import (
     assert_is_instance,
     assert_is_not_none,
     assert_equal,
