@@ -14,10 +14,13 @@ import json
 from typing import List, Dict, Any
 
 # Add project root to path
-project_root = Path(__file__).parent
+project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from test_optimization import (
+# Also add scripts directory for local imports
+sys.path.insert(0, str(Path(__file__).parent))
+
+from scripts.test_optimization import (
     OptimizedTestRunner,
     run_tests_with_optimization,
     run_test_directory
@@ -179,7 +182,7 @@ def main():
     start_time = time.time()
     
     # Run tests using the existing function
-    from test_optimization import run_test_directory
+    from scripts.test_optimization import run_test_directory
     results = run_test_directory(
         directory_path=args.directory,
         cache_enabled=args.cache,

@@ -6,7 +6,7 @@ The Inference-PIO project uses a custom-built testing framework designed to prov
 
 ## Core Components
 
-### Test Utilities (`src/inference_pio/test_utils.py`)
+### Test Utilities (`tests.utils.test_utils.py`)
 
 The core of the testing framework consists of custom assertion functions and test runners:
 
@@ -79,7 +79,7 @@ src/
 ### Basic Test Function
 
 ```python
-from src.inference_pio.test_utils import assert_equal, assert_true, run_tests
+from tests.utils.test_utils import assert_equal, assert_true, run_tests
 
 def test_basic_functionality():
     """Test basic arithmetic operations."""
@@ -94,7 +94,7 @@ if __name__ == '__main__':
 ### Class-Based Tests
 
 ```python
-from src.inference_pio.test_utils import assert_equal
+from tests.utils.test_utils import assert_equal
 
 class TestCalculator:
     def test_addition(self):
@@ -111,7 +111,7 @@ class TestCalculator:
 ### Using Different Assertions
 
 ```python
-from src.inference_pio.test_utils import (
+from tests.utils.test_utils import (
     assert_equal, assert_true, assert_false,
     assert_in, assert_is_none, assert_greater,
     assert_raises, run_tests
@@ -151,7 +151,7 @@ if __name__ == '__main__':
 ### Skipping Tests
 
 ```python
-from src.inference_pio.test_utils import skip_test, run_tests
+from tests.utils.test_utils import skip_test, run_tests
 
 def test_feature_that_requires_gpu():
     # Check if GPU is available
@@ -175,7 +175,7 @@ The test discovery system automatically finds and executes tests across the proj
 - Can discover tests for specific models or the entire project
 - Provides summary statistics about test coverage
 
-### Test Discovery System (`src/inference_pio/test_discovery.py`)
+### Test Discovery System (`tests.utils.discovery.py`)
 
 The test discovery system automatically finds and executes tests across the project:
 
@@ -189,7 +189,7 @@ The test discovery system automatically finds and executes tests across the proj
 ### Individual Model Tests
 
 ```python
-from src.inference_pio.test_discovery import run_model_tests
+from tests.utils.discovery import run_model_tests
 
 # Run all tests for a specific model
 run_model_tests('qwen3_vl_2b')
@@ -198,7 +198,7 @@ run_model_tests('qwen3_vl_2b')
 ### All Project Tests
 
 ```python
-from src.inference_pio.test_discovery import run_all_project_tests
+from tests.utils.discovery import run_all_project_tests
 
 # Run all tests in the project
 run_all_project_tests()
@@ -207,7 +207,7 @@ run_all_project_tests()
 ### Test Summary
 
 ```python
-from src.inference_pio.test_discovery import get_test_summary
+from tests.utils.discovery import get_test_summary
 
 # Get a summary of all tests in the project
 summary = get_test_summary()
@@ -217,7 +217,7 @@ print(f"Total tests: {summary['total_tests']}")
 ### Manual Test Execution
 
 ```python
-from src.inference_pio.test_utils import run_tests
+from tests.utils.test_utils import run_tests
 
 def test_example():
     assert_equal(1 + 1, 2)

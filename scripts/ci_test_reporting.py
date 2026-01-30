@@ -20,7 +20,7 @@ from typing import Dict, List, Any, Optional
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.inference_pio.test_reporting import TestReportGenerator, TestResult
+from tests.utils.reporting import TestReportGenerator, TestResult
 
 
 def run_pytest_with_reporting(pytest_args: List[str], reports_dir: str = "test_reports") -> Dict[str, Any]:

@@ -7,13 +7,13 @@ import os
 from unittest.mock import Mock
 
 # Import the test utilities from the project
-from src.inference_pio.test_utils import (
+from tests.utils.test_utils import (
     assert_equal, assert_true, assert_false, assert_is_not_none, 
     assert_in, assert_greater, run_tests
 )
 
 # Import the fixture system
-from src.inference_pio.test_fixtures import (
+from tests.utils.fixtures import (
     fixture, use_fixtures, fixture_context, temp_dir, tensor_fixture,
     mock_model_fixture, config_fixture
 )

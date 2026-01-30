@@ -12,7 +12,7 @@ current_dir = os.path.dirname(__file__)
 src_dir = os.path.join(current_dir, '..', '..', '..', '..')
 sys.path.insert(0, src_dir)
 
-from src.inference_pio.test_discovery import discover_test_functions_from_directory, run_discovered_tests
+from tests.utils.discovery import discover_test_functions_from_directory, run_discovered_tests
 
 
 def discover_tests():

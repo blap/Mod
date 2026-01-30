@@ -6,7 +6,7 @@ This test verifies that the memory management system works correctly across all 
 
 import torch
 import tempfile
-from src.inference_pio.test_utils import (
+from tests.utils.test_utils import (
     assert_true,
     assert_is_not_none,
     assert_is_instance,

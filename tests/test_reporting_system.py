@@ -11,7 +11,7 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-from src.inference_pio.test_reporting import TestReportGenerator, TestResult
+from tests.utils.reporting import TestReportGenerator, TestResult
 
 
 def test_basic_functionality():

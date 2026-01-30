@@ -1,0 +1,155 @@
+{
+  "9eb69c2925a81962d5d89f5fef54bdea1aa76e129899bf5212edd6016cd7dcd9": {
+    "result": {
+      "success": false,
+      "error": "No module named 'inference_pio'"
+    },
+    "timestamp": "2026-01-30T10:46:03.939163",
+    "test_path": "tests/unit/common/test_simple_config.py::test_config_creation",
+    "test_args": ""
+  },
+  "2e653b87ac16639c069d55fe7712876c2e5b072dfd71580c9cadc742c6d5d137": {
+    "result": {
+      "success": false,
+      "error": "No module named 'inference_pio'"
+    },
+    "timestamp": "2026-01-30T10:46:03.939601",
+    "test_path": "tests/unit/common/test_simple_config.py::test_config_loader",
+    "test_args": ""
+  },
+  "63c5f36c696403e4d3fc8e2d67aec549afea540720cb04a6b4b092caa1040c72": {
+    "result": {
+      "success": false,
+      "error": "No module named 'inference_pio'"
+    },
+    "timestamp": "2026-01-30T10:46:03.940135",
+    "test_path": "tests/unit/common/test_simple_config.py::test_config_manager",
+    "test_args": ""
+  },
+  "e901bb2582ea310818060ecffc1345a03229a1ab017c74360eacf9d5326ff227": {
+    "result": {
+      "success": false,
+      "error": "No module named 'inference_pio'"
+    },
+    "timestamp": "2026-01-30T10:46:03.940725",
+    "test_path": "tests/unit/common/test_simple_config.py::test_config_profiles",
+    "test_args": ""
+  },
+  "1abf0fb0fe15157c0358a5a221abb5bd683e93162af7cf05537c9087f289b208": {
+    "result": {
+      "success": false,
+      "error": "No module named 'inference_pio'"
+    },
+    "timestamp": "2026-01-30T10:46:03.941360",
+    "test_path": "tests/unit/common/test_simple_config.py::test_config_templates",
+    "test_args": ""
+  },
+  "da834492f3f9483606d8c815289b4c9b6443e996b2e4ea2734d4631dddb51283": {
+    "result": {
+      "success": false,
+      "error": "No module named 'inference_pio'"
+    },
+    "timestamp": "2026-01-30T10:46:03.941928",
+    "test_path": "tests/unit/common/test_simple_config.py::test_config_validator",
+    "test_args": ""
+  },
+  "425c45d6d7288a394dc40a5f7cd6fd395841f6b395690a1c0074c91e2b32dc81": {
+    "result": {
+      "success": true,
+      "error": null
+    },
+    "timestamp": "2026-01-30T10:46:03.944532",
+    "test_path": "tests/unit/models/qwen3_vl_2b/test_simple_multimodal_attention_optimization.py::test_attention_manager_creation",
+    "test_args": ""
+  },
+  "969532720e9f7c9b98713a4958153d329cf5cef8dd070bdce4b73e8339f1ffb4": {
+    "result": {
+      "success": true,
+      "error": null
+    },
+    "timestamp": "2026-01-30T10:46:03.946451",
+    "test_path": "tests/unit/models/qwen3_vl_2b/test_simple_multimodal_attention_optimization.py::test_config_has_multimodal_attention_optimization_params",
+    "test_args": ""
+  },
+  "4436014e4e17ca53ae250fcfa3bc546d5e74429297a94f8eeea4379fc47a7403": {
+    "result": {
+      "success": true,
+      "error": null
+    },
+    "timestamp": "2026-01-30T10:46:03.948693",
+    "test_path": "tests/unit/models/qwen3_vl_2b/test_simple_multimodal_attention_optimization.py::test_model_integration",
+    "test_args": ""
+  },
+  "dd3ec774a52e2918d35f56ae83e4c838949ca6c400cfc33861b1a96c789fc58b": {
+    "result": {
+      "success": true,
+      "error": null
+    },
+    "timestamp": "2026-01-30T10:46:03.950658",
+    "test_path": "tests/unit/models/qwen3_vl_2b/test_simple_multimodal_attention_optimization.py::test_multimodal_attention_optimization_imports",
+    "test_args": ""
+  },
+  "dbdbc9ba28f144eab91ffa123b1ba3647f03209475071e08c0e8ca4aca28617b": {
+    "result": {
+      "success": true,
+      "error": null
+    },
+    "timestamp": "2026-01-30T10:46:03.952942",
+    "test_path": "tests/unit/models/qwen3_vl_2b/test_simple_multimodal_attention_optimization.py::test_multimodal_attention_optimizer_creation",
+    "test_args": ""
+  },
+  "5bac946361fd2d9b9685c28c20683451ab7894dd1435095e4db8957de62e1c00": {
+    "result": {
+      "success": false,
+      "error": "No module named 'inference_pio'"
+    },
+    "timestamp": "2026-01-30T10:46:03.953594",
+    "test_path": "tests/unit/misc/test_simple_config.py::test_config_creation",
+    "test_args": ""
+  },
+  "ac2eb5a0c537a2e7c15d0d8302c1754f521f4483a0bdef6c19557fceb766267d": {
+    "result": {
+      "success": false,
+      "error": "No module named 'inference_pio'"
+    },
+    "timestamp": "2026-01-30T10:46:03.954225",
+    "test_path": "tests/unit/misc/test_simple_config.py::test_config_loader",
+    "test_args": ""
+  },
+  "50bd4b54492aa1c90f2bd81250f66a2b12d013bf918226d9fcde1a0d889085e6": {
+    "result": {
+      "success": false,
+      "error": "No module named 'inference_pio'"
+    },
+    "timestamp": "2026-01-30T10:46:03.955038",
+    "test_path": "tests/unit/misc/test_simple_config.py::test_config_manager",
+    "test_args": ""
+  },
+  "c887b2c06f8649852733bbb758a215c14e4176368daeba728d9599719ba7925d": {
+    "result": {
+      "success": false,
+      "error": "No module named 'inference_pio'"
+    },
+    "timestamp": "2026-01-30T10:46:03.955816",
+    "test_path": "tests/unit/misc/test_simple_config.py::test_config_profiles",
+    "test_args": ""
+  },
+  "cd531eda912f632bc597b0e27576046187e5c679f399361e4a62cdc8b167439d": {
+    "result": {
+      "success": false,
+      "error": "No module named 'inference_pio'"
+    },
+    "timestamp": "2026-01-30T10:46:03.956545",
+    "test_path": "tests/unit/misc/test_simple_config.py::test_config_templates",
+    "test_args": ""
+  },
+  "919999aa04f9810e556300a55a370ce07eb192c784b953696a0cad543c811eed": {
+    "result": {
+      "success": false,
+      "error": "No module named 'inference_pio'"
+    },
+    "timestamp": "2026-01-30T10:46:03.957505",
+    "test_path": "tests/unit/misc/test_simple_config.py::test_config_validator",
+    "test_args": ""
+  }
+}

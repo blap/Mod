@@ -1,5 +1,0 @@
-category,state,status,execution_time,return_code
-accuracy,original,success,1.6744110584259033,
-inference_speed,original,success,1.0027058124542236,
-memory_usage,original,success,1.000694990158081,
-optimization_impact,original,success,1.0003759860992432,

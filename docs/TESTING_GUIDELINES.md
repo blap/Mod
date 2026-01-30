@@ -96,7 +96,7 @@ src/
 
 ## Custom Test Utilities
 
-The project uses custom test utilities in `src/inference_pio/test_utils.py`:
+The project uses custom test utilities in `tests.utils.test_utils.py`:
 
 ### Available Assertions
 - `assert_true(condition, message)` - Assert condition is True

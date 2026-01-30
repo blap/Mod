@@ -205,7 +205,7 @@ The project uses a direct testing approach without external testing frameworks l
 
 ### Writing Tests
 
-Tests use the custom assertion functions in `src/inference_pio/test_utils.py`:
+Tests use the custom assertion functions in `tests.utils.test_utils.py`:
 
 ```python
 from inference_pio.test_utils import (

@@ -4,7 +4,7 @@ Tests for Spiking Neural Network (SNN) Components
 This module contains comprehensive tests for SNN components in the common module.
 """
 import torch
-from src.inference_pio.test_utils import (
+from tests.utils.test_utils import (
     assert_equal, assert_true, assert_greater, run_tests
 )
 

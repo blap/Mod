@@ -5,7 +5,7 @@
 Unit tests focus on individual functions or methods in isolation:
 
 ```python
-from src.inference_pio.test_utils import assert_equal, assert_true, assert_is_instance, run_tests
+from tests.utils.test_utils import assert_equal, assert_true, assert_is_instance, run_tests
 
 def test_addition_function():
     """Test a simple addition function."""
@@ -34,7 +34,7 @@ if __name__ == '__main__':
 Integration tests verify how multiple components work together:
 
 ```python
-from src.inference_pio.test_utils import assert_true, assert_is_not_none, run_tests
+from tests.utils.test_utils import assert_true, assert_is_not_none, run_tests
 
 class ComponentA:
     def __init__(self):
@@ -76,7 +76,7 @@ Performance tests measure execution time and resource usage:
 
 ```python
 import time
-from src.inference_pio.test_utils import assert_less, run_tests
+from tests.utils.test_utils import assert_less, run_tests
 
 def performance_test_sorting():
     """Test sorting performance with different data sizes."""
@@ -113,7 +113,7 @@ if __name__ == '__main__':
 Test that appropriate exceptions are raised:
 
 ```python
-from src.inference_pio.test_utils import assert_raises, assert_true, run_tests
+from tests.utils.test_utils import assert_raises, assert_true, run_tests
 
 def test_division_by_zero():
     """Test that division by zero raises appropriate exception."""
@@ -138,7 +138,7 @@ if __name__ == '__main__':
 Example of testing a model-specific functionality:
 
 ```python
-from src.inference_pio.test_utils import assert_equal, assert_true, run_tests
+from tests.utils.test_utils import assert_equal, assert_true, run_tests
 
 def test_model_configuration():
     """Test model configuration functionality."""
@@ -181,7 +181,7 @@ if __name__ == '__main__':
 A complete test suite combining different types of tests:
 
 ```python
-from src.inference_pio.test_utils import (
+from tests.utils.test_utils import (
     assert_equal, assert_true, assert_false, 
     assert_is_none, assert_in, assert_greater,
     run_tests

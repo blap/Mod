@@ -3,7 +3,7 @@ Integration test for Model Surgery with Plugin System.
 
 This module tests the integration of the Model Surgery system with the plugin architecture.
 """
-from src.inference_pio.test_utils import (assert_equal, assert_not_equal, assert_true, assert_false, assert_is_none, assert_is_not_none, assert_in, assert_not_in, assert_greater, assert_less, assert_is_instance, assert_raises, run_tests)
+from tests.utils.test_utils import (assert_equal, assert_not_equal, assert_true, assert_false, assert_is_none, assert_is_not_none, assert_in, assert_not_in, assert_greater, assert_less, assert_is_instance, assert_raises, run_tests)
 
 
 import torch
@@ -18,62 +18,24 @@ from src.inference_pio.common.model_surgery import ModelSurgerySystem, apply_mod
 from src.inference_pio.common.base_plugin_interface import ModelPluginInterface, ModelPluginMetadata, PluginType
 from datetime import datetime
 
-# Import the real model implementation
-from real_model_for_testing import RealGLM47Model
-
-
-class MockModel(RealGLM47Model):
-    """Real model for testing."""
+class MockModel(nn.Module):
+    """Mock model for testing."""
 
     def __init__(self):
-        # Initialize with smaller parameters for testing
-        super().__init__(
-            hidden_size=64,
-            num_attention_heads=2,
-            num_hidden_layers=2,
-            intermediate_size=128,
-            vocab_size=256
-        )
-        # Add additional layers for surgery testing
-        self.dropout = nn.Dropout(0.1)
-        self.norm = nn.LayerNorm(64)
-        self.relu = nn.ReLU()
-        self.linear2 = nn.Linear(64, 5)
+        super().__init__()
+        linear1 = nn.Linear(10, 20)
+        dropout = nn.Dropout(0.5)
+        norm = nn.LayerNorm(20)
+        relu = nn.ReLU()
+        linear2 = nn.Linear(20, 5)
 
     def forward(self, x):
-        # Handle different input formats for compatibility with test expectations
-        if x.dim() == 2 and x.size(1) == 10:
-            # If input is (batch, 10), treat as token IDs
-            input_ids = x.argmax(dim=1).unsqueeze(0).long()  # Convert to token IDs
-            result = super().forward(input_ids=input_ids)
-            # Extract the last hidden state and apply additional layers
-            x = result.last_hidden_state.mean(dim=1)  # Average pooling
-            x = self.dropout(x)
-            x = self.norm(x)
-            x = self.relu(x)
-            x = self.linear2(x)
-            return x
-        elif x.dim() == 2:
-            # If input has different size, convert to token IDs appropriately
-            input_ids = x.abs().sum(dim=1).unsqueeze(0).long()  # Sum along feature dimension to get token IDs
-            result = super().forward(input_ids=input_ids)
-            # Extract the last hidden state and apply additional layers
-            x = result.last_hidden_state.mean(dim=1)  # Average pooling
-            x = self.dropout(x)
-            x = self.norm(x)
-            x = self.relu(x)
-            x = self.linear2(x)
-            return x
-        else:
-            # For other inputs, use the parent forward method
-            result = super().forward(input_ids=x.long())
-            # Extract the last hidden state and apply additional layers
-            x = result.last_hidden_state.mean(dim=1)  # Average pooling
-            x = self.dropout(x)
-            x = self.norm(x)
-            x = self.relu(x)
-            x = self.linear2(x)
-            return x
+        x = linear1(x)
+        x = dropout(x)
+        x = norm(x)
+        x = relu(x)
+        x = linear2(x)
+        return x
 
 # TestModelSurgeryPluginIntegration
 

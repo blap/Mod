@@ -4,7 +4,7 @@ Tests for Visual Resource Compression System for Qwen3-VL-2B Model
 This module contains comprehensive tests for the visual resource compression system
 implemented for the Qwen3-VL-2B model.
 """
-from src.inference_pio.test_utils import (assert_equal, assert_not_equal, assert_true, assert_false, assert_is_none, assert_is_not_none, assert_in, assert_not_in, assert_greater, assert_less, assert_is_instance, assert_raises, run_tests)
+from tests.utils.test_utils import (assert_equal, assert_not_equal, assert_true, assert_false, assert_is_none, assert_is_not_none, assert_in, assert_not_in, assert_greater, assert_less, assert_is_instance, assert_raises, run_tests)
 
 
 import torch

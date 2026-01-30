@@ -8,7 +8,7 @@ The Inference-PIO project implements a comprehensive testing ecosystem designed 
 
 ### 1. Custom Test Utilities Framework
 
-The foundation of the testing ecosystem is a custom-built framework located in `src/inference_pio/test_utils.py`. This framework provides:
+The foundation of the testing ecosystem is a custom-built framework located in `tests.utils.test_utils.py`. This framework provides:
 
 - **Assertion Functions**: A comprehensive set of assertion utilities for common testing scenarios
 - **Test Execution**: Simple yet effective test runner functions
@@ -73,7 +73,7 @@ A sophisticated benchmarking system measures performance across different dimens
 Tests follow a simple pattern using the custom utilities:
 
 ```python
-from src.inference_pio.test_utils import assert_equal, assert_true, run_tests
+from tests.utils.test_utils import assert_equal, assert_true, run_tests
 
 def test_example():
     """Example test function."""
