@@ -1,42 +1,23 @@
 # Benchmarking Standards
 
-This document outlines the standardized benchmarking framework and best practices for the Inference-PIO project.
+**Reference Guide:** For instructions on running and writing benchmarks, see [Benchmarking Guide](../guides/benchmarking.md).
 
-## Directory Structure
+## 1. Directory Structure
+*   Core framework scripts **MUST** be in `benchmarks/core/`.
+*   Model-specific benchmarks **SHOULD** be in `src/inference_pio/models/<model>/benchmarks/`.
+*   Runner scripts **MUST** be in `benchmarks/scripts/`.
 
-Benchmarks are consolidated in the `benchmarks/` directory at the project root.
+## 2. Naming Conventions
+*   **Files:** Must start with `benchmark_` (e.g., `benchmark_latency.py`).
+*   **Functions:** Must start with `benchmark_` or `run_`.
 
-```
-benchmarks/
-├── core/                 # Core benchmarking utilities and scripts
-│   ├── benchmark_optimization.py
-│   └── benchmark_resize.py
-├── results/              # Output directory for results (ignored by git)
-└── scripts/              # Runner scripts (e.g., standardized_runner.py)
-```
+## 3. Mandatory Metrics
+All model inference benchmarks **MUST** report:
+1.  **Time To First Token (TTFT)**: Latency for the first generated token.
+2.  **Tokens Per Second (TPS)**: Throughput for generation.
+3.  **Peak Memory Usage**: Max VRAM/RAM consumed.
 
-## Running Benchmarks
-
-Benchmarks are executed via Python scripts located in the `benchmarks/` directory.
-
-```bash
-# Run optimization benchmark
-python benchmarks/core/benchmark_optimization.py
-
-# Run resize benchmark
-python benchmarks/core/benchmark_resize.py
-```
-
-## Benchmark Implementation Guidelines
-
-1.  **Isolation**: Ensure benchmarks isolate the component being measured.
-2.  **Repetition**: Run operations multiple times to get statistically significant results.
-3.  **Metrics**: Measure Time To First Token (TTFT), Throughput (TPS), and Memory Usage.
-4.  **Hardware Awareness**: Use `HardwareAnalyzer` to record the environment context alongside results.
-5.  **Output**: Save results to `benchmark_results/` in structured formats (JSON/CSV) for analysis.
-
-## Naming Conventions
-
-- **Files**: `benchmark_{metric_name}.py` (e.g., `benchmark_inference_speed.py`).
-- **Classes**: `Benchmark{Component}` (e.g., `BenchmarkQwenAttention`).
-- **Functions**: `benchmark_{scenario}` (e.g., `benchmark_large_batch_inference`).
+## 4. Implementation Rules
+*   **Hardware Context:** Every result **MUST** be tagged with the output of `HardwareAnalyzer`.
+*   **Output:** Results **MUST** be saved to `benchmark_results/` in JSON format.
+*   **Reproducibility:** Benchmarks **MUST** set random seeds before execution.
