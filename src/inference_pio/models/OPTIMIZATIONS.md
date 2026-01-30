@@ -5,7 +5,7 @@ This document defines the mandatory set of optimizations ("The Floor") that ever
 ## 1. Categorization
 
 Models are divided into two primary categories:
-*   **Text Models:** Pure language models (e.g., Qwen3-4B-Instruct, Qwen3-Coder-30B, GLM-4.7-Flash).
+*   **Text Models:** Pure language models (e.g., Qwen3-4B-Instruct, Qwen3-Coder-30B, GLM-4.7-Flash, Qwen3-0.6B).
 *   **Multimodal Models:** Models processing vision/audio + text (e.g., Qwen3-VL-2B).
 
 ## 2. Text Model Floor (Mandatory)
@@ -45,7 +45,19 @@ Multimodal models must implement **all Text Model optimizations** (for their lan
 *   **Resizing & Projection Optimization:**
     *   Avoid redundant interpolation. Combine resizing and normalization steps where possible.
 
-## 4. Future Roadmap (Planned)
+## 4. Thinking Mode Floor (Mandatory for Reasoning Models)
+
+Models with "Thinking" or "Chain of Thought" capabilities (e.g., Qwen3-0.6B) must implement:
+
+*   **Thought-Aware KV Cache Compression:**
+    *   Mechanism to compress, quantize, or prune the Key-Value cache blocks corresponding to the `<think>...</think>` segment immediately after the thought concludes.
+    *   Frees up critical VRAM for generating the final response.
+*   **Dynamic Repetition Penalty:**
+    *   Adaptive penalty system that applies aggressive presence penalty (e.g., 1.5) *only* during thought generation to prevent endless reasoning loops, while allowing natural flow in the final answer.
+*   **Long-Sequence RoPE Scaling:**
+    *   Must use `float32` precision for Rotary Embedding calculations to ensure numerical stability in extremely long reasoning contexts (>8k tokens), even if the model weights are `float16`.
+
+## 5. Future Roadmap (Planned)
 
 The following optimizations are planned for future inclusion in the floor:
 
@@ -53,5 +65,3 @@ The following optimizations are planned for future inclusion in the floor:
     *   Using smaller draft models (e.g., Qwen3-VL-2B drafting for Qwen3-Coder-30B) to accelerate generation.
 *   **FP8 / INT8 Quantization:**
     *   Standardizing W8A16 or W8A8 inference for 30B+ parameter models.
-*   **Thinking / Long-Context Optimization:**
-    *   Specific kernel fusion for "Chain of Thought" patterns (extremely long output sequences).
