@@ -1,4 +1,0 @@
-Model: qwen3_vl_2b
-Category: benchmark_accuracy
-Execution time: 7.75s
-============================================================

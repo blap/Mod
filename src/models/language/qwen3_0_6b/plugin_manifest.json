@@ -1,0 +1,41 @@
+{
+  "name": "Qwen3-0.6B",
+  "version": "1.0.0",
+  "author": "Alibaba Cloud",
+  "description": "Qwen3-0.6B Causal LM with Thinking Mode support.",
+  "plugin_type": "MODEL_COMPONENT",
+  "dependencies": [
+    "torch",
+    "transformers"
+  ],
+  "compatibility": {
+    "torch_version": ">=2.0.0",
+    "min_memory_gb": 1.5
+  },
+  "created_at": "2026-01-31T00:00:00",
+  "updated_at": "2026-01-31T00:00:00",
+  "model_architecture": "Qwen3",
+  "model_size": "0.6B",
+  "required_memory_gb": 1.5,
+  "supported_modalities": [
+    "text"
+  ],
+  "license": "Apache 2.0",
+  "tags": [
+    "text-generation",
+    "thinking-mode",
+    "0.6B"
+  ],
+  "model_family": "Qwen3",
+  "num_parameters": 600000000,
+  "test_coverage": 1.0,
+  "validation_passed": true,
+  "main_class_path": "src.models.qwen3_0_6b.plugin.Qwen3_0_6B_Plugin",
+  "entry_point": "create_qwen3_0_6b_plugin",
+  "input_types": [
+    "text"
+  ],
+  "output_types": [
+    "text"
+  ]
+}

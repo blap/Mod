@@ -3,22 +3,37 @@ Test suite for Tensor Compression functionality in model plugins.
 
 This test verifies that the tensor compression system works correctly across all model plugins.
 """
-from tests.utils.test_utils import (assert_equal, assert_not_equal, assert_true, assert_false, assert_is_none, assert_is_not_none, assert_in, assert_not_in, assert_greater, assert_less, assert_is_instance, assert_raises, run_tests)
-
-
 import torch
 import torch.nn as nn
+
 from src.inference_pio.common.tensor_compression import (
-    TensorCompressor,
     AdaptiveTensorCompressor,
-    get_tensor_compressor,
+    TensorCompressor,
     compress_model_weights,
-    decompress_model_weights
+    decompress_model_weights,
+    get_tensor_compressor,
 )
 from src.inference_pio.models.glm_4_7.plugin import GLM_4_7_Plugin
-from src.inference_pio.models.qwen3_4b_instruct_2507.plugin import Qwen3_4B_Instruct_2507_Plugin
+from src.inference_pio.models.qwen3_4b_instruct_2507.plugin import (
+    Qwen3_4B_Instruct_2507_Plugin,
+)
 from src.inference_pio.models.qwen3_coder_30b.plugin import Qwen3_Coder_30B_Plugin
 from src.inference_pio.models.qwen3_vl_2b.plugin import Qwen3_VL_2B_Plugin
+from tests.utils.test_utils import (
+    assert_equal,
+    assert_false,
+    assert_greater,
+    assert_in,
+    assert_is_instance,
+    assert_is_none,
+    assert_is_not_none,
+    assert_less,
+    assert_not_equal,
+    assert_not_in,
+    assert_raises,
+    assert_true,
+    run_tests,
+)
 
 # TestTensorCompression
 

@@ -1,4 +1,0 @@
-Model: qwen3_vl_2b
-Category: benchmark_memory_usage
-Execution time: 0.00s
-============================================================

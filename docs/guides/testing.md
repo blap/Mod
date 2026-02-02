@@ -78,7 +78,12 @@ Tests are organized in `tests/`:
 *   **`tests/performance/`**: Timing and resource tracking.
 
 ### Model-Specific Tests
-Model tests are located in `src/inference_pio/models/<model>/tests/` or centralized in `tests/models/<model>/`.
+Model tests follow the self-contained architecture and are located in `tests/models/<model>/` with the following structure:
+*   `tests/models/<model>/unit/` - Unit tests for the specific model
+*   `tests/models/<model>/integration/` - Integration tests for the specific model
+*   `tests/models/<model>/performance/` - Performance tests for the specific model
+
+Each model plugin is completely independent with its own tests and benchmarks.
 
 ## 5. Reporting & CI/CD
 

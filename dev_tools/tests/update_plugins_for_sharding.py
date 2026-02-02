@@ -10,32 +10,31 @@ from pathlib import Path
 
 def update_plugin_file(plugin_file_path: str):
     """Update a single plugin file to add sharding support."""
-    with open(plugin_file_path, 'r', encoding='utf-8') as f:
+    with open(plugin_file_path, "r", encoding="utf-8") as f:
         content = f.read()
-    
+
     # Add time import if not present
-    if 'import time' not in content:
-        content = content.replace(
-            'import logging',
-            'import logging\nimport time'
-        )
-    
+    if "import time" not in content:
+        content = content.replace("import logging", "import logging\nimport time")
+
     # Update the initialize method to include sharding initialization
-    initialize_pattern = r'(def initialize\(self, \*\*kwargs\) -> bool:[\s\S]*?)(return True)'
-    initialize_replacement = r'\1\n            # Initialize sharding if enabled in config\n            if getattr(self._config, \'enable_sharding\', False):\n                num_shards = getattr(self._config, \'num_shards\', 500)\n                storage_path = getattr(self._config, \'sharding_storage_path\', \'./shards/default\')\n                self.enable_sharding(num_shards=num_shards, storage_path=storage_path)\n                \n                # Shard the model\n                if self._model is not None:\n                    self.shard_model(self._model, num_shards=num_shards)\n\n\2'
-    
+    initialize_pattern = (
+        r"(def initialize\(self, \*\*kwargs\) -> bool:[\s\S]*?)(return True)"
+    )
+    initialize_replacement = r"\1\n            # Initialize sharding if enabled in config\n            if getattr(self._config, \'enable_sharding\', False):\n                num_shards = getattr(self._config, \'num_shards\', 500)\n                storage_path = getattr(self._config, \'sharding_storage_path\', \'./shards/default\')\n                self.enable_sharding(num_shards=num_shards, storage_path=storage_path)\n                \n                # Shard the model\n                if self._model is not None:\n                    self.shard_model(self._model, num_shards=num_shards)\n\n\2"
+
     content = re.sub(initialize_pattern, initialize_replacement, content)
-    
+
     # Update the infer method to use sharding if enabled
-    infer_pattern = r'(def infer\(self, data: Any\) -> Any:[\s\S]*?)(try:)'
-    infer_replacement = r'\1        # Use sharding if enabled\n        if self._sharding_enabled and self._model is not None:\n            return self._infer_with_sharding(data)\n\n\2'
-    
+    infer_pattern = r"(def infer\(self, data: Any\) -> Any:[\s\S]*?)(try:)"
+    infer_replacement = r"\1        # Use sharding if enabled\n        if self._sharding_enabled and self._model is not None:\n            return self._infer_with_sharding(data)\n\n\2"
+
     content = re.sub(infer_pattern, infer_replacement, content)
-    
+
     # Add the sharding inference methods if they don't exist
-    if '_infer_with_sharding' not in content:
+    if "_infer_with_sharding" not in content:
         # Find the end of the infer method
-        infer_end_pattern = r'(def infer\(self, data: Any\) -> Any:[\s\S]*?return generated_text[\s\n]*\n[\s\n]*\)[\s\n]*except'
+        infer_end_pattern = r"(def infer\(self, data: Any\) -> Any:[\s\S]*?return generated_text[\s\n]*\n[\s\n]*\)[\s\n]*except"
         sharding_methods = r'''
     def _infer_with_sharding(self, data: str) -> str:
         """
@@ -154,11 +153,11 @@ def update_plugin_file(plugin_file_path: str):
             raise e
 '''
         content = content.rstrip() + sharding_methods
-    
+
     # Write the updated content back to the file
-    with open(plugin_file_path, 'w', encoding='utf-8') as f:
+    with open(plugin_file_path, "w", encoding="utf-8") as f:
         f.write(content)
-    
+
     print(f"Updated {plugin_file_path}")
 
 
@@ -166,15 +165,15 @@ def main():
     """Main function to update all plugin files."""
     project_root = Path(__file__).parent
     plugin_dir = project_root / "src/inference_pio/models"
-    
+
     # Find all plugin.py files in the model directories
     plugin_files = list(plugin_dir.rglob("plugin.py"))
-    
+
     print(f"Found {len(plugin_files)} plugin files to update:")
     for plugin_file in plugin_files:
         print(f"  - {plugin_file}")
         update_plugin_file(str(plugin_file))
-    
+
     print("\nAll plugin files have been updated with sharding support!")
 
 

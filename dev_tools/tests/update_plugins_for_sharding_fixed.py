@@ -11,39 +11,40 @@ from pathlib import Path
 
 def update_plugin_file(plugin_file_path: str):
     """Update a single plugin file to add sharding support."""
-    with open(plugin_file_path, 'r', encoding='utf-8') as f:
+    with open(plugin_file_path, "r", encoding="utf-8") as f:
         content = f.read()
-    
+
     # Check if the methods already exist to avoid duplication
-    has_infer_with_sharding = '_infer_with_sharding' in content
-    has_fallback_infer = '_fallback_infer' in content
-    has_time_import = 'import time' in content
-    
+    has_infer_with_sharding = "_infer_with_sharding" in content
+    has_fallback_infer = "_fallback_infer" in content
+    has_time_import = "import time" in content
+
     # Add time import if not present
     if not has_time_import:
-        content = content.replace(
-            'import logging',
-            'import logging\nimport time'
-        )
-    
+        content = content.replace("import logging", "import logging\nimport time")
+
     # Update the initialize method to include sharding initialization if not already done
-    if 'enable_sharding' not in content:
-        initialize_pattern = r'(def initialize\(self, \*\*kwargs\) -> bool:[\s\S]*?)(return True)'
-        initialize_replacement = r'\1\n            # Initialize sharding if enabled in config\n            if getattr(self._config, \'enable_sharding\', False):\n                num_shards = getattr(self._config, \'num_shards\', 500)\n                storage_path = getattr(self._config, \'sharding_storage_path\', \'./shards/default\')\n                self.enable_sharding(num_shards=num_shards, storage_path=storage_path)\n                \n                # Shard the model\n                if self._model is not None:\n                    self.shard_model(self._model, num_shards=num_shards)\n\n\2'
-        
+    if "enable_sharding" not in content:
+        initialize_pattern = (
+            r"(def initialize\(self, \*\*kwargs\) -> bool:[\s\S]*?)(return True)"
+        )
+        initialize_replacement = r"\1\n            # Initialize sharding if enabled in config\n            if getattr(self._config, \'enable_sharding\', False):\n                num_shards = getattr(self._config, \'num_shards\', 500)\n                storage_path = getattr(self._config, \'sharding_storage_path\', \'./shards/default\')\n                self.enable_sharding(num_shards=num_shards, storage_path=storage_path)\n                \n                # Shard the model\n                if self._model is not None:\n                    self.shard_model(self._model, num_shards=num_shards)\n\n\2"
+
         content = re.sub(initialize_pattern, initialize_replacement, content)
-    
+
     # Update the infer method to use sharding if enabled (only if not already updated)
-    if 'self._sharding_enabled' not in content:
-        infer_pattern = r'(def infer\(self, data: Any\) -> Any:[\s\S]*?)(try:)'
-        infer_replacement = r'\1        # Use sharding if enabled\n        if self._sharding_enabled and self._model is not None:\n            return self._infer_with_sharding(data)\n\n\2'
-        
+    if "self._sharding_enabled" not in content:
+        infer_pattern = r"(def infer\(self, data: Any\) -> Any:[\s\S]*?)(try:)"
+        infer_replacement = r"\1        # Use sharding if enabled\n        if self._sharding_enabled and self._model is not None:\n            return self._infer_with_sharding(data)\n\n\2"
+
         content = re.sub(infer_pattern, infer_replacement, content)
-    
+
     # Add the sharding inference methods if they don't exist
     if not has_infer_with_sharding:
         # Find the end of the infer method and add the new methods
-        infer_end_pos = content.find('def generate_text(', content.find('def infer(self, data: Any) -> Any:'))
+        infer_end_pos = content.find(
+            "def generate_text(", content.find("def infer(self, data: Any) -> Any:")
+        )
         if infer_end_pos != -1:
             # Insert the new methods before the generate_text method
             new_methods = '''
@@ -165,11 +166,11 @@ def update_plugin_file(plugin_file_path: str):
             raise e
 '''
             content = content[:infer_end_pos] + new_methods + content[infer_end_pos:]
-    
+
     # Write the updated content back to the file
-    with open(plugin_file_path, 'w', encoding='utf-8') as f:
+    with open(plugin_file_path, "w", encoding="utf-8") as f:
         f.write(content)
-    
+
     print(f"Updated {plugin_file_path}")
 
 
@@ -177,15 +178,15 @@ def main():
     """Main function to update all plugin files."""
     project_root = Path(__file__).parent
     plugin_dir = project_root / "src/inference_pio/models"
-    
+
     # Find all plugin.py files in the model directories
     plugin_files = list(plugin_dir.rglob("plugin.py"))
-    
+
     print(f"Found {len(plugin_files)} plugin files to update:")
     for plugin_file in plugin_files:
         print(f"  - {plugin_file}")
         update_plugin_file(str(plugin_file))
-    
+
     print("\nAll plugin files have been updated with sharding support!")
 
 

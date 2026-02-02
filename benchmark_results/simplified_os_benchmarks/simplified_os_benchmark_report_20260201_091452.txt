@@ -1,0 +1,40 @@
+================================================================================
+SIMPLIFIED OS BENCHMARK REPORT FOR REAL MODELS
+================================================================================
+Generated: 2026-02-01 09:14:52
+
+SYSTEM INFORMATION
+------------------------------
+Platform: win32
+Python Version: 3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]
+CPU Count (Logical): 8
+Max CPU Frequency: 2112.0 MHz
+Total Memory: 10.3 GB
+Torch Version: 2.7.1+cu128
+CUDA Available: True
+CUDA Device Count: 1
+
+AVAILABLE MODELS
+--------------------
+- qwen3_0_6b
+
+PERFORMANCE SUMMARY
+-------------------------
+
+QWEN3_0_6B:
+  CPU Usage: 4.12% (avg)
+    Max CPU: 12.50%
+  Memory Usage: 0.04MB
+
+DETAILED METRICS
+-------------------------
+
+QWEN3_0_6B DETAILED RESULTS:
+  Inference Time:
+    Input Length 10: 0.3579s (27.94 tokens/sec)
+    Input Length 30: 0.3610s (83.09 tokens/sec)
+    Input Length 50: 0.3582s (139.57 tokens/sec)
+
+================================================================================
+END OF REPORT
+================================================================================

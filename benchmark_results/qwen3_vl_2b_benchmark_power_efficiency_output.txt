@@ -1,4 +1,0 @@
-Model: qwen3_vl_2b
-Category: benchmark_power_efficiency
-Execution time: 0.00s
-============================================================

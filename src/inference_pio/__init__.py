@@ -1,108 +1,97 @@
 """
-Inference-PIO Package - Main Entry Point
+Inference-PIO Plugin System - Main Package
 
-This module provides the main entry point for the Inference-PIO system with self-contained plugins.
+This is the main package for the Inference-PIO system with self-contained plugins.
 """
 
-# Import common components
-from .common import (
-    AdaptiveBatchManager,
-    BatchMetrics,
-    BatchSizeAdjustmentReason,
-    get_adaptive_batch_manager,
-    StructuredPruningSystem,
-    PruningMethod,
-    PruningResult,
-    get_structured_pruning_system,
-    apply_structured_pruning
-)
+import os
+import sys
 
-# Import plugin system components
-from .plugin_system.plugin_manager import (
-    PluginManager,
-    get_plugin_manager,
-    register_plugin,
-    load_plugin_from_path,
-    load_plugins_from_directory,
-    activate_plugin,
-    execute_plugin,
-    discover_and_load_plugins
+# Add the src directory to the path to allow imports
+src_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if src_dir not in sys.path:
+    sys.path.insert(0, src_dir)
+
+# Import common components using absolute imports from src level
+from common.base_attention import BaseAttention
+from common.base_model import BaseModel
+
+# Import model factory
+from model_factory import create_model, get_model_class, register_model
+
+# Import configurable model plugins
+from models.specialized.glm_4_7_flash.config_integration import (
+    GLM47ConfigurablePlugin,
+)
+from models.specialized.glm_4_7_flash.config_integration import (
+    create_glm_4_7_flash_plugin as create_glm_4_7_configurable_plugin,
 )
 
 # Import model plugins
-from .models import (
+from models.specialized.glm_4_7_flash.plugin import (
     GLM_4_7_Flash_Plugin,
     create_glm_4_7_flash_plugin,
+)
+from models.language.qwen3_0_6b.config_integration import (
+    Qwen3_0_6BConfigurablePlugin,
+)
+from models.language.qwen3_0_6b.config_integration import (
+    create_qwen3_0_6b_plugin as create_qwen3_0_6b_configurable_plugin,
+)
+from models.language.qwen3_0_6b.plugin import Qwen3_0_6B_Plugin, create_qwen3_0_6b_plugin
+from models.language.qwen3_4b_instruct_2507.config_integration import (
+    Qwen34BInstruct2507ConfigurablePlugin,
+)
+from models.language.qwen3_4b_instruct_2507.config_integration import (
+    create_qwen3_4b_instruct_2507_plugin as create_qwen3_4b_instruct_2507_configurable_plugin,
+)
+from models.language.qwen3_4b_instruct_2507.plugin import (
+    Qwen3_4B_Instruct_2507_Plugin,
+    create_qwen3_4b_instruct_2507_plugin,
+)
+from models.coding.qwen3_coder_30b.config_integration import (
+    Qwen3Coder30BConfigurablePlugin,
+)
+from models.coding.qwen3_coder_30b.config_integration import (
+    create_qwen3_coder_30b_plugin as create_qwen3_coder_30b_configurable_plugin,
+)
+from models.coding.qwen3_coder_30b.plugin import (
     Qwen3_Coder_30B_Plugin,
     create_qwen3_coder_30b_plugin,
+)
+from models.vision_language.qwen3_vl_2b.config_integration import (
+    Qwen3VL2BConfigurablePlugin,
+)
+from models.vision_language.qwen3_vl_2b.config_integration import (
+    create_qwen3_vl_2b_instruct_plugin as create_qwen3_vl_2b_configurable_plugin,
+)
+from models.vision_language.qwen3_vl_2b.plugin import (
     Qwen3_VL_2B_Instruct_Plugin,
     create_qwen3_vl_2b_instruct_plugin,
-    Qwen3_4B_Instruct_2507_Plugin,
-    create_qwen3_4b_instruct_2507_plugin
 )
 
-# Import configurable model plugins
-from .models.glm_4_7_flash.config_integration import (
-    GLM47ConfigurablePlugin,
-    create_glm_4_7_flash_plugin as create_glm_4_7_configurable_plugin
-)
-from .models.qwen3_4b_instruct_2507.config_integration import (
-    Qwen34BInstruct2507ConfigurablePlugin,
-    create_qwen3_4b_instruct_2507_plugin as create_qwen3_4b_instruct_2507_configurable_plugin
-)
-from .models.qwen3_coder_30b.config_integration import (
-    Qwen3Coder30BConfigurablePlugin,
-    create_qwen3_coder_30b_plugin as create_qwen3_coder_30b_configurable_plugin
-)
-from .models.qwen3_vl_2b.config_integration import (
-    Qwen3VL2BConfigurablePlugin,
-    create_qwen3_vl_2b_instruct_plugin as create_qwen3_vl_2b_configurable_plugin
-)
-
-# Import design patterns for easy access
-from .design_patterns.integration import (
-    create_optimized_plugin,
-    create_adapted_model,
-    create_optimized_adapted_plugin,
-    create_glm_4_7_optimized_plugin,
-    create_qwen3_4b_instruct_2507_optimized_plugin,
-    create_qwen3_coder_30b_optimized_plugin,
-    create_qwen3_vl_2b_optimized_plugin
-)
+# Import plugin system components
+from plugins.manager import PluginManager, get_plugin_manager
 
 # Define what gets imported with "from inference_pio import *"
 __all__ = [
     # Common Components
-    "AdaptiveBatchManager",
-    "BatchMetrics",
-    "BatchSizeAdjustmentReason",
-    "get_adaptive_batch_manager",
-    "StructuredPruningSystem",
-    "PruningMethod",
-    "PruningResult",
-    "get_structured_pruning_system",
-    "apply_structured_pruning",
-
+    "BaseModel",
+    "BaseAttention",
     # Plugin System
     "PluginManager",
     "get_plugin_manager",
-    "register_plugin",
-    "load_plugin_from_path",
-    "load_plugins_from_directory",
-    "activate_plugin",
-    "execute_plugin",
-    "discover_and_load_plugins",
-
     # Model Plugins
     "GLM_4_7_Flash_Plugin",
     "create_glm_4_7_flash_plugin",
+    "Qwen3_4B_Instruct_2507_Plugin",
+    "create_qwen3_4b_instruct_2507_plugin",
     "Qwen3_Coder_30B_Plugin",
     "create_qwen3_coder_30b_plugin",
     "Qwen3_VL_2B_Instruct_Plugin",
     "create_qwen3_vl_2b_instruct_plugin",
-    "Qwen3_4B_Instruct_2507_Plugin",
-    "create_qwen3_4b_instruct_2507_plugin",
-
+    "Qwen3_0_6B_Plugin",
+    "create_qwen3_0_6b_plugin",
     # Configurable Model Plugins
     "GLM47ConfigurablePlugin",
     "create_glm_4_7_configurable_plugin",
@@ -112,15 +101,12 @@ __all__ = [
     "create_qwen3_coder_30b_configurable_plugin",
     "Qwen3VL2BConfigurablePlugin",
     "create_qwen3_vl_2b_configurable_plugin",
-
-    # Design Pattern Functions
-    "create_optimized_plugin",
-    "create_adapted_model",
-    "create_optimized_adapted_plugin",
-    "create_glm_4_7_optimized_plugin",
-    "create_qwen3_4b_instruct_2507_optimized_plugin",
-    "create_qwen3_coder_30b_optimized_plugin",
-    "create_qwen3_vl_2b_optimized_plugin"
+    "Qwen3_0_6BConfigurablePlugin",
+    "create_qwen3_0_6b_configurable_plugin",
+    # Model Factory
+    "create_model",
+    "get_model_class",
+    "register_model",
 ]
 
 # Package version

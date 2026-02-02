@@ -1,12 +1,14 @@
-
 import time
+
+import numpy as np
 import torch
 import torch.nn.functional as F
 from PIL import Image
-import numpy as np
+
 
 def generate_random_image(size=(1024, 1024)):
     return Image.fromarray(np.random.randint(0, 255, size + (3,), dtype=np.uint8))
+
 
 def old_pipeline(image, image_size=448, compression_ratio=0.5):
     # 1. Resize to image_size (PIL)
@@ -19,21 +21,19 @@ def old_pipeline(image, image_size=448, compression_ratio=0.5):
     tensor = tensor.unsqueeze(0)
 
     # 3. Compress (Interpolate)
-    ratio = compression_ratio ** 0.5
-    target_size = int(image_size * ratio) # 448 * 0.707 = 316
+    ratio = compression_ratio**0.5
+    target_size = int(image_size * ratio)  # 448 * 0.707 = 316
 
     compressed = F.interpolate(
-        tensor,
-        size=(target_size, target_size),
-        mode='bilinear',
-        align_corners=False
+        tensor, size=(target_size, target_size), mode="bilinear", align_corners=False
     )
     return compressed
 
+
 def new_pipeline(image, image_size=448, compression_ratio=0.5):
     # 1. Calc target size
-    ratio = compression_ratio ** 0.5
-    target_size = int(image_size * ratio) # 316
+    ratio = compression_ratio**0.5
+    target_size = int(image_size * ratio)  # 316
 
     # 2. Resize directly to target_size (PIL)
     img_resized = image.resize((target_size, target_size))
@@ -46,6 +46,7 @@ def new_pipeline(image, image_size=448, compression_ratio=0.5):
 
     # No interpolation needed
     return tensor
+
 
 def main():
     image = generate_random_image()
@@ -74,6 +75,7 @@ def main():
     res_new = new_pipeline(image)
     print(f"Old shape: {res_old.shape}")
     print(f"New shape: {res_new.shape}")
+
 
 if __name__ == "__main__":
     main()

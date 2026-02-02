@@ -1,4 +1,0 @@
-Model: qwen3_coder_30b
-Category: benchmark_memory_usage
-Execution time: 0.00s
-============================================================

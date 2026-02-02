@@ -11,20 +11,55 @@
 
 ## 2. Standardized Structure
 
-Every model plugin in `src/inference_pio/models/` follows this layout:
+Every model plugin in `src/models/` follows this layout:
 
 ```
-models/<name>/
+src/models/<name>/
+├── __init__.py         # Module entry point
 ├── config.py           # Model-specific config
 ├── model.py            # Core logic
 ├── plugin.py           # Interface adapter
-├── attention/          # Attention kernels (Flash, Sparse)
-├── kv_cache/           # Compression & Paging
-├── fused_layers/       # Optimized implementations
-└── tests/              # Unit & Integration tests
+├── plugin_manifest.json # Plugin metadata and discovery info
+├── architecture/       # Architecture-specific implementations
+├── attention/          # Attention mechanisms (Flash, Sparse, etc.)
+├── fused_layers/       # Fused layer implementations
+├── kv_cache/           # KV cache management and compression
+├── mlp/                # MLP implementations
+├── rotary_embeddings/  # Rotary embedding implementations
+├── specific_optimizations/ # Model-specific optimizations
+├── configs/            # Configuration files
+├── tests/              # Unit & Integration tests
+├── benchmarks/         # Benchmark implementations
+└── README.md           # Model-specific documentation
 ```
 
-## 3. Implementation Details
+## 3. Documentation Standards for Models
+
+Each model plugin must adhere to the project's documentation standards:
+
+### Module Documentation
+Each model's `__init__.py` file must include a module-level docstring that:
+- Describes the model's purpose and functionality
+- Lists the main classes and functions exported
+- Mentions the self-contained nature of the model
+
+### Class Documentation
+All classes within the model must include:
+- A class-level docstring describing the class's purpose
+- Constructor documentation with parameter details
+- Method documentation following Google style
+
+### Method Documentation
+All public methods must include:
+- A brief description of the method's purpose
+- Complete parameter documentation with type hints
+- Return value documentation
+- Exception documentation
+- Usage examples when beneficial
+
+For detailed standards, see [DOCSTRINGS.md](../standards/DOCSTRINGS.md) and [COMMENTS.md](../standards/COMMENTS.md).
+
+## 4. Implementation Details
 
 ### GLM-4.7-Flash
 Optimized for complex reasoning. Uses a mixture-of-experts architecture.
@@ -58,7 +93,7 @@ Vision-Language model.
     plugin.infer({"text": "Describe image", "image": "path/to/img.jpg"})
     ```
 
-## 4. Configuration
+## 5. Configuration
 
 Models use specific config classes (e.g., `Qwen3VL2BConfig`) extending `BaseModelConfig`.
 Common parameters:
@@ -66,7 +101,7 @@ Common parameters:
 *   `load_in_4bit`: bool
 *   `max_new_tokens`: int
 
-## 5. Optimizations
+## 6. Optimizations
 All models leverage:
 *   **FlashAttention 2.0**
 *   **Paged KV Cache** (vLLM style)

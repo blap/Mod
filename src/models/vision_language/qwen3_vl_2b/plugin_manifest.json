@@ -1,0 +1,51 @@
+{
+  "name": "Qwen3-VL-2B-Instruct",
+  "version": "1.0.0",
+  "author": "Alibaba Cloud",
+  "description": "Qwen3-VL-2B-Instruct specialized multimodal model with advanced vision-language capabilities, optimized for image understanding, text generation, and multimodal tasks",
+  "plugin_type": "MODEL_COMPONENT",
+  "dependencies": [
+    "torch",
+    "transformers",
+    "pillow",
+    "accelerate"
+  ],
+  "compatibility": {
+    "torch_version": ">=2.0.0",
+    "transformers_version": ">=4.30.0",
+    "python_version": ">=3.8",
+    "min_memory_gb": 6.0
+  },
+  "created_at": "2026-01-31T00:00:00",
+  "updated_at": "2026-01-31T00:00:00",
+  "model_architecture": "Qwen3-VL-2B Transformer-based multimodal model optimized for vision-language tasks",
+  "model_size": "2B",
+  "required_memory_gb": 6.0,
+  "supported_modalities": [
+    "text",
+    "image"
+  ],
+  "license": "MIT",
+  "tags": [
+    "vision-language",
+    "multimodal",
+    "image-understanding",
+    "text-generation",
+    "qwen-vl",
+    "2b",
+    "efficient"
+  ],
+  "model_family": "Qwen-VL",
+  "num_parameters": 2000000000,
+  "test_coverage": 0.95,
+  "validation_passed": true,
+  "main_class_path": "src.models.qwen3_vl_2b.plugin.Qwen3_VL_2B_Instruct_Plugin",
+  "entry_point": "create_qwen3_vl_2b_instruct_plugin",
+  "input_types": [
+    "text",
+    "image"
+  ],
+  "output_types": [
+    "text"
+  ]
+}

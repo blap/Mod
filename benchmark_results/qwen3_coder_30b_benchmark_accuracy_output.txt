@@ -1,4 +1,0 @@
-Model: qwen3_coder_30b
-Category: benchmark_accuracy
-Execution time: 0.00s
-============================================================

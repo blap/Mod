@@ -1,0 +1,43 @@
+{
+  "name": "GLM-4.7-Flash",
+  "version": "1.0.0",
+  "author": "Zhipu AI",
+  "description": "GLM-4.7-Flash model plugin for inference optimization",
+  "plugin_type": "MODEL_COMPONENT",
+  "dependencies": [
+    "torch",
+    "transformers"
+  ],
+  "compatibility": {
+    "torch_version": ">=2.0.0",
+    "transformers_version": ">=4.30.0",
+    "python_version": ">=3.8",
+    "min_memory_gb": 12.0
+  },
+  "created_at": "2026-01-31T00:00:00",
+  "updated_at": "2026-01-31T00:00:00",
+  "model_architecture": "GLM Transformer",
+  "model_size": "Unknown",
+  "required_memory_gb": 12.0,
+  "supported_modalities": [
+    "text"
+  ],
+  "license": "MIT",
+  "tags": [
+    "glm",
+    "chat",
+    "flash"
+  ],
+  "model_family": "GLM",
+  "num_parameters": 0,
+  "test_coverage": 0.8,
+  "validation_passed": true,
+  "main_class_path": "src.models.glm_4_7_flash.plugin.GLM_4_7_Flash_Plugin",
+  "entry_point": "create_glm_4_7_flash_plugin",
+  "input_types": [
+    "text"
+  ],
+  "output_types": [
+    "text"
+  ]
+}

@@ -1,5 +1,0 @@
-Model Name,Benchmark Name,Value,Unit,Category,Timestamp
-MockModel,inference_speed_20tokens,1939.1097107958606,tokens/sec,performance,2026-01-25T19:50:38.328010
-MockModel,inference_speed_100tokens,9444.418424513176,tokens/sec,performance,2026-01-25T19:50:38.328010
-MockModel,memory_usage,0.0,MB,performance,2026-01-25T19:50:38.328010
-MockModel,accuracy_score,0.0,ratio,accuracy,2026-01-25T19:50:38.328010

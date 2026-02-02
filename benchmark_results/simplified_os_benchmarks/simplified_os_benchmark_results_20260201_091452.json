@@ -1,0 +1,89 @@
+{
+  "timestamp": "2026-02-01T09:14:38.188520",
+  "system_info": {
+    "platform": "win32",
+    "python_version": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+    "cpu_count_logical": 8,
+    "cpu_freq_max": 2112.0,
+    "cpu_freq_current": 1609.0,
+    "memory_total_gb": 10.3,
+    "memory_available_gb": 4.58,
+    "torch_version": "2.7.1+cu128",
+    "cuda_available": true,
+    "cuda_device_count": 1,
+    "cuda_devices": [
+      {
+        "device_name": "NVIDIA GeForce MX330",
+        "memory_total": 1.9998779296875,
+        "compute_capability": [
+          6,
+          1
+        ]
+      }
+    ]
+  },
+  "benchmark_results": [
+    {
+      "model_name": "qwen3_0_6b",
+      "metric_name": "cpu_usage",
+      "value": 4.12,
+      "unit": "% (avg)",
+      "timestamp": "2026-02-01T09:14:44.325904",
+      "additional_info": {
+        "max_cpu": 12.5,
+        "duration": 5,
+        "samples": 10
+      }
+    },
+    {
+      "model_name": "qwen3_0_6b",
+      "metric_name": "memory_usage",
+      "value": 0.03515625,
+      "unit": "MB",
+      "timestamp": "2026-02-01T09:14:46.483443",
+      "additional_info": {
+        "baseline_memory_mb": 1786.90625,
+        "current_memory_mb": 1786.94140625
+      }
+    },
+    {
+      "model_name": "qwen3_0_6b",
+      "metric_name": "inference_time_10",
+      "value": 0.3578578631083171,
+      "unit": "seconds",
+      "timestamp": "2026-02-01T09:14:48.416011",
+      "additional_info": {
+        "input_length": 10,
+        "total_time": 1.0735735893249512,
+        "num_iterations": 3,
+        "tokens_per_second": 27.944055534063203
+      }
+    },
+    {
+      "model_name": "qwen3_0_6b",
+      "metric_name": "inference_time_30",
+      "value": 0.36104830106099445,
+      "unit": "seconds",
+      "timestamp": "2026-02-01T09:14:50.229779",
+      "additional_info": {
+        "input_length": 30,
+        "total_time": 1.0831449031829834,
+        "num_iterations": 3,
+        "tokens_per_second": 83.09137561883136
+      }
+    },
+    {
+      "model_name": "qwen3_0_6b",
+      "metric_name": "inference_time_50",
+      "value": 0.3582452138264974,
+      "unit": "seconds",
+      "timestamp": "2026-02-01T09:14:52.063065",
+      "additional_info": {
+        "input_length": 50,
+        "total_time": 1.0747356414794922,
+        "num_iterations": 3,
+        "tokens_per_second": 139.569205868625
+      }
+    }
+  ]
+}

@@ -1,4 +1,0 @@
-Model: qwen3_4b_instruct_2507
-Category: benchmark_accuracy
-Execution time: 0.00s
-============================================================
