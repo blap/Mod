@@ -10,19 +10,19 @@ src/
     └── models/
         └── model_name/
             ├── __init__.py
-        ├── config.py
-        ├── model.py
-        ├── plugin.py
-        ├── plugin_manifest.json
-        ├── architecture/
-        ├── attention/
-        ├── fused_layers/
-        ├── kv_cache/
-        ├── mlp/
-        ├── rotary_embeddings/
-        ├── specific_optimizations/
-        ├── tests/
-        └── benchmarks/
+            ├── config.py
+            ├── model.py
+            ├── plugin.py
+            ├── plugin_manifest.json
+            ├── architecture/
+            ├── attention/
+            ├── fused_layers/
+            ├── kv_cache/
+            ├── mlp/
+            ├── rotary_embeddings/
+            ├── specific_optimizations/
+            ├── tests/
+            └── benchmarks/
 ```
 
 ## Step 1: Create the Directory Structure

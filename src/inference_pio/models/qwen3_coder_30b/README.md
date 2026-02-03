@@ -14,7 +14,7 @@
 ### Basic Usage
 
 ```python
-from src.models.qwen3_coder_30b.plugin import create_qwen3_coder_30b_plugin
+from src.inference_pio.models.qwen3_coder_30b.plugin import create_qwen3_coder_30b_plugin
 
 plugin = create_qwen3_coder_30b_plugin()
 response = plugin.generate_code("Write a Python function to sort an array.")

@@ -14,7 +14,7 @@
 ### Basic Usage
 
 ```python
-from src.models.qwen3_0_6b.plugin import create_qwen3_0_6b_plugin
+from src.inference_pio.models.qwen3_0_6b.plugin import create_qwen3_0_6b_plugin
 
 plugin = create_qwen3_0_6b_plugin()
 response = plugin.generate_text("Explain quantum entanglement.")
