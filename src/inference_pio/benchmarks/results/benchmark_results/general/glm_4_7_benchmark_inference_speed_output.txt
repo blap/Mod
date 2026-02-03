@@ -1,4 +1,0 @@
-Model: glm_4_7
-Category: benchmark_inference_speed
-Execution time: 0.00s
-============================================================

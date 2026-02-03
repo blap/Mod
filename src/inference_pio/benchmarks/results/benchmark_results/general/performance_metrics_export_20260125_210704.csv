@@ -1,6 +1,0 @@
-Model Name,Metric Name,Value,Unit,Category,Timestamp,Date Time
-test_model,inference_speed,100.0,tokens/sec,performance,1769386024.5428085,2026-01-25T21:07:04.542809
-test_model,inference_speed,90.0,tokens/sec,performance,1769386024.5428085,2026-01-25T21:07:04.542809
-test_model,inference_speed,120.0,tokens/sec,performance,1769386024.5428085,2026-01-25T21:07:04.542809
-test_model,memory_usage,500.0,MB,memory,1769386024.5428085,2026-01-25T21:07:04.542809
-test_model,memory_usage,550.0,MB,memory,1769386024.5428085,2026-01-25T21:07:04.542809

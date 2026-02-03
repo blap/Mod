@@ -1,4 +1,0 @@
-Model: glm_4_7
-Category: benchmark_power_efficiency
-Execution time: 0.02s
-============================================================
