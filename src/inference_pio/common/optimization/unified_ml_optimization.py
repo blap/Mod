@@ -20,7 +20,7 @@ from .hyperparameter_optimizer import (
     PerformanceHyperparameterOptimizer,
     get_performance_optimizer,
 )
-from .input_complexity_analyzer import get_complexity_analyzer
+from ..processing.input_complexity_analyzer import get_complexity_analyzer
 from .ml_optimization_selector import (
     AutoOptimizationSelector,
     PerformanceMetrics,

@@ -15,12 +15,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ....common.vision_transformer_kernels import (
-    Qwen3VL2BVisionEncoderKernel,
-    VisionMLPKernel,
-    VisionPatchEmbeddingKernel,
-    VisionSelfAttentionKernel,
-    VisionTransformerBlockKernel,
+from ....common.layers.vision_transformer_kernels import (
+    GenericVisionEncoderKernel,
+    GenericVisionMLPKernel,
+    GenericVisionPatchEmbeddingKernel,
+    GenericVisionSelfAttentionKernel,
+    GenericVisionTransformerBlockKernel,
     VisionTransformerConfig,
 )
 from ..config import Qwen3VL2BConfig
@@ -74,9 +74,9 @@ class VisionEncoderOptimizer:
 
     def optimize_vision_encoder(
         self,
-        vision_encoder: Qwen3VL2BVisionEncoderKernel,
+        vision_encoder: GenericVisionEncoderKernel,
         model_config: Qwen3VL2BConfig,
-    ) -> Qwen3VL2BVisionEncoderKernel:
+    ) -> GenericVisionEncoderKernel:
         """
         Apply optimizations to the vision encoder.
 
@@ -135,16 +135,16 @@ class VisionEncoderOptimizer:
 
     def _optimize_patch_embedding(
         self,
-        patch_embedding: VisionPatchEmbeddingKernel,
+        patch_embedding: GenericVisionPatchEmbeddingKernel,
         config: VisionTransformerConfig,
-    ) -> VisionPatchEmbeddingKernel:
+    ) -> GenericVisionPatchEmbeddingKernel:
         """Optimize the patch embedding layer."""
         logger.info("Optimizing patch embedding layer...")
 
         # Replace with optimized version if needed
         if self.config.use_convolution_fusion:
             # Create a more efficient patch embedding with fused operations
-            optimized_patch_embed = OptimizedVisionPatchEmbeddingKernel(config)
+            optimized_patch_embed = OptimizedGenericVisionPatchEmbeddingKernel(config)
 
             # Copy weights from original to optimized version
             optimized_patch_embed.load_state_dict(
@@ -164,7 +164,7 @@ class VisionEncoderOptimizer:
         for i, block in enumerate(blocks):
             if hasattr(block, "attention"):
                 # Create optimized attention kernel
-                optimized_attention = OptimizedVisionSelfAttentionKernel(config)
+                optimized_attention = OptimizedGenericVisionSelfAttentionKernel(config)
 
                 # Copy weights from original to optimized version
                 if hasattr(block.attention, "state_dict"):
@@ -189,7 +189,7 @@ class VisionEncoderOptimizer:
         for i, block in enumerate(blocks):
             if hasattr(block, "mlp"):
                 # Create optimized MLP kernel
-                optimized_mlp = OptimizedVisionMLPKernel(config)
+                optimized_mlp = OptimizedGenericVisionMLPKernel(config)
 
                 # Copy weights from original to optimized version
                 if hasattr(block.mlp, "state_dict"):
@@ -204,9 +204,9 @@ class VisionEncoderOptimizer:
 
     def _optimize_transformer_blocks(
         self,
-        vision_encoder: Qwen3VL2BVisionEncoderKernel,
+        vision_encoder: GenericVisionEncoderKernel,
         config: VisionTransformerConfig,
-    ) -> Qwen3VL2BVisionEncoderKernel:
+    ) -> GenericVisionEncoderKernel:
         """Optimize transformer blocks."""
         logger.info("Optimizing transformer blocks...")
 
@@ -225,14 +225,14 @@ class VisionEncoderOptimizer:
                     return checkpointed_forward
 
                 block.forward = make_checkpoint_func(i).__get__(
-                    block, VisionTransformerBlockKernel
+                    block, GenericVisionTransformerBlockKernel
                 )
 
         return vision_encoder
 
     def _apply_memory_optimizations(
-        self, vision_encoder: Qwen3VL2BVisionEncoderKernel
-    ) -> Qwen3VL2BVisionEncoderKernel:
+        self, vision_encoder: GenericVisionEncoderKernel
+    ) -> GenericVisionEncoderKernel:
         """Apply memory optimizations to the vision encoder."""
         logger.info("Applying memory optimizations...")
 
@@ -250,8 +250,8 @@ class VisionEncoderOptimizer:
         return vision_encoder
 
     def _apply_quantization(
-        self, vision_encoder: Qwen3VL2BVisionEncoderKernel
-    ) -> Qwen3VL2BVisionEncoderKernel:
+        self, vision_encoder: GenericVisionEncoderKernel
+    ) -> GenericVisionEncoderKernel:
         """Apply quantization to the vision encoder."""
         logger.info(
             f"Applying {self.config.quantization_method} quantization with {self.config.quantization_bits} bits..."
@@ -275,7 +275,7 @@ class VisionEncoderOptimizer:
         return vision_encoder
 
 
-class OptimizedVisionPatchEmbeddingKernel(VisionPatchEmbeddingKernel):
+class OptimizedGenericVisionPatchEmbeddingKernel(GenericVisionPatchEmbeddingKernel):
     """
     Optimized version of the vision patch embedding kernel with additional optimizations.
     """
@@ -322,7 +322,7 @@ class OptimizedVisionPatchEmbeddingKernel(VisionPatchEmbeddingKernel):
         return patches
 
 
-class OptimizedVisionSelfAttentionKernel(VisionSelfAttentionKernel):
+class OptimizedGenericVisionSelfAttentionKernel(GenericVisionSelfAttentionKernel):
     """
     Optimized version of the vision self-attention kernel with additional optimizations.
     """
@@ -418,7 +418,7 @@ class OptimizedVisionSelfAttentionKernel(VisionSelfAttentionKernel):
         return output
 
 
-class OptimizedVisionMLPKernel(VisionMLPKernel):
+class OptimizedGenericVisionMLPKernel(GenericVisionMLPKernel):
     """
     Optimized version of the vision MLP kernel with additional optimizations.
     """
@@ -493,7 +493,7 @@ def apply_vision_encoder_optimizations_to_model(
 
     # Find and optimize the vision encoder
     for name, module in model.named_modules():
-        if isinstance(module, Qwen3VL2BVisionEncoderKernel):
+        if isinstance(module, GenericVisionEncoderKernel):
             logger.info(f"Found vision encoder at {name}, applying optimizations...")
 
             # Optimize the vision encoder
@@ -541,9 +541,9 @@ def _get_parent_module(model: nn.Module, full_name: str) -> tuple:
 __all__ = [
     "VisionEncoderOptimizationConfig",
     "VisionEncoderOptimizer",
-    "OptimizedVisionPatchEmbeddingKernel",
-    "OptimizedVisionSelfAttentionKernel",
-    "OptimizedVisionMLPKernel",
+    "OptimizedGenericVisionPatchEmbeddingKernel",
+    "OptimizedGenericVisionSelfAttentionKernel",
+    "OptimizedGenericVisionMLPKernel",
     "create_vision_encoder_optimizer",
     "apply_vision_encoder_optimizations_to_model",
 ]

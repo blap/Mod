@@ -448,3 +448,59 @@ def compare_dicts(dict1: Dict, dict2: Dict, ignore_keys: List[str] = None) -> bo
     filtered_dict2 = {k: v for k, v in dict2.items() if k not in ignore_keys}
 
     return filtered_dict1 == filtered_dict2
+
+# Assertion wrappers
+def assert_equal(a, b, msg=None):
+    assert a == b, msg or f"{a} != {b}"
+
+def assert_true(a, msg=None):
+    assert a, msg or f"{a} is not True"
+
+def assert_false(a, msg=None):
+    assert not a, msg or f"{a} is not False"
+
+def assert_is_instance(obj, cls, msg=None):
+    assert isinstance(obj, cls), msg or f"{obj} is not instance of {cls}"
+
+def assert_is_none(obj, msg=None):
+    assert obj is None, msg or f"{obj} is not None"
+
+def assert_is_not_none(obj, msg=None):
+    assert obj is not None, msg or f"{obj} is None"
+
+def assert_in(member, container, msg=None):
+    assert member in container, msg or f"{member} not in {container}"
+
+def assert_not_in(member, container, msg=None):
+    assert member not in container, msg or f"{member} in {container}"
+
+def assert_greater(a, b, msg=None):
+    assert a > b, msg or f"{a} <= {b}"
+
+def assert_less(a, b, msg=None):
+    assert a < b, msg or f"{a} >= {b}"
+
+def assert_not_equal(a, b, msg=None):
+    assert a != b, msg or f"{a} == {b}"
+
+def assert_raises(exception_class, callable_obj=None, *args, **kwargs):
+    if callable_obj is None:
+        import pytest
+        return pytest.raises(exception_class)
+    try:
+        callable_obj(*args, **kwargs)
+    except exception_class:
+        return
+    except Exception as e:
+        raise AssertionError(f"Expected {exception_class}, but got {type(e)}")
+    raise AssertionError(f"Expected {exception_class}, but no exception was raised")
+
+def run_tests(test_functions):
+    for test_func in test_functions:
+        try:
+            test_func()
+            print(f"PASS: {test_func.__name__}")
+        except Exception as e:
+            print(f"FAIL: {test_func.__name__} - {e}")
+            import traceback
+            traceback.print_exc()

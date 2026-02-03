@@ -11,8 +11,8 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import torch
 import torch.nn as nn
 
-from .input_complexity_analyzer import InputComplexityAnalyzer
-from .nas_controller import ContinuousNASController, NASConfig
+from ..processing.input_complexity_analyzer import InputComplexityAnalyzer
+from ..optimization.nas_controller import ContinuousNASController, NASConfig
 
 logger = logging.getLogger(__name__)
 

@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import torch
 import torch.nn as nn
 
-from ...common.quantization import (
+from ...common.optimization.quantization import (
     QuantizationConfig,
     QuantizationScheme,
     QuantizedLinear,
