@@ -67,7 +67,7 @@ def main():
 
     # Test the core model surgery system
     try:
-        from src.inference_pio.common.model_surgery import ModelSurgerySystem
+        from src.inference_pio.common.optimization.model_surgery import ModelSurgerySystem
 
         surgery_system = ModelSurgerySystem()
         print(f"ModelSurgerySystem: PASS Available")
@@ -77,7 +77,7 @@ def main():
 
     # Test that base plugin interface has surgery methods
     try:
-        from src.inference_pio.common.base_plugin_interface import ModelPluginInterface
+        from src.inference_pio.common.interfaces.base_plugin_interface import ModelPluginInterface
 
         has_surgery = all(
             [

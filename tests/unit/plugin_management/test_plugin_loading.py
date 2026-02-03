@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from src.plugins.manager import PluginManager, discover_and_load_plugins
+from src.inference_pio.plugins.manager import PluginManager, discover_and_load_plugins
 from tests.unit.plugin_management.test_plugin_helpers import (
     create_mock_plugin_structure,
 )
@@ -44,7 +44,7 @@ def test_discover_and_load_plugins_with_plugin_py():
 
         # Create plugin.py with plugin class
         plugin_content = """
-from src.common.improved_base_plugin_interface import (
+from src.inference_pio.common.interfaces.improved_base_plugin_interface import (
     PluginMetadata,
     PluginType,
     TextModelPluginInterface

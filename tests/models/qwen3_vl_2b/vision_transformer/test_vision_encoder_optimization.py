@@ -8,12 +8,12 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from src.common.vision_transformer_kernels import (
+from src.inference_pio.common.layers.vision_transformer_kernels import (
     Qwen3VL2BVisionEncoderKernel,
     VisionTransformerConfig,
 )
-from src.models.qwen3_vl_2b.config import Qwen3VL2BConfig
-from src.models.qwen3_vl_2b.vision_transformer import (
+from src.inference_pio.models.qwen3_vl_2b.config import Qwen3VL2BConfig
+from src.inference_pio.models.qwen3_vl_2b.vision_transformer import (
     OptimizedVisionMLPKernel,
     OptimizedVisionPatchEmbeddingKernel,
     OptimizedVisionSelfAttentionKernel,

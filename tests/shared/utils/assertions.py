@@ -9,7 +9,7 @@ from typing import Any, List
 
 import torch
 
-from src.common.improved_base_plugin_interface import TextModelPluginInterface
+from src.inference_pio.common.interfaces.improved_base_plugin_interface import TextModelPluginInterface
 
 
 def assert_plugin_interface_implemented(

@@ -48,7 +48,7 @@ def demonstrate_individual_module_usage():
     
     # Example of how to create a custom test using the functional testing module
     from testing_modules.functional_testing import ModelFunctionalTest
-    from src.models.qwen3_0_6b.plugin import Qwen3_0_6B_Plugin
+    from src.inference_pio.models.qwen3_0_6b.plugin import Qwen3_0_6B_Plugin
     
     class ExampleFunctionalTest(ModelFunctionalTest):
         def get_model_plugin_class(self):

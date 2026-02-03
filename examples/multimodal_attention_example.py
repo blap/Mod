@@ -7,18 +7,18 @@ with different models in the Inference-PIO framework.
 
 import torch
 
-from src.common.multimodal_attention import (
+from src.inference_pio.common.attention.multimodal_attention import (
     AdaptiveMultimodalAttention,
     MultimodalCrossAttention,
     MultimodalFusionLayer,
 )
-from src.models.glm_4_7_flash.model import GLM47Config, GLM47Model
-from src.models.qwen3_4b_instruct_2507.model import (
+from src.inference_pio.models.glm_4_7_flash.model import GLM47Config, GLM47Model
+from src.inference_pio.models.qwen3_4b_instruct_2507.model import (
     Qwen34BInstruct2507Config,
     Qwen34BInstruct2507Model,
 )
-from src.models.qwen3_coder_30b.model import Qwen3Coder30BConfig, Qwen3Coder30BModel
-from src.models.qwen3_vl_2b.model import Qwen3VL2BConfig, Qwen3VL2BModel
+from src.inference_pio.models.qwen3_coder_30b.model import Qwen3Coder30BConfig, Qwen3Coder30BModel
+from src.inference_pio.models.qwen3_vl_2b.model import Qwen3VL2BConfig, Qwen3VL2BModel
 
 
 def create_sample_multimodal_inputs(batch_size=2, seq_len=10, d_model=512):

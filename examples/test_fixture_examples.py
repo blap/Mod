@@ -19,7 +19,7 @@ import torch
 import torch.nn as nn
 
 # Import the necessary functions from the appropriate module
-from src.common.test_utilities import (
+from src.inference_pio.common.test_utilities import (
     calculate_statistics,
     ensure_directory_exists,
     extract_model_name_from_path,

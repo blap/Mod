@@ -6,7 +6,7 @@ This test verifies that the kernel fusion system works correctly across all mode
 import torch
 import torch.nn as nn
 
-from src.inference_pio.common.kernel_fusion import get_kernel_fusion_manager
+from src.inference_pio.common.optimization.kernel_fusion import get_kernel_fusion_manager
 from src.inference_pio.models.glm_4_7.plugin import GLM_4_7_Plugin
 from src.inference_pio.models.qwen3_4b_instruct_2507.plugin import (
     Qwen3_4B_Instruct_2507_Plugin,
@@ -64,7 +64,7 @@ from tests.utils.test_utils import (
 
     def kernel_fusion_manager_creation(self)():
         """Test that the kernel fusion manager can be created and accessed."""
-        from src.inference_pio.common.kernel_fusion import KernelFusionManager
+        from src.inference_pio.common.optimization.kernel_fusion import KernelFusionManager
         fusion_manager = KernelFusionManager()
         assert_is_instance(fusion_manager, KernelFusionManager)
         

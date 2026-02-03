@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from src.plugins.manager import PluginManager
+from src.inference_pio.plugins.manager import PluginManager
 from tests.unit.plugin_management.test_plugin_helpers import (
     create_mock_plugin_structure,
 )
@@ -74,7 +74,7 @@ def test_discover_and_load_plugins_with_multiple_models():
 
             # Create plugin.py with unique plugin names
             plugin_py_content = f"""
-from src.common.improved_base_plugin_interface import (
+from src.inference_pio.common.interfaces.improved_base_plugin_interface import (
     PluginMetadata,
     PluginType,
     TextModelPluginInterface
@@ -185,7 +185,7 @@ __all__ = ["TestModel{i}Plugin", "create_test_model_{i}_plugin"]
                 "num_parameters": 1000000,
                 "test_coverage": 1.0,
                 "validation_passed": True,
-                "main_class_path": f"src.models.test_model_{i}.plugin.TestModel{i}Plugin",
+                "main_class_path": f"src.inference_pio.models.test_model_{i}.plugin.TestModel{i}Plugin",
                 "entry_point": f"create_test_model_{i}_plugin",
                 "input_types": ["text"],
                 "output_types": ["text"],

@@ -19,13 +19,13 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(project_root / "src"))
 
-from src.inference_pio.common.benchmark_fixtures import (
+from benchmarks.core.benchmark_fixtures import (
     accuracy_benchmark_fixture,
     create_benchmark_fixture,
     memory_benchmark_fixture,
     performance_benchmark_fixture,
 )
-from src.inference_pio.common.benchmark_interface import (
+from src.inference_pio.common.interfaces.benchmark_interface import (
     AccuracyBenchmark,
     BatchProcessingBenchmark,
     BenchmarkRunner,
@@ -36,10 +36,10 @@ from src.inference_pio.common.benchmark_interface import (
     get_full_suite,
     get_performance_suite,
 )
-from src.inference_pio.common.test_performance_regression import (
+from benchmarks.core.test_performance_regression import (
     PerformanceRegressionTracker,
 )
-from src.inference_pio.common.unified_benchmark_discovery import (
+from benchmarks.core.unified_benchmark_discovery import (
     UnifiedBenchmarkDiscoverer,
 )
 

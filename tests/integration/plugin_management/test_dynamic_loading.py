@@ -12,12 +12,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.common.improved_base_plugin_interface import (
+from src.inference_pio.common.interfaces.improved_base_plugin_interface import (
     PluginMetadata,
     PluginType,
     TextModelPluginInterface,
 )
-from src.plugins.manager import PluginManager
+from src.inference_pio.plugins.manager import PluginManager
 
 
 def create_test_plugin_structure(base_path: Path):
@@ -29,7 +29,7 @@ def create_test_plugin_structure(base_path: Path):
 
     # Create a plugin module with a test plugin class
     plugin_content = """
-from src.common.improved_base_plugin_interface import (
+from src.inference_pio.common.interfaces.improved_base_plugin_interface import (
     PluginMetadata,
     PluginType,
     TextModelPluginInterface
@@ -140,7 +140,7 @@ __all__ = ["TestDynamicPlugin", "create_test_dynamic_plugin"]
         "num_parameters": 1000000,
         "test_coverage": 1.0,
         "validation_passed": True,
-        "main_class_path": f"src.models.test_dynamic_model.dynamic_plugin.TestDynamicPlugin",
+        "main_class_path": f"src.inference_pio.models.test_dynamic_model.dynamic_plugin.TestDynamicPlugin",
         "entry_point": "create_test_dynamic_plugin",
         "input_types": ["text"],
         "output_types": ["text"],

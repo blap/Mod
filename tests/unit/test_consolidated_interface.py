@@ -8,10 +8,10 @@ from unittest.mock import Mock
 import pytest
 import torch
 
-from src.common.base_plugin_interface import (
+from src.inference_pio.common.interfaces.base_plugin_interface import (
     ModelPluginInterface as BaseModelPluginInterface,
 )
-from src.common.improved_base_plugin_interface import (
+from src.inference_pio.common.interfaces.improved_base_plugin_interface import (
     ModelPluginInterface,
     PluginMetadata,
     PluginType,

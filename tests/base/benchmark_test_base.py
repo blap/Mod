@@ -20,8 +20,8 @@ import psutil
 import pytest
 import torch
 
-from src.testing_utils import create_temp_test_config
-from src.benchmarking_utils import (
+from src.inference_pio.utils.testing_utils import create_temp_test_config
+from src.inference_pio.utils.benchmarking_utils import (
     benchmark_inference_speed,
     benchmark_generation_speed,
     benchmark_memory_usage,

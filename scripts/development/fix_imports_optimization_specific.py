@@ -22,7 +22,7 @@ def fix_imports_specific_optimization(filepath):
     )
 
     # Note: 'src.inference_pio.common.optimization_profiles' might not contain the specific classes like QuantizationOptimization
-    # They might be in 'src.inference_pio.common.quantization' or similar.
+    # They might be in 'src.inference_pio.common.optimization.quantization' or similar.
     # But let's try mapping to common first as a fallback.
 
     if new_content != content:

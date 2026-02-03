@@ -8,8 +8,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 import torch
 
-from src.common.improved_base_plugin_interface import PluginMetadata, PluginType
-from src.models.qwen3_0_6b.plugin import Qwen3_0_6B_Plugin
+from src.inference_pio.common.interfaces.improved_base_plugin_interface import PluginMetadata, PluginType
+from src.inference_pio.models.qwen3_0_6b.plugin import Qwen3_0_6B_Plugin
 
 
 def test_security_initialization():

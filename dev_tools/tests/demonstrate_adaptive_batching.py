@@ -8,7 +8,7 @@ import time
 
 import torch
 
-from src.inference_pio.common.adaptive_batch_manager import AdaptiveBatchManager
+from src.inference_pio.common.processing.adaptive_batch_manager import AdaptiveBatchManager
 from src.inference_pio.models.glm_4_7.plugin import GLM_4_7_Plugin
 
 
