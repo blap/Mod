@@ -1,4 +1,0 @@
-Model: glm_4_7
-Category: benchmark_memory_usage
-Execution time: 0.00s
-============================================================

@@ -14,7 +14,7 @@
 ### Basic Usage
 
 ```python
-from src.models.qwen3_4b_instruct_2507.plugin import create_qwen3_4b_instruct_2507_plugin
+from src.inference_pio.models.qwen3_4b_instruct_2507.plugin import create_qwen3_4b_instruct_2507_plugin
 
 plugin = create_qwen3_4b_instruct_2507_plugin()
 response = plugin.generate_text("Explain quantum computing.")

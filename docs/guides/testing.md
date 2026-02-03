@@ -13,21 +13,21 @@ The project uses a custom-built testing framework (`tests.utils`) designed for m
 
 ## 2. Test Execution
 
-The primary entry point for running tests is `scripts/run_tests.py`.
+The primary entry point for running tests is `src/inference_pio/core/tools/scripts/testing/run_tests.py`.
 
 ### Basic Usage
 ```bash
 # Run all tests
-python scripts/run_tests.py
+python src/inference_pio/core/tools/scripts/testing/run_tests.py
 
 # Run a specific category
-python scripts/run_tests.py --category unit
+python src/inference_pio/core/tools/scripts/testing/run_tests.py --category unit
 
 # Run tests in a specific directory
-python scripts/run_tests.py --directory tests/unit/common
+python src/inference_pio/core/tools/scripts/testing/run_tests.py --directory src/inference_pio/tests/unit/common
 
 # List available tests
-python scripts/run_tests.py --list
+python src/inference_pio/core/tools/scripts/testing/run_tests.py --list
 ```
 
 ### Advanced Options
@@ -37,10 +37,10 @@ python scripts/run_tests.py --list
 
 ## 3. Writing Tests
 
-Tests are simple Python functions or classes. They must be placed in `tests/` or model-specific `tests/` directories and start with `test_`.
+Tests are simple Python functions or classes. They must be placed in `src/inference_pio/tests/` or model-specific `src/inference_pio/models/<model>/tests/` directories and start with `test_`.
 
 ### The `tests.utils` Framework
-Import utilities from `tests.utils.test_utils`.
+Import utilities from `src.inference_pio.tests.utils.test_utils`.
 
 ```python
 from tests.utils.test_utils import assert_equal, assert_true, run_tests
@@ -71,17 +71,37 @@ if __name__ == '__main__':
 
 ## 4. Test Categories & Structure
 
-Tests are organized in `tests/`:
+Tests are organized in `src/inference_pio/tests/`:
 
-*   **`tests/unit/`**: Isolated logic. Fast. Mock external I/O.
-*   **`tests/integration/`**: Component interaction. Real I/O allowed.
-*   **`tests/performance/`**: Timing and resource tracking.
+*   **`src/inference_pio/tests/unit/`**: Isolated logic. Fast. Mock external I/O.
+*   **`src/inference_pio/tests/integration/`**: Component interaction. Real I/O allowed.
+*   **`src/inference_pio/tests/performance/`**: Timing and resource tracking.
 
 ### Model-Specific Tests
-Model tests follow the self-contained architecture and are located in `tests/models/<model>/` with the following structure:
-*   `tests/models/<model>/unit/` - Unit tests for the specific model
-*   `tests/models/<model>/integration/` - Integration tests for the specific model
-*   `tests/models/<model>/performance/` - Performance tests for the specific model
+Model tests follow the self-contained architecture and are located in `src/inference_pio/models/<model>/tests/`.
+
+The structure is as follows:
+
+```
+src/
+└── inference_pio/
+    ├── models/
+    │   ├── glm_4_7_flash/
+    │   │   └── tests/
+    │   │       ├── unit/
+    │   │       ├── integration/
+    │   │       └── performance/
+    │   ├── qwen3_0_6b/
+    │   │   └── tests/
+    │   │       ├── unit/
+    │   │       ├── integration/
+    │   │       └── performance/
+    │   └── ...
+    └── tests/
+        ├── unit/                       # Shared unit tests
+        ├── integration/                # Shared integration tests
+        └── performance/                # Shared performance tests
+```
 
 Each model plugin is completely independent with its own tests and benchmarks.
 
@@ -138,3 +158,47 @@ The `UnifiedTestDiscovery` class automatically finds tests and benchmarks using 
 The `optimized_test_runner.py` script (wrapped by `scripts/run_tests.py`) provides:
 *   **Parallel Execution:** Uses `max_workers` to run independent tests concurrently.
 *   **Result Caching:** Caches successful test results for 24 hours to speed up local development cycles. Use `--no-cache` to force re-execution.
+
+## 8. Test Class Hierarchy
+
+The project provides standardized base classes in `src.inference_pio.tests.base` to ensure consistency and reuse.
+
+### 8.1 Unit Tests (`unit_test_base.py`)
+- **`BaseUnitTest`**: General purpose unit tests.
+- **`ModelUnitTest`**: Specialized for model plugins.
+- **`PluginUnitTest`**: Specialized for plugin components.
+
+### 8.2 Integration Tests (`integration_test_base.py`)
+- **`BaseIntegrationTest`**: General integration tests.
+- **`ModelIntegrationTest`**: Model integration scenarios.
+- **`PipelineIntegrationTest`**: Pipeline component integration.
+
+### 8.3 Functional Tests (`functional_test_base.py`)
+- **`BaseFunctionalTest`**: End-to-end user flows.
+- **`ModelFunctionalTest`**: Full model workflows.
+- **`SystemFunctionalTest`**: Complete system simulation.
+
+### 8.4 Benchmarks (`benchmark_test_base.py`)
+- **`BaseBenchmarkTest`**: Performance measurement base.
+- **`ModelBenchmarkTest`**: Model performance tracking.
+- **`SystemBenchmarkTest`**: System-wide benchmarks.
+
+### 8.5 Regression Tests (`regression_test_base.py`)
+- **`BaseRegressionTest`**: Baseline comparison.
+- **`ModelRegressionTest`**: Output consistency checks.
+- **`FeatureRegressionTest`**: Feature stability checks.
+
+### Usage Example
+
+```python
+from src.inference_pio.tests.base.unit_test_base import ModelUnitTest
+
+class TestMyModel(ModelUnitTest):
+    def get_model_plugin_class(self):
+        from src.inference_pio.models.my_model.plugin import MyModelPlugin
+        return MyModelPlugin
+
+    def test_required_functionality(self):
+        # Specific test implementation
+        pass
+```

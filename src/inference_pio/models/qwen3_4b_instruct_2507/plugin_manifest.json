@@ -38,7 +38,7 @@
   "num_parameters": 4000000000,
   "test_coverage": 0.95,
   "validation_passed": true,
-  "main_class_path": "src.models.qwen3_4b_instruct_2507.plugin.Qwen3_4B_Instruct_2507_Plugin",
+  "main_class_path": "src.inference_pio.models.qwen3_4b_instruct_2507.plugin.Qwen3_4B_Instruct_2507_Plugin",
   "entry_point": "create_qwen3_4b_instruct_2507_plugin",
   "input_types": [
     "text"

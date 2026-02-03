@@ -32,7 +32,7 @@
   "num_parameters": 0,
   "test_coverage": 0.8,
   "validation_passed": true,
-  "main_class_path": "src.models.glm_4_7_flash.plugin.GLM_4_7_Flash_Plugin",
+  "main_class_path": "src.inference_pio.models.glm_4_7_flash.plugin.GLM_4_7_Flash_Plugin",
   "entry_point": "create_glm_4_7_flash_plugin",
   "input_types": [
     "text"

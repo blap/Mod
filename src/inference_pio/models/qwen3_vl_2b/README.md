@@ -14,7 +14,7 @@
 ### Basic Usage
 
 ```python
-from src.models.qwen3_vl_2b.plugin import create_qwen3_vl_2b_plugin
+from src.inference_pio.models.qwen3_vl_2b.plugin import create_qwen3_vl_2b_plugin
 
 plugin = create_qwen3_vl_2b_plugin()
 response = plugin.generate_multimodal_response(image_path="path/to/image.jpg", prompt="Describe this image.")

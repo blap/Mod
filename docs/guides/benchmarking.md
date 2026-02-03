@@ -64,15 +64,15 @@ def benchmark_inference():
 ## 4. Results & Reporting
 
 Results are automatically saved to `benchmark_results/` in JSON and CSV formats.
-Model-specific benchmarks are saved to `src/models/<model>/benchmarks/results/`.
+Model-specific benchmarks are saved to `src/inference_pio/models/<model>/benchmarks/results/`.
 These results are used by the CI/CD pipeline to detect performance regressions.
 
 ### Self-Contained Architecture
 Each model plugin is completely independent with its own benchmarks located in:
-*   `src/models/<model>/benchmarks/unit/` - Unit benchmarks for the specific model
-*   `src/models/<model>/benchmarks/integration/` - Integration benchmarks for the specific model
-*   `src/models/<model>/benchmarks/performance/` - Performance benchmarks for the specific model
-*   `src/models/<model>/benchmarks/results/` - Benchmark results for the specific model
+*   `src/inference_pio/models/<model>/benchmarks/unit/` - Unit benchmarks for the specific model
+*   `src/inference_pio/models/<model>/benchmarks/integration/` - Integration benchmarks for the specific model
+*   `src/inference_pio/models/<model>/benchmarks/performance/` - Performance benchmarks for the specific model
+*   `src/inference_pio/models/<model>/benchmarks/results/` - Benchmark results for the specific model
 
 ### Output Format
 ```json

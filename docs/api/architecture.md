@@ -7,9 +7,10 @@ Inference-PIO is designed as a modular, self-contained plugin system. Each model
 ### High-Level Structure
 ```
 src/
-├── common/               # Shared utilities (BasePlugin, ConfigManager, interfaces)
-├── models/               # Self-contained model plugins (each with own config/tests/benchmarks)
-│   ├── glm_4_7_flash/    # GLM-4.7 Flash model with all components
+└── inference_pio/
+    ├── common/               # Shared utilities (BasePlugin, ConfigManager, interfaces)
+    ├── models/               # Self-contained model plugins (each with own config/tests/benchmarks)
+    │   ├── glm_4_7_flash/    # GLM-4.7 Flash model with all components
 │   │   ├── __init__.py   # Module entry point
 │   │   ├── config.py     # Model-specific config
 │   │   ├── model.py      # Core model implementation
@@ -55,7 +56,7 @@ pm = get_plugin_manager()
 pm.discover_and_load_plugins()
 
 # Or load plugins from a specific directory
-pm.load_plugins_from_directory("./src/models")
+pm.load_plugins_from_directory("./src/inference_pio/models")
 
 # Activate
 pm.activate_plugin("qwen3_vl_2b", device="cuda:0")

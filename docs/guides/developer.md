@@ -3,19 +3,19 @@
 ## 1. Plugin Development
 
 ### The Interface
-All plugins must implement `ModelPluginInterface` (see `src/common/improved_base_plugin_interface.py`).
+All plugins must implement `ModelPluginInterface` (see `src/inference_pio/common/interfaces/improved_base_plugin_interface.py`).
 
 ### Self-Contained Architecture
 Each model plugin is completely independent with its own:
 - Configuration files in `configs/`
 - Model implementation in `model.py`
 - Plugin interface in `plugin.py`
-- Tests in `tests/` (organized by model)
-- Benchmarks in `benchmarks/` (organized by model)
+- Tests in `tests/`
+- Benchmarks in `benchmarks/`
 - Optimization implementations in dedicated subdirectories
 
 ### Steps to Add a New Model
-1.  **Create Directory:** `src/models/<new_model>/`
+1.  **Create Directory:** `src/inference_pio/models/<new_model>/`
 2.  **Implement Config:** Create `config.py` inheriting `BaseConfig`.
 3.  **Implement Plugin:** Create `plugin.py` implementing `initialize`, `load_model`, `infer`, `cleanup`.
 4.  **Add Manifest:** Create `plugin_manifest.json` for automatic discovery.
@@ -62,10 +62,10 @@ Since each model plugin is completely independent with its own configuration, te
 *   **Memory:** Use `HardwareAnalyzer` to check available VRAM and adapt config (e.g., enable paging) automatically.
 
 ### Testing
-*   Write unit tests in `tests/models/<model_name>/unit/`.
-*   Write integration tests in `tests/models/<model_name>/integration/`.
-*   Write performance tests in `tests/models/<model_name>/performance/`.
-*   Use `tests.utils` assertions.
+*   Write unit tests in `src/inference_pio/models/<model_name>/tests/unit/`.
+*   Write integration tests in `src/inference_pio/models/<model_name>/tests/integration/`.
+*   Write performance tests in `src/inference_pio/models/<model_name>/tests/performance/`.
+*   Use `src.inference_pio.tests.utils` assertions.
 *   Avoid large model downloads in CI tests; use mocks or lightweight checks.
 
 ### Self-Contained Principle

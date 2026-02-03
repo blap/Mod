@@ -39,7 +39,7 @@
   "num_parameters": 2000000000,
   "test_coverage": 0.95,
   "validation_passed": true,
-  "main_class_path": "src.models.qwen3_vl_2b.plugin.Qwen3_VL_2B_Instruct_Plugin",
+  "main_class_path": "src.inference_pio.models.qwen3_vl_2b.plugin.Qwen3_VL_2B_Instruct_Plugin",
   "entry_point": "create_qwen3_vl_2b_instruct_plugin",
   "input_types": [
     "text",

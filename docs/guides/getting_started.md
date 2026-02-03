@@ -24,7 +24,7 @@ pip install -e .
 Models are loaded via factory functions.
 
 ```python
-from src.models.glm_4_7_flash.plugin import create_glm_4_7_flash_plugin
+from src.inference_pio.models.glm_4_7_flash.plugin import create_glm_4_7_flash_plugin
 
 # 1. Create Plugin
 plugin = create_glm_4_7_flash_plugin()
@@ -45,7 +45,7 @@ plugin.cleanup()
 For managing multiple models dynamically:
 
 ```python
-from src.plugins.manager import get_plugin_manager
+from src.inference_pio.plugins.manager import get_plugin_manager
 
 pm = get_plugin_manager()
 pm.activate_plugin("qwen3_vl_2b")
@@ -56,7 +56,7 @@ result = pm.execute_plugin("qwen3_vl_2b", {"text": "Describe image", "image": "i
 Alternatively, you can use the model factory for simplified model loading:
 
 ```python
-from src.model_factory import create_model
+from src.inference_pio.core.model_factory import create_model
 
 # Load any model by name
 model = create_model("glm_4_7_flash")
@@ -77,7 +77,7 @@ plugin.initialize(
 ```
 
 ## 5. Adding New Models
-Each model in the `src/models/` directory is completely self-contained with its own:
+Each model in the `src/inference_pio/models/` directory is completely self-contained with its own:
 - Configuration files
 - Model implementation
 - Plugin interface
@@ -85,7 +85,7 @@ Each model in the `src/models/` directory is completely self-contained with its 
 - Benchmarks
 - Optimization implementations
 
-To add a new model, simply create a new directory following the standardized structure described in `docs/creating_model_plugin_guide.md`.
+To add a new model, simply create a new directory following the standardized structure described in `docs/guides/model_plugins/structure.md`.
 
 ## 6. Troubleshooting
 *   **OOM Errors:** Enable 4-bit loading, reduce batch size, or enable disk offloading.

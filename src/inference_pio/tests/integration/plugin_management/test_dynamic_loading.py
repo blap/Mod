@@ -1,5 +1,5 @@
 """
-Tests for the dynamic loading system in src/plugins/manager.py
+Tests for the dynamic loading system in src/inference_pio/plugins/manager.py
 """
 
 import importlib.util

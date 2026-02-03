@@ -14,7 +14,7 @@
 ### Basic Usage
 
 ```python
-from src.models.glm_4_7_flash.plugin import create_glm_4_7_flash_plugin
+from src.inference_pio.models.glm_4_7_flash.plugin import create_glm_4_7_flash_plugin
 
 plugin = create_glm_4_7_flash_plugin()
 response = plugin.generate_text("Explain quantum computing.")

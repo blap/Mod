@@ -39,7 +39,7 @@
   "num_parameters": 30000000000,
   "test_coverage": 0.95,
   "validation_passed": true,
-  "main_class_path": "src.models.qwen3_coder_30b.plugin.Qwen3_Coder_30B_Plugin",
+  "main_class_path": "src.inference_pio.models.qwen3_coder_30b.plugin.Qwen3_Coder_30B_Plugin",
   "entry_point": "create_qwen3_coder_30b_plugin",
   "input_types": [
     "text"
