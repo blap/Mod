@@ -39,8 +39,8 @@ This ensures that each model/plugin is completely independent with its own confi
 2.  **Branch:** Create a feature branch (`feat/my-new-model`).
 3.  **Implement:** Follow the [Developer Guide](docs/guides/developer.md).
 4.  **Document:** Ensure all code follows the documentation standards ([DOCSTRINGS.md](docs/standards/DOCSTRINGS.md), [COMMENTS.md](docs/standards/COMMENTS.md)).
-5.  **Test:** Ensure all tests pass (`python scripts/run_tests.py`).
-6.  **Benchmark:** Run benchmarks for your model (`python scripts/benchmarking/validate_benchmarks.py`).
+5.  **Test:** Ensure all tests pass (`python src/inference_pio/core/tools/scripts/testing/run_tests.py`).
+6.  **Benchmark:** Run benchmarks for your model (`python src/inference_pio/core/tools/scripts/benchmarking/validate_benchmarks.py`).
 7.  **Submit:** Open a Pull Request.
 
 ## 📝 Standards Checklist

@@ -4,7 +4,7 @@ This comprehensive guide covers the testing ecosystem of the Inference-PIO proje
 
 ## 1. Overview
 
-The project uses a custom-built testing framework (`tests.utils`) designed for minimal dependencies and fast execution. It avoids external runners like `pytest` for the core execution logic, though `pytest` plugins are supported for reporting.
+The project uses a custom-built testing framework (`src.inference_pio.tests.utils`) designed for minimal dependencies and fast execution. It avoids external runners like `pytest` for the core execution logic, though `pytest` plugins are supported for reporting.
 
 ### Core Philosophy
 *   **Minimal Dependencies:** Rely on internal tools where possible.
@@ -43,7 +43,7 @@ Tests are simple Python functions or classes. They must be placed in `src/infere
 Import utilities from `src.inference_pio.tests.utils.test_utils`.
 
 ```python
-from tests.utils.test_utils import assert_equal, assert_true, run_tests
+from src.inference_pio.tests.utils.test_utils import assert_equal, assert_true, run_tests
 
 def test_example():
     """Example test function."""
@@ -110,11 +110,11 @@ Each model plugin is completely independent with its own tests and benchmarks.
 The system generates reports in JSON, XML, HTML, and Markdown.
 
 ### Generation
-The `tests.utils.reporting` module handles report generation.
+The `src.inference_pio.tests.utils.reporting` module handles report generation.
 To generate reports during a run:
 
 ```bash
-python scripts/ci_test_reporting.py --pytest-args "tests/unit" --ci-platform github-actions
+python src/inference_pio/core/tools/scripts/testing/ci_test_reporting.py --pytest-args "src/inference_pio/tests/unit" --ci-platform github-actions
 ```
 
 ### CI/CD Integration
@@ -125,7 +125,7 @@ python scripts/ci_test_reporting.py --pytest-args "tests/unit" --ci-platform git
 
 ### Integration Test Example
 ```python
-from tests.utils.test_utils import assert_true, run_tests
+from src.inference_pio.tests.utils.test_utils import assert_true, run_tests
 from src.inference_pio.common.config_manager import ConfigManager
 
 def test_config_integration():
@@ -138,7 +138,7 @@ def test_config_integration():
 ### Performance Test Example
 ```python
 import time
-from tests.utils.test_utils import assert_less, run_tests
+from src.inference_pio.tests.utils.test_utils import assert_less, run_tests
 
 def test_inference_speed():
     start = time.time()
@@ -155,7 +155,7 @@ The `UnifiedTestDiscovery` class automatically finds tests and benchmarks using 
 *   Benchmarks: `benchmark_*`, `run_*`, `measure_*`.
 
 ### Test Optimization
-The `optimized_test_runner.py` script (wrapped by `scripts/run_tests.py`) provides:
+The `test_optimization.py` script (wrapped by `run_tests.py`) provides:
 *   **Parallel Execution:** Uses `max_workers` to run independent tests concurrently.
 *   **Result Caching:** Caches successful test results for 24 hours to speed up local development cycles. Use `--no-cache` to force re-execution.
 

@@ -8,6 +8,7 @@
 | **Qwen3-4B-Instruct** | Instruction | 4B | Context Management, Safety |
 | **Qwen3-Coder-30B** | Code | 30B | Syntax-Aware Attention, Long Context |
 | **Qwen3-VL-2B** | Multimodal | 2B | Vision Fusion, Cross-Attention |
+| **Qwen3-0.6B** | Text/Reasoning | 0.6B | Thinking Mode, Lightweight Reasoning |
 
 ## 2. Standardized Structure
 
@@ -91,6 +92,14 @@ Vision-Language model.
 *   **Usage:**
     ```python
     plugin.infer({"text": "Describe image", "image": "path/to/img.jpg"})
+    ```
+
+### Qwen3-0.6B
+Ultra-lightweight reasoning model.
+*   **Special Feature:** "Thinking Mode" which can be toggled via `/think` command in prompts to activate detailed reasoning chains.
+*   **Usage:**
+    ```python
+    plugin.infer("/think Explain the implications of quantum entanglement")
     ```
 
 ## 5. Configuration
