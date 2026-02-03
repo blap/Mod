@@ -2,10 +2,22 @@
 
 ## Step 8: Test the Plugin
 
+Each model **MUST** have its own independent test suite located in `tests/` within the model directory. These tests should not rely on other models or shared test state that isn't provided by the standard test infrastructure.
+
+### Directory Structure
+```
+src/inference_pio/models/model_name/tests/
+├── unit/           # Unit tests for components
+├── integration/    # Integration tests for the full plugin
+└── performance/    # Performance benchmarks
+```
+
+### Writing Tests
+
 Create tests to ensure the plugin works correctly:
 
 ```python
-# In tests/test_model_name.py
+# In src/inference_pio/models/model_name/tests/unit/test_plugin.py
 import unittest
 from src.inference_pio.models.model_name.plugin import create_model_name_plugin
 
@@ -26,16 +38,23 @@ class TestModelName(unittest.TestCase):
         Tests ModelName plugin initialization.
         """
         plugin = create_model_name_plugin()
-        result = plugin.initialize()
-        self.assertTrue(result)
+        # Mocking initialization to avoid loading weights in unit tests is recommended
+        # result = plugin.initialize()
+        # self.assertTrue(result)
+```
+
+## Benchmarks
+
+Each model should also have its own benchmarks in `benchmarks/`.
+
+```
+src/inference_pio/models/model_name/benchmarks/
+├── benchmark_inference_speed.py
+└── benchmark_memory_usage.py
 ```
 
 ## Final Considerations
 
--   Each model must be self-contained and not depend on other models.
--   Follow naming conventions and directory structure.
--   Use existing configuration and plugin systems.
--   Ensure reasonable default values.
--   Implement mandatory interface methods.
--   Follow documentation standards.
--   Test the plugin thoroughly.
+-   **Independence**: Tests for Model A must pass even if Model B is broken or missing.
+-   **Structure**: Follow the directory structure strictly.
+-   **Coverage**: Aim for high coverage of the `plugin.py` and `model.py` logic.

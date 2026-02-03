@@ -30,14 +30,37 @@ def create_model_name_model(config: ModelNameConfig) -> ModelNameModel:
 
 ## Step 5: Create the Plugin
 
-Create a `plugin.py` file implementing the common interface:
+Create a `plugin.py` file. The class must implement either `ModelPluginInterface` (for generic models) or `TextModelPluginInterface` (for LLMs).
+
+### Minimum Implementation Requirements
+
+#### For All Models (`ModelPluginInterface`)
+You **must** implement the following methods:
+*   `initialize(**kwargs)`: Setup resources (device, precision).
+*   `load_model(config)`: Load weights and apply optimizations.
+*   `infer(data)`: Run the forward pass.
+*   `cleanup()`: Release memory and handles.
+*   `supports_config(config)`: Validate compatibility.
+
+#### For Text Models (`TextModelPluginInterface`)
+In addition to the above, you **must** implement:
+*   `tokenize(text)`: Convert string to tokens.
+*   `detokenize(token_ids)`: Convert tokens back to string.
+*   `generate_text(prompt, ...)`: Autoregressive generation.
+
+### Example Implementation (Text Model)
 
 ```python
 import logging
-from typing import Any
+from typing import Any, List, Union
+import torch
 import torch.nn as nn
 
-from ...common.base_plugin_interface import TextModelPluginInterface, ModelPluginMetadata, PluginType
+from ...common.interfaces.improved_base_plugin_interface import (
+    TextModelPluginInterface,
+    PluginMetadata,
+    PluginType
+)
 from .config import ModelNameConfig
 from .model import create_model_name_model
 
@@ -48,7 +71,7 @@ class ModelName_Plugin(TextModelPluginInterface):
     Plugin for the ModelName model.
     """
     def __init__(self):
-        metadata = ModelPluginMetadata(
+        metadata = PluginMetadata(
             name="ModelName",
             version="1.0.0",
             author="Your Name",
@@ -60,7 +83,9 @@ class ModelName_Plugin(TextModelPluginInterface):
                 "transformers_version": ">=4.30.0",
                 "python_version": ">=3.8",
                 "min_memory_gb": 8.0
-            }
+            },
+            created_at=None, # Set appropriate datetime
+            updated_at=None
         )
         super().__init__(metadata)
         self._config = None
@@ -95,13 +120,23 @@ class ModelName_Plugin(TextModelPluginInterface):
     def infer(self, data: Any) -> Any:
         if not self.is_loaded:
             self.initialize()
-        # Implement inference
+        # Implement inference logic
         pass
 
     def supports_config(self, config: Any) -> bool:
         return isinstance(config, ModelNameConfig)
 
-    # Implement tokenize, detokenize, generate_text as needed
+    def tokenize(self, text: str, **kwargs) -> Any:
+        # Implement tokenization
+        pass
+
+    def detokenize(self, token_ids: Union[List[int], torch.Tensor], **kwargs) -> str:
+        # Implement detokenization
+        pass
+
+    def generate_text(self, prompt: str, max_new_tokens: int = 512, **kwargs) -> str:
+        # Implement text generation
+        pass
 
     def cleanup(self) -> bool:
         self._model = None
@@ -132,20 +167,4 @@ __all__ = [
 
 ## Step 7: Implement Installation Method
 
-Ensure the model has an `install()` method (usually in `model.py` or separate `installer.py` called by plugin):
-
-```python
-def install(self):
-    """
-    Prepare dependencies and configurations.
-    """
-    import subprocess
-    import sys
-
-    dependencies = ["torch", "transformers"]
-    for dep in dependencies:
-        try:
-            __import__(dep.replace("-", "_"))
-        except ImportError:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", dep])
-```
+Ensure the model has an `install()` method (usually in the plugin or helper) to handle dependency checks if specialized libraries are needed. Note that standard dependencies should be handled by `requirements.txt`.
