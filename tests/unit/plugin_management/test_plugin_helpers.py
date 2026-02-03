@@ -15,7 +15,7 @@ def create_mock_plugin_structure(base_path: Path):
 
     # Create plugin.py with a realistic test plugin
     plugin_py_content = """
-from src.common.improved_base_plugin_interface import (
+from src.inference_pio.common.interfaces.improved_base_plugin_interface import (
     PluginMetadata,
     PluginType,
     TextModelPluginInterface
@@ -126,7 +126,7 @@ __all__ = ["TestModelPlugin", "create_test_model_plugin"]
         "num_parameters": 1000000,
         "test_coverage": 1.0,
         "validation_passed": True,
-        "main_class_path": "src.models.test_model.plugin.TestModelPlugin",
+        "main_class_path": "src.inference_pio.models.test_model.plugin.TestModelPlugin",
         "entry_point": "create_test_model_plugin",
         "input_types": ["text"],
         "output_types": ["text"],

@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from src.plugins.manager import PluginManager, discover_and_load_plugins
+from src.inference_pio.plugins.manager import PluginManager, discover_and_load_plugins
 
 
 def test_dynamic_loading_with_existing_qwen3_plugin():
@@ -52,7 +52,7 @@ def test_dynamic_loading_methods_directly():
     """Test the individual dynamic loading methods directly."""
     from pathlib import Path
 
-    from src.plugins.manager import PluginManager
+    from src.inference_pio.plugins.manager import PluginManager
 
     pm = PluginManager()
 

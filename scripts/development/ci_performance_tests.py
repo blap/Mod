@@ -19,13 +19,13 @@ from typing import Any, Dict, List
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.inference_pio.common.performance_regression_tracker import (
+from benchmarks.core.performance_regression_tracker import (
     PerformanceRegressionTracker,
     RegressionAlert,
     get_regression_alerts,
     save_regression_data,
 )
-from src.inference_pio.common.test_performance_regression import (
+from benchmarks.core.test_performance_regression import (
     run_all_performance_regression_tests,
 )
 

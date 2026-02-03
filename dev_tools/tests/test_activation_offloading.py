@@ -9,7 +9,7 @@ import tempfile
 import torch
 import torch.nn as nn
 
-from src.inference_pio.common.activation_offloading import (
+from src.inference_pio.common.optimization.activation_offloading import (
     AccessPattern,
     ActivationOffloadingManager,
     OffloadPriority,

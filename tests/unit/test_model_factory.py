@@ -7,8 +7,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 import torch
 
-from src.common.improved_base_plugin_interface import TextModelPluginInterface
-from src.model_factory import ModelFactory, create_model
+from src.inference_pio.common.interfaces.improved_base_plugin_interface import TextModelPluginInterface
+from src.inference_pio.core.model_factory import ModelFactory, create_model
 
 
 def test_create_model_qwen3_0_6b():

@@ -12,12 +12,12 @@ from datetime import datetime
 import torch
 import torch.nn as nn
 
-from src.inference_pio.common.base_plugin_interface import (
+from src.inference_pio.common.interfaces.base_plugin_interface import (
     ModelPluginInterface,
     ModelPluginMetadata,
     PluginType,
 )
-from src.inference_pio.common.model_sharder import create_extreme_sharding_system
+from src.inference_pio.common.parallel.model_sharder import create_extreme_sharding_system
 
 
 class SimpleTestModel(nn.Module):

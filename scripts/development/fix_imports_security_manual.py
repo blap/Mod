@@ -11,21 +11,21 @@ def fix_imports_security_manual(filepath):
     # Fix from src.inference_pio.security.context import SecurityContext
     new_content = re.sub(
         r"from src\.inference_pio\.security\.context import SecurityContext",
-        r"from src.inference_pio.common.security_manager import SecurityContext",
+        r"from src.inference_pio.common.security.security_manager import SecurityContext",
         new_content,
     )
 
     # Fix from src.inference_pio.security.manager import SecurityManager
     new_content = re.sub(
         r"from src\.inference_pio\.security\.manager import SecurityManager",
-        r"from src.inference_pio.common.security_manager import SecurityManager",
+        r"from src.inference_pio.common.security.security_manager import SecurityManager",
         new_content,
     )
 
     # Fix from src.inference_pio.security.resource_manager import ResourceManager
     new_content = re.sub(
         r"from src\.inference_pio\.security\.resource_manager import ResourceManager",
-        r"from src.inference_pio.common.memory_manager import MemoryManager as ResourceManager",
+        r"from src.inference_pio.common.hardware.memory_manager import MemoryManager as ResourceManager",
         new_content,
     )
     # Assuming ResourceManager was renamed or merged. Or maybe check if it exists in security_manager.

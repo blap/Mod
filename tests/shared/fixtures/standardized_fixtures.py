@@ -21,7 +21,7 @@ import torch
 # Adiciona o diretório src ao caminho para permitir importações
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from src.common.improved_base_plugin_interface import (
+from src.inference_pio.common.interfaces.improved_base_plugin_interface import (
     PluginMetadata,
     PluginType,
     TextModelPluginInterface,
@@ -368,7 +368,7 @@ def sample_plugin_manifest() -> Dict[str, Any]:
         "num_parameters": 1000000,
         "test_coverage": 1.0,
         "validation_passed": True,
-        "main_class_path": "src.models.test_plugin.plugin.TestPlugin",
+        "main_class_path": "src.inference_pio.models.test_plugin.plugin.TestPlugin",
         "entry_point": "create_test_plugin",
         "input_types": ["text"],
         "output_types": ["text"],

@@ -183,7 +183,7 @@ class SystemFunctionalTest(BaseFunctionalTest, ABC):
         """Test a complete user workflow from model selection to inference."""
         # This would test the complete user experience
         # For now, we'll simulate the workflow
-        from src.model_factory import create_model
+        from src.inference_pio.core.model_factory import create_model
 
         # Test model creation
         try:

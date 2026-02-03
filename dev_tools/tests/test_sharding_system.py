@@ -10,12 +10,12 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 
-from src.inference_pio.common.base_plugin_interface import (
+from src.inference_pio.common.interfaces.base_plugin_interface import (
     ModelPluginInterface,
     ModelPluginMetadata,
     PluginType,
 )
-from src.inference_pio.common.model_sharder import create_extreme_sharding_system
+from src.inference_pio.common.parallel.model_sharder import create_extreme_sharding_system
 from tests.utils.test_utils import (
     assert_equal,
     assert_false,

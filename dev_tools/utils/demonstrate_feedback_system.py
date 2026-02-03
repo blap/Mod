@@ -6,7 +6,7 @@ import time
 
 import torch
 
-from src.inference_pio.common.feedback_controller import (
+from src.inference_pio.common.optimization.feedback_controller import (
     PerformanceMetrics,
     get_feedback_controller,
 )

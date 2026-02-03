@@ -11,21 +11,21 @@ def fix_imports_security(filepath):
     # Fix from src.inference_pio.security import ...
     new_content = re.sub(
         r"from src\.inference_pio\.security import",
-        r"from src.inference_pio.common.security_manager import",
+        r"from src.inference_pio.common.security.security_manager import",
         new_content,
     )
 
     # Fix from src.inference_pio.security.resource_management import ...
     new_content = re.sub(
         r"from src\.inference_pio\.security\.resource_management import",
-        r"from src.inference_pio.common.security_manager import",
+        r"from src.inference_pio.common.security.security_manager import",
         new_content,
     )
 
     # Fix from src.inference_pio.security.security_contexts import ...
     new_content = re.sub(
         r"from src\.inference_pio\.security\.security_contexts import",
-        r"from src.inference_pio.common.security_manager import",
+        r"from src.inference_pio.common.security.security_manager import",
         new_content,
     )
 

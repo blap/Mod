@@ -13,14 +13,14 @@ from concurrent.futures import as_completed
 
 import torch
 
-from src.models.glm_4_7_flash.config import GLM47Config
-from src.models.glm_4_7_flash.model import GLM47Model
-from src.models.qwen3_4b_instruct_2507.config import Qwen34BInstruct2507Config
-from src.models.qwen3_4b_instruct_2507.model import Qwen34BInstruct2507Model
-from src.models.qwen3_coder_30b.config import Qwen3Coder30BConfig
-from src.models.qwen3_coder_30b.model import Qwen3Coder30BModel
-from src.models.qwen3_vl_2b.config import Qwen3VL2BConfig
-from src.models.qwen3_vl_2b.model import Qwen3VL2BModel
+from src.inference_pio.models.glm_4_7_flash.config import GLM47Config
+from src.inference_pio.models.glm_4_7_flash.model import GLM47Model
+from src.inference_pio.models.qwen3_4b_instruct_2507.config import Qwen34BInstruct2507Config
+from src.inference_pio.models.qwen3_4b_instruct_2507.model import Qwen34BInstruct2507Model
+from src.inference_pio.models.qwen3_coder_30b.config import Qwen3Coder30BConfig
+from src.inference_pio.models.qwen3_coder_30b.model import Qwen3Coder30BModel
+from src.inference_pio.models.qwen3_vl_2b.config import Qwen3VL2BConfig
+from src.inference_pio.models.qwen3_vl_2b.model import Qwen3VL2BModel
 
 
 def example_glm47_streaming():

@@ -16,7 +16,7 @@ from unittest.mock import Mock, patch
 import pytest
 import torch
 
-from src.testing_utils import (
+from src.inference_pio.utils.testing_utils import (
     create_temp_test_config,
     cleanup_temp_config,
     create_mock_model,

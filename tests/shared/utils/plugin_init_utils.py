@@ -7,8 +7,8 @@ to eliminate code duplication and ensure consistent behavior.
 
 from typing import Any, Dict, Optional, Type
 
-from src.common.improved_base_plugin_interface import TextModelPluginInterface
-from src.testing_utils import (
+from src.inference_pio.common.interfaces.improved_base_plugin_interface import TextModelPluginInterface
+from src.inference_pio.utils.testing_utils import (
     create_test_model_instance,
     verify_plugin_interface as verify_plugin_interface_shared,
     run_basic_functionality_tests as run_basic_functionality_tests_shared

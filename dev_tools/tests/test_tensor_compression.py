@@ -6,7 +6,7 @@ This test verifies that the tensor compression system works correctly across all
 import torch
 import torch.nn as nn
 
-from src.inference_pio.common.tensor_compression import (
+from src.inference_pio.common.optimization.tensor_compression import (
     AdaptiveTensorCompressor,
     TensorCompressor,
     compress_model_weights,

@@ -14,7 +14,7 @@ import torch.nn as nn
 # Add the src directory to the path to import the modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from src.inference_pio.common.model_surgery import (
+from src.inference_pio.common.optimization.model_surgery import (
     ModelSurgerySystem,
     apply_model_surgery,
     restore_model_from_surgery,

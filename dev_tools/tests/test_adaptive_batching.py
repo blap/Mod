@@ -9,14 +9,14 @@ import unittest
 
 import torch
 
-from src.common.adaptive_batch_manager import (
+from src.inference_pio.common.processing.adaptive_batch_manager import (
     AdaptiveBatchManager,
     get_adaptive_batch_manager,
 )
-from src.models.glm_4_7_flash.plugin import GLM_4_7_Flash_Plugin
-from src.models.qwen3_4b_instruct_2507.plugin import Qwen3_4B_Instruct_2507_Plugin
-from src.models.qwen3_coder_30b.plugin import Qwen3_Coder_30B_Plugin
-from src.models.qwen3_vl_2b.plugin import Qwen3_VL_2B_Plugin
+from src.inference_pio.models.glm_4_7_flash.plugin import GLM_4_7_Flash_Plugin
+from src.inference_pio.models.qwen3_4b_instruct_2507.plugin import Qwen3_4B_Instruct_2507_Plugin
+from src.inference_pio.models.qwen3_coder_30b.plugin import Qwen3_Coder_30B_Plugin
+from src.inference_pio.models.qwen3_vl_2b.plugin import Qwen3_VL_2B_Plugin
 
 
 class TestAdaptiveBatching(unittest.TestCase):

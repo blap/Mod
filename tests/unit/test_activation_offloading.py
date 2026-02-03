@@ -15,7 +15,7 @@ class TestActivationOffloading(ModelUnitTest):
     """Test activation offloading functionality in plugins."""
 
     def get_model_plugin_class(self):
-        from src.models.qwen3_0_6b.plugin import Qwen3_0_6B_Plugin
+        from src.inference_pio.models.qwen3_0_6b.plugin import Qwen3_0_6B_Plugin
 
         return Qwen3_0_6B_Plugin
 

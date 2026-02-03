@@ -8,8 +8,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from src.models.qwen3_vl_2b.config import Qwen3VL2BConfig
-from src.models.qwen3_vl_2b.visual_resource_compression import (
+from src.inference_pio.models.qwen3_vl_2b.config import Qwen3VL2BConfig
+from src.inference_pio.models.qwen3_vl_2b.visual_resource_compression import (
     CompressionMethod,
     VisualCompressionConfig,
     VisualFeatureCompressor,

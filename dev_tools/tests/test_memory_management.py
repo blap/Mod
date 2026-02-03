@@ -8,7 +8,7 @@ import tempfile
 
 import torch
 
-from src.inference_pio.common.memory_manager import (
+from src.inference_pio.common.hardware.memory_manager import (
     MemoryManager,
     MemoryPriority,
     TensorPagingManager,

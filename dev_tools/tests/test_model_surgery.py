@@ -6,7 +6,7 @@ This test verifies that the model surgery system works correctly across all mode
 import torch
 import torch.nn as nn
 
-from src.inference_pio.common.model_surgery import (
+from src.inference_pio.common.optimization.model_surgery import (
     ModelSurgerySystem,
     apply_model_surgery,
     restore_model_from_surgery,
@@ -72,7 +72,7 @@ from tests.utils.test_utils import (
         assert_is_instance(surgery_system, ModelSurgerySystem)
         
         # Test global instance
-        from src.inference_pio.common.model_surgery import get_model_surgery_system
+        from src.inference_pio.common.optimization.model_surgery import get_model_surgery_system
         global_system = get_model_surgery_system()
         assert_is_instance(global_system, ModelSurgerySystem)
 

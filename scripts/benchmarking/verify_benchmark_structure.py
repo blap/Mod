@@ -195,7 +195,7 @@ def main():
         print(f"  1. benchmarks/unit/benchmark_accuracy.py")
         print(f"  2. benchmarks/integration/benchmark_comparison.py")
         print(f"  3. benchmarks/performance/benchmark_inference_speed.py")
-        print(f"  4. Proper imports from src.inference_pio.common.benchmark_interface")
+        print(f"  4. Proper imports from src.inference_pio.common.interfaces.benchmark_interface")
         print(f"  5. Valid Python syntax")
 
         return 1

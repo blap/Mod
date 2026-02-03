@@ -103,7 +103,7 @@ def test_shared_mock_torch_model(mock_torch_model):
 def test_shared_sample_metadata(sample_metadata):
     """Test the shared sample metadata fixture."""
     # Import the expected class
-    from src.common.improved_base_plugin_interface import PluginMetadata
+    from src.inference_pio.common.interfaces.improved_base_plugin_interface import PluginMetadata
 
     # Verify that sample_metadata is a PluginMetadata instance
     assert isinstance(sample_metadata, PluginMetadata)
@@ -295,7 +295,7 @@ if __name__ == "__main__":
 
     from datetime import datetime
 
-    from src.common.improved_base_plugin_interface import PluginMetadata, PluginType
+    from src.inference_pio.common.interfaces.improved_base_plugin_interface import PluginMetadata, PluginType
 
     metadata = PluginMetadata(
         name="SamplePlugin",
@@ -346,7 +346,7 @@ if __name__ == "__main__":
         "num_parameters": 1000000,
         "test_coverage": 1.0,
         "validation_passed": True,
-        "main_class_path": "src.models.test_plugin.plugin.TestPlugin",
+        "main_class_path": "src.inference_pio.models.test_plugin.plugin.TestPlugin",
         "entry_point": "create_test_plugin",
         "input_types": ["text"],
         "output_types": ["text"],

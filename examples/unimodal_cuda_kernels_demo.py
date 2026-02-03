@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import torch
 
-from src.common.unimodal_cuda_kernels import (
+from src.inference_pio.common.layers.unimodal_cuda_kernels import (
     UnimodalAttentionKernel,
     UnimodalLayerNormKernel,
     UnimodalMLPKernel,

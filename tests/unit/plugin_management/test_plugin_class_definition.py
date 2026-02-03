@@ -7,7 +7,7 @@ from datetime import datetime
 import torch
 import torch.nn as nn
 
-from src.common.improved_base_plugin_interface import (
+from src.inference_pio.common.interfaces.improved_base_plugin_interface import (
     PluginMetadata,
     PluginType,
     TextModelPluginInterface,
