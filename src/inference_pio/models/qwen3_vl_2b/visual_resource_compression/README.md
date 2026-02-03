@@ -42,7 +42,7 @@ This module implements a comprehensive compression system specifically for visua
 The visual resource compression system is highly configurable through the `VisualCompressionConfig` class:
 
 ```python
-from src.models.qwen3_vl_2b.visual_resource_compression import VisualCompressionConfig, CompressionMethod
+from src.inference_pio.models.qwen3_vl_2b.visual_resource_compression import VisualCompressionConfig, CompressionMethod
 
 config = VisualCompressionConfig(
     compression_method=CompressionMethod.QUANTIZATION,  # Choose compression method
@@ -63,7 +63,7 @@ config = VisualCompressionConfig(
 The visual compression system integrates seamlessly with the Qwen3-VL-2B model through the following configuration options in `Qwen3VL2BConfig`:
 
 ```python
-from src.models.qwen3_vl_2b.config import Qwen3VL2BConfig
+from src.inference_pio.models.qwen3_vl_2b.config import Qwen3VL2BConfig
 
 config = Qwen3VL2BConfig()
 config.enable_visual_resource_compression = True  # Enable visual compression
@@ -75,7 +75,7 @@ config.visual_quantization_bits = 8  # Quantization bits
 ## Usage Example
 
 ```python
-from src.models.qwen3_vl_2b.visual_resource_compression import (
+from src.inference_pio.models.qwen3_vl_2b.visual_resource_compression import (
     VisualCompressionConfig, 
     VisualResourceCompressor, 
     CompressionMethod

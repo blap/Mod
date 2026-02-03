@@ -1,4 +1,4 @@
-# Modular Optimization System for Inference-PIO
+# Modular Optimization System
 
 ## Overview
 
@@ -81,7 +81,7 @@ The Modular Optimization System provides a centralized, flexible framework for m
 
 ### 1. Basic Model Optimization
 ```python
-from inference_pio.common.optimization_integration import apply_glm_optimizations
+from src.inference_pio.common.optimization.optimization_integration import apply_glm_optimizations
 
 # Apply optimizations with balanced profile
 optimized_model = apply_glm_optimizations(model, profile_name="balanced")
@@ -97,7 +97,7 @@ model = apply_qwen_optimizations(model, profile_name="balanced")  # Balanced
 
 ### 3. Custom Configuration
 ```python
-from inference_pio.common.optimization_manager import OptimizationConfig, OptimizationType
+from src.inference_pio.common.optimization.optimization_manager import OptimizationConfig, OptimizationType
 
 # Create custom optimization configuration
 config = OptimizationConfig(
@@ -116,7 +116,7 @@ optimized_model = manager.apply_optimizations(model, ["flash_attention"])
 
 ### 4. Pipeline Creation
 ```python
-from inference_pio.common.optimization_integration import create_optimization_pipeline
+from src.inference_pio.common.optimization.optimization_integration import create_optimization_pipeline
 
 # Create a reusable optimization pipeline
 pipeline = create_optimization_pipeline(
@@ -133,7 +133,7 @@ optimized_model2 = pipeline(model2)
 
 ### Enable/Disable Individual Optimizations
 ```python
-from inference_pio.common.optimization_integration import update_model_optimization
+from src.inference_pio.common.optimization.optimization_integration import update_model_optimization
 
 # Disable a specific optimization
 model = update_model_optimization(model, "disk_offloading", enabled=False)

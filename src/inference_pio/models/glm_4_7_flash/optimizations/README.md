@@ -99,7 +99,7 @@ Configuration parameters:
 To apply GLM-4.7 specific optimizations to a model:
 
 ```python
-from src.models.glm_4_7_flash.optimizations.glm_specific_optimizations import (
+from src.inference_pio.models.glm_4_7_flash.optimizations.glm_specific_optimizations import (
     apply_glm47_specific_optimizations,
     GLM47OptimizationConfig
 )
