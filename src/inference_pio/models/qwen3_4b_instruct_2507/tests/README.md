@@ -14,7 +14,7 @@ This directory contains all tests specific to the Qwen3-4B-Instruct-2507 model. 
 To run all tests for this model:
 
 ```bash
-cd src/models/language/qwen3_4b_instruct_2507/tests
+cd src/inference_pio/models/qwen3_4b_instruct_2507/tests
 python __main__.py
 ```
 

@@ -22,7 +22,7 @@ def test_dynamic_loading_with_existing_qwen3_plugin():
     pm = PluginManager()
 
     # Discover and load plugins from the existing models directory
-    models_dir = Path("src/models")
+    models_dir = Path("src/inference_pio/models")
     count = pm.discover_and_load_plugins(models_dir)
 
     # Verify that at least the Qwen3-0.6B plugin was loaded
@@ -57,7 +57,7 @@ def test_dynamic_loading_methods_directly():
     pm = PluginManager()
 
     # Test loading the Qwen3 plugin directly from its manifest
-    qwen3_dir = Path("src/models/qwen3_0_6b")
+    qwen3_dir = Path("src/inference_pio/models/qwen3_0_6b")
     manifest_path = qwen3_dir / "plugin_manifest.json"
 
     if manifest_path.exists():

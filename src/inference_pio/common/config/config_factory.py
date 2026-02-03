@@ -191,7 +191,7 @@ def get_model_config_class(model_name: str) -> Type[BaseConfig]:
     return ConfigFactory._configs[model_name_lower]
 
 
-def auto_detect_and_register_configs(models_dir: str = "src/models"):
+def auto_detect_and_register_configs(models_dir: str = "src/inference_pio/models"):
     """
     Automatically detect and register configuration classes from model directories.
 
