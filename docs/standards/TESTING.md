@@ -3,8 +3,8 @@
 **Reference Guide:** For instructions on writing and running tests, see [Testing Guide](../guides/testing.md).
 
 ## 1. Directory Structure Requirements
-*   All global tests **MUST** be located in `tests/`.
-*   Model-specific tests **MAY** be located in `src/inference_pio/models/<model>/tests/` but moving them to `tests/models/<model>/` is preferred.
+*   All global tests **MUST** be located in `src/inference_pio/tests/`.
+*   Model-specific tests **MUST** be located in `src/inference_pio/models/<model>/tests/`.
 *   Tests **MUST** be categorized into `unit/`, `integration/`, or `performance/`.
 
 ## 2. Naming Conventions

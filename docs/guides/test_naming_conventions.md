@@ -133,22 +133,22 @@ Use these standardized terms in test method names:
 The project follows a structure where tests are organized by model or component.
 
 ```
-tests/
-├── unit/                       # Generic unit tests
-├── integration/                # Generic integration tests
-├── models/                     # Model-specific tests
-│   ├── qwen3_0_6b/
-│   │   ├── unit/
-│   │   ├── integration/
-│   │   └── performance/
-│   └── glm_4_7_flash/
-│       └── ...
-└── ...
-
-benchmarks/
-├── performance/                # Pure performance benchmarks
-├── functional/                 # Functional benchmarks
-└── integration/                # Integration benchmarks
+src/
+└── inference_pio/
+    ├── models/
+    │   ├── qwen3_0_6b/
+    │   │   └── tests/
+    │   │       ├── unit/
+    │   │       ├── integration/
+    │   │       └── performance/
+    │   └── ...
+    ├── tests/
+    │   ├── unit/                       # Generic unit tests
+    │   └── integration/                # Generic integration tests
+    └── benchmarks/
+        ├── performance/                # Pure performance benchmarks
+        ├── functional/                 # Functional benchmarks
+        └── integration/                # Integration benchmarks
 ```
 
 ## 6. Enforcement

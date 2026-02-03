@@ -115,16 +115,16 @@ When setup logic is complex, encapsulate it in helper functions.
 ## Fixture Organization
 
 ### Shared Fixtures
--   **Location**: `tests/shared/fixtures/`
+-   **Location**: `src/inference_pio/tests/shared/fixtures/`
 -   Should be generic enough for multiple contexts.
 
 ### Domain-Specific Fixtures
--   **Location**: Inside the corresponding test directory (e.g., `tests/models/model_name/`).
+-   **Location**: Inside the corresponding test directory (e.g., `src/inference_pio/models/<model_name>/tests/`).
 -   Can have domain-specific dependencies.
 
 ## Available Shared Fixtures
 
-The following fixtures are available in `tests.shared.fixtures`:
+The following fixtures are available in `src.inference_pio.tests.shared.fixtures`:
 
 ### Basic Fixtures
 - `temp_dir`: Temporary directory for tests.

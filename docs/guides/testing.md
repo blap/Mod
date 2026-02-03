@@ -13,21 +13,21 @@ The project uses a custom-built testing framework (`tests.utils`) designed for m
 
 ## 2. Test Execution
 
-The primary entry point for running tests is `scripts/run_tests.py`.
+The primary entry point for running tests is `src/inference_pio/core/tools/scripts/testing/run_tests.py`.
 
 ### Basic Usage
 ```bash
 # Run all tests
-python scripts/run_tests.py
+python src/inference_pio/core/tools/scripts/testing/run_tests.py
 
 # Run a specific category
-python scripts/run_tests.py --category unit
+python src/inference_pio/core/tools/scripts/testing/run_tests.py --category unit
 
 # Run tests in a specific directory
-python scripts/run_tests.py --directory tests/unit/common
+python src/inference_pio/core/tools/scripts/testing/run_tests.py --directory src/inference_pio/tests/unit/common
 
 # List available tests
-python scripts/run_tests.py --list
+python src/inference_pio/core/tools/scripts/testing/run_tests.py --list
 ```
 
 ### Advanced Options
@@ -37,10 +37,10 @@ python scripts/run_tests.py --list
 
 ## 3. Writing Tests
 
-Tests are simple Python functions or classes. They must be placed in `tests/` or model-specific `tests/` directories and start with `test_`.
+Tests are simple Python functions or classes. They must be placed in `src/inference_pio/tests/` or model-specific `src/inference_pio/models/<model>/tests/` directories and start with `test_`.
 
 ### The `tests.utils` Framework
-Import utilities from `tests.utils.test_utils`.
+Import utilities from `src.inference_pio.tests.utils.test_utils`.
 
 ```python
 from tests.utils.test_utils import assert_equal, assert_true, run_tests
@@ -71,32 +71,36 @@ if __name__ == '__main__':
 
 ## 4. Test Categories & Structure
 
-Tests are organized in `tests/`:
+Tests are organized in `src/inference_pio/tests/`:
 
-*   **`tests/unit/`**: Isolated logic. Fast. Mock external I/O.
-*   **`tests/integration/`**: Component interaction. Real I/O allowed.
-*   **`tests/performance/`**: Timing and resource tracking.
+*   **`src/inference_pio/tests/unit/`**: Isolated logic. Fast. Mock external I/O.
+*   **`src/inference_pio/tests/integration/`**: Component interaction. Real I/O allowed.
+*   **`src/inference_pio/tests/performance/`**: Timing and resource tracking.
 
 ### Model-Specific Tests
-Model tests follow the self-contained architecture and are located in `tests/models/<model>/`.
+Model tests follow the self-contained architecture and are located in `src/inference_pio/models/<model>/tests/`.
 
 The structure is as follows:
 
 ```
-tests/
-├── models/
-│   ├── glm_4_7_flash/
-│   │   ├── unit/
-│   │   ├── integration/
-│   │   └── performance/
-│   ├── qwen3_0_6b/
-│   │   ├── unit/
-│   │   ├── integration/
-│   │   └── performance/
-│   └── ...
-├── unit/                       # Shared unit tests
-├── integration/                # Shared integration tests
-└── performance/                # Shared performance tests
+src/
+└── inference_pio/
+    ├── models/
+    │   ├── glm_4_7_flash/
+    │   │   └── tests/
+    │   │       ├── unit/
+    │   │       ├── integration/
+    │   │       └── performance/
+    │   ├── qwen3_0_6b/
+    │   │   └── tests/
+    │   │       ├── unit/
+    │   │       ├── integration/
+    │   │       └── performance/
+    │   └── ...
+    └── tests/
+        ├── unit/                       # Shared unit tests
+        ├── integration/                # Shared integration tests
+        └── performance/                # Shared performance tests
 ```
 
 Each model plugin is completely independent with its own tests and benchmarks.

@@ -11,10 +11,10 @@
 
 ## 2. Standardized Structure
 
-Every model plugin in `src/models/` follows this layout:
+Every model plugin in `src/inference_pio/models/` follows this layout:
 
 ```
-src/models/<name>/
+src/inference_pio/models/<name>/
 ├── __init__.py         # Module entry point
 ├── config.py           # Model-specific config
 ├── model.py            # Core logic
