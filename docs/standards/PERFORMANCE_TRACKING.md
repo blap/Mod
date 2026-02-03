@@ -6,7 +6,7 @@ This document describes the system for tracking performance metrics over time, d
 
 ### Performance Tracker
 
-The core logic resides in `scripts/performance_tracker.py` (formerly `performance_regression_tracker_refined.py`).
+The core logic resides in `src/inference_pio/core/tools/scripts/benchmarking/performance_tracker.py`.
 
 It handles:
 - Metric tracking (Time, Throughput, Memory).
@@ -19,7 +19,7 @@ It handles:
 ### In Python Scripts
 
 ```python
-from scripts.performance_tracker import record_performance_metric, save_regression_data
+from src.inference_pio.core.tools.scripts.benchmarking.performance_tracker import record_performance_metric, save_regression_data
 
 # Record a metric
 record_performance_metric(

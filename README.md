@@ -5,7 +5,7 @@ Inference-PIO is a modular, high-performance inference system built on a self-co
 ## 📚 Documentation
 
 *   **[Getting Started](docs/guides/getting_started.md):** Installation, basic usage, and configuration.
-*   **[Creating a Model Plugin](docs/creating_model_plugin_guide.md):** Guide to creating new model plugins.
+*   **[Creating a Model Plugin](docs/guides/model_plugins/overview.md):** Guide to creating new model plugins.
 *   **[Supported Models](docs/api/models.md):** List of models and their capabilities.
 *   **[System Architecture](docs/api/architecture.md):** Deep dive into the plugin system and design.
 *   **[Advanced Features](docs/api/advanced_features.md):** Multimodal attention, streaming, and NAS.
@@ -21,73 +21,51 @@ Inference-PIO is a modular, high-performance inference system built on a self-co
 ```
 .
 ├── benchmark_results/              # General benchmark results
-│   └── general/                  # Cross-model benchmark data
-├── docs/                         # Documentation (Guides, API, Standards)
-├── examples/                     # Example usage scripts
-├── scripts/                      # Utility scripts
-│   ├── benchmarking/            # Scripts for running benchmarks
-│   ├── development/             # Development and debugging scripts
-│   ├── testing/                 # Scripts for running tests
-│   └── utils/                   # General utility scripts
+│   └── general/                    # Cross-model benchmark data
+├── docs/                           # Documentation (Guides, API, Standards)
+├── examples/                       # Example usage scripts
 ├── src/
-│   ├── common/                  # Shared utilities and interfaces
-│   ├── configs/                 # Global configuration
-│   ├── inference/               # Inference engine components
-│   ├── models/                  # Individual self-contained model plugins
-│   │   ├── glm_4_7_flash/       # GLM-4.7 Flash model with all components
-│   │   │   ├── __init__.py      # Module entry point
-│   │   │   ├── config.py        # Model-specific config
-│   │   │   ├── model.py         # Core model implementation
-│   │   │   ├── plugin.py        # Plugin interface implementation
-│   │   │   ├── plugin_manifest.json # Plugin metadata for discovery
-│   │   │   ├── architecture/    # Architecture-specific implementations
-│   │   │   ├── attention/       # Attention mechanisms
-│   │   │   ├── fused_layers/    # Fused layer implementations
-│   │   │   ├── kv_cache/        # KV cache management
-│   │   │   ├── mlp/             # MLP implementations
-│   │   │   ├── rotary_embeddings/ # Rotary embedding implementations
-│   │   │   ├── specific_optimizations/ # Model-specific optimizations
-│   │   │   ├── configs/         # Configuration files
-│   │   │   ├── tests/           # Legacy model-specific tests (deprecated)
-│   │   │   ├── benchmarks/      # Model-specific benchmarks
-│   │   │   └── README.md        # Model-specific documentation
-│   │   ├── qwen3_0_6b/          # Qwen3-0.6B model with all components
-│   │   ├── qwen3_4b_instruct_2507/ # Qwen3-4B-Instruct-2507 model with all components
-│   │   ├── qwen3_coder_30b/     # Qwen3-Coder-30B model with all components
-│   │   └── qwen3_vl_2b/         # Qwen3-VL-2B model with all components
-│   ├── plugins/                 # Plugin system infrastructure
-│   │   ├── __init__.py          # Plugin system entry point
-│   │   ├── base/                # Base plugin interfaces
-│   │   ├── cpu/                 # CPU-specific plugins
-│   │   ├── intel/               # Intel-specific plugins
-│   │   └── manager.py           # Plugin manager implementation
-│   ├── utils/                   # Utility functions
-│   └── model_factory.py         # Model creation factory
-├── tests/                       # Organized test structure
-│   ├── models/                  # Model-specific tests (organized by model)
-│   │   ├── glm_4_7_flash/       # Tests for GLM-4.7 Flash model
-│   │   ├── qwen3_0_6b/          # Tests for Qwen3-0.6B model
-│   │   ├── qwen3_4b_instruct_2507/ # Tests for Qwen3-4B-Instruct-2507 model
-│   │   ├── qwen3_coder_30b/     # Tests for Qwen3-Coder-30B model
-│   │   └── qwen3_vl_2b/         # Tests for Qwen3-VL-2B model
-│   ├── unit/                    # General unit tests
-│   ├── integration/             # General integration tests
-│   └── performance/             # General performance tests
-├── benchmarks/                  # General benchmarks
-└── dev_tools/                   # Development tools and utilities
+│   └── inference_pio/
+│       ├── benchmarks/             # General benchmarks
+│       ├── common/                 # Shared utilities and interfaces
+│       ├── configs/                # Global configuration
+│       ├── core/                   # Core system components (tools, scripts, factory)
+│       │   ├── tools/
+│       │   │   ├── scripts/        # Utility scripts (testing, benchmarking)
+│       │   │   └── ...
+│       │   └── model_factory.py    # Model creation factory
+│       ├── models/                 # Individual self-contained model plugins
+│       │   ├── glm_4_7_flash/      # GLM-4.7 Flash model
+│       │   ├── qwen3_0_6b/         # Qwen3-0.6B model
+│       │   ├── qwen3_4b_instruct_2507/ # Qwen3-4B-Instruct-2507 model
+│       │   ├── qwen3_coder_30b/    # Qwen3-Coder-30B model
+│       │   └── qwen3_vl_2b/        # Qwen3-VL-2B model
+│       ├── plugins/                # Plugin system infrastructure
+│       │   ├── base/               # Base plugin interfaces
+│       │   ├── cpu/                # CPU-specific plugins
+│       │   ├── intel/              # Intel-specific plugins
+│       │   └── manager.py          # Plugin manager implementation
+│       ├── tests/                  # Global test structure
+│       │   ├── base/               # Test base classes
+│       │   ├── functional/         # Functional tests
+│       │   ├── integration/        # Integration tests
+│       │   ├── performance/        # Performance tests
+│       │   └── unit/               # Unit tests
+│       └── utils/                  # Utility functions
+└── ...
 ```
 
 ## 🚀 Quick Start
 
 ```bash
 pip install -r requirements.txt
-python -c "from src.model_factory import create_model; m=create_model('glm_4_7_flash'); m.initialize(); print(m.infer('Hello'))"
+python -c "from src.inference_pio.core.model_factory import create_model; m=create_model('glm_4_7_flash'); m.initialize(); print(m.infer('Hello'))"
 ```
 
 ## 🧩 Plugin Discovery System
 
 The system automatically discovers new plugins through:
-1. **Directory scanning**: Looks for model directories in `src/models/`
+1. **Directory scanning**: Looks for model directories in `src/inference_pio/models/`
 2. **Manifest files**: Each model has a `plugin_manifest.json` file
 3. **Auto-registration**: Plugins are automatically registered without manual imports
 
@@ -105,103 +83,52 @@ This ensures that each model can be developed, tested, and deployed independentl
 
 ## 🧪 Testing
 
-The project now uses an organized test structure that mirrors the `src/models` hierarchy:
+The project uses an organized test structure. Global tests are in `src/inference_pio/tests/`, and model-specific tests are in `src/inference_pio/models/<model_name>/tests/`.
 
-```
-tests/
-├── models/                  # Model-specific tests
-│   ├── glm_4_7_flash/       # Tests for GLM-4.7 Flash model
-│   │   ├── unit/            # Unit tests
-│   │   ├── integration/     # Integration tests
-│   │   └── performance/     # Performance tests
-│   ├── qwen3_0_6b/          # Tests for Qwen3-0.6B model
-│   ├── qwen3_4b_instruct_2507/ # Tests for Qwen3-4B-Instruct-2507 model
-│   ├── qwen3_coder_30b/     # Tests for Qwen3-Coder-30B model
-│   └── qwen3_vl_2b/         # Tests for Qwen3-VL-2B model
-├── unit/                    # General unit tests
-├── integration/             # General integration tests
-└── performance/             # General performance tests
-```
-
-To run tests for a specific model:
+To run all tests:
 ```bash
-pytest tests/models/qwen3_0_6b/
+python src/inference_pio/core/tools/scripts/testing/run_tests.py
 ```
 
-To run unit tests for a specific model:
+To run tests for a specific category (e.g., unit):
 ```bash
-pytest tests/models/qwen3_0_6b/unit/
+python src/inference_pio/core/tools/scripts/testing/run_tests.py --category unit
 ```
 
 ## 🤝 Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for developer guidelines.
 
-## 🧪 Testes com Funcionalidades Reais
+## 🧪 Tests with Real Functionalities
 
-O projeto inclui uma suite abrangente de testes que utilizam funcionalidades reais em vez de simulações excessivas. Esses testes exercitam os caminhos críticos do sistema com dados e operações reais, mantendo a eficiência enquanto aumentam a fidelidade à realidade.
+The project includes a comprehensive test suite that uses real functionalities instead of excessive simulations. These tests exercise critical system paths with real data and operations, maintaining efficiency while increasing fidelity to reality.
 
-### Tipos de Testes Reais
+### Types of Real Tests
 
-- **Testes de Funcionalidade**: Verificam a funcionalidade básica do sistema usando componentes reais
-- **Testes de Integração**: Testam a interação entre múltiplos componentes do sistema
-- **Testes de Desempenho**: Medem métricas reais de desempenho em vez de simulações
-- **Testes Funcionais**: Verificam o comportamento do sistema do ponto de vista do usuário
-- **Testes de Regressão**: Garantem que alterações não quebrem funcionalidades existentes
+- **Functionality Tests**: Verify basic system functionality using real components
+- **Integration Tests**: Test interaction between multiple system components
+- **Performance Tests**: Measure real performance metrics instead of simulations
+- **Functional Tests**: Verify system behavior from a user perspective
+- **Regression Tests**: Ensure changes do not break existing functionalities
 
-### Execução dos Testes Reais
+### Running Real Tests
 
-Para executar todos os testes com funcionalidades reais:
-
-```bash
-python run_real_tests.py
-```
-
-Ou executar testes específicos:
+To run all tests with real functionalities:
 
 ```bash
-# Testes de funcionalidade
-python -m pytest test_real_functionality.py -v
-
-# Testes de integração
-python -m pytest test_real_integration.py -v
-
-# Testes de desempenho
-python -m pytest test_real_performance.py -v
-
-# Testes funcionais
-python -m pytest test_real_functional.py -v
-
-# Testes de regressão
-python -m pytest test_real_regression.py -v
+python src/inference_pio/core/tools/scripts/testing/run_tests.py
 ```
 
-## 🔌 Arquitetura Extensível
+## 🔌 Extensible Architecture
 
-O projeto implementa uma arquitetura flexível e extensível para fácil inclusão de novos modelos e tipos de teste/benchmark. Cada modelo/plugin é completamente independente com sua própria configuração, testes e benchmarks.
+The project implements a flexible and extensible architecture for easy inclusion of new models and test/benchmark types. Each model/plugin is completely independent with its own configuration, tests, and benchmarks.
 
-### Adicionando Novos Modelos
+### Adding New Models
 
-Use o assistente de criação de modelos para gerar automaticamente toda a estrutura necessária:
+To add a new model, create a new directory in `src/inference_pio/models/` following the standard structure. Refer to [Creating a Model Plugin](docs/guides/model_plugins/overview.md) for details.
 
-```bash
-python create_model.py --name meu-novo-modelo --description "Descrição do novo modelo"
-```
+### Adding New Test/Benchmark Types
 
-### Adicionando Novos Tipos de Teste
+New test and benchmark types can be added by extending the base classes in `src/inference_pio/tests/base/` or creating new scripts in `src/inference_pio/core/tools/scripts/`.
 
-Crie novos tipos de testes com o assistente de criação de testes:
-
-```bash
-python create_test_type.py --name tipo-de-teste --description "Descrição do tipo de teste"
-```
-
-### Adicionando Novos Tipos de Benchmark
-
-Adicione novos benchmarks com o assistente de criação de benchmarks:
-
-```bash
-python create_benchmark_type.py --name tipo-de-benchmark --description "Descrição do tipo de benchmark"
-```
-
-Para mais detalhes sobre a arquitetura extensível, consulte [EXTENSIBLE_ARCHITECTURE_README.md](EXTENSIBLE_ARCHITECTURE_README.md) e [MODEL_PLUGIN_ARCHITECTURE.md](MODEL_PLUGIN_ARCHITECTURE.md).
+For more details on the extensible architecture, consult the documentation in `docs/guides/`.

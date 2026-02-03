@@ -10,36 +10,20 @@ src/
 └── inference_pio/
     ├── common/               # Shared utilities (BasePlugin, ConfigManager, interfaces)
     ├── models/               # Self-contained model plugins (each with own config/tests/benchmarks)
-    │   ├── glm_4_7_flash/    # GLM-4.7 Flash model with all components
-│   │   ├── __init__.py   # Module entry point
-│   │   ├── config.py     # Model-specific config
-│   │   ├── model.py      # Core model implementation
-│   │   ├── plugin.py     # Plugin interface implementation
-│   │   ├── plugin_manifest.json # Plugin metadata for discovery
-│   │   ├── architecture/ # Architecture-specific implementations
-│   │   ├── attention/    # Attention mechanisms
-│   │   ├── fused_layers/ # Fused layer implementations
-│   │   ├── kv_cache/     # KV cache management
-│   │   ├── mlp/          # MLP implementations
-│   │   ├── rotary_embeddings/ # Rotary embedding implementations
-│   │   ├── specific_optimizations/ # Model-specific optimizations
-│   │   ├── configs/      # Configuration files
-│   │   ├── tests/        # Model-specific tests
-│   │   ├── benchmarks/   # Model-specific benchmarks
-│   │   └── README.md     # Model-specific documentation
-│   ├── qwen3_0_6b/       # Qwen3-0.6B model with all components
-│   ├── qwen3_4b_instruct_2507/ # Qwen3-4B-Instruct-2507 model with all components
-│   ├── qwen3_coder_30b/  # Qwen3-Coder-30B model with all components
-│   ├── qwen3_vl_2b/      # Qwen3-VL-2B model with all components
-│   └── ...
-├── plugins/              # Hardware and system plugins
-│   ├── base/             # Base plugin interfaces
-│   ├── cpu/              # CPU-specific plugins
-│   ├── intel/            # Intel-specific plugins
-│   └── manager.py        # Plugin manager implementation
-├── inference/            # Inference engine components
-├── utils/                # Utility functions
-└── configs/              # Global configuration
+    │   ├── glm_4_7_flash/    # GLM-4.7 Flash model
+    │   ├── qwen3_0_6b/       # Qwen3-0.6B model
+    │   ├── qwen3_4b_instruct_2507/ # Qwen3-4B-Instruct-2507 model
+    │   ├── qwen3_coder_30b/  # Qwen3-Coder-30B model
+    │   ├── qwen3_vl_2b/      # Qwen3-VL-2B model
+    │   └── ...
+    ├── plugins/              # Hardware and system plugins
+    │   ├── base/             # Base plugin interfaces
+    │   ├── cpu/              # CPU-specific plugins
+    │   ├── intel/            # Intel-specific plugins
+    │   └── manager.py        # Plugin manager implementation
+    ├── inference/            # Inference engine components
+    ├── utils/                # Utility functions
+    └── configs/              # Global configuration
 ```
 
 ## 2. Plugin System API
@@ -48,7 +32,7 @@ The `PluginManager` is the central orchestrator.
 
 ### Usage
 ```python
-from src.plugins.manager import get_plugin_manager
+from src.inference_pio.plugins.manager import get_plugin_manager
 
 pm = get_plugin_manager()
 

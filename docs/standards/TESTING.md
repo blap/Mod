@@ -14,7 +14,7 @@
 
 ## 3. Implementation Rules
 *   **Imports:** Use absolute imports starting from `src` (e.g., `from src.inference_pio import ...`).
-*   **Assertions:** You **MUST** use `tests.utils.test_utils` assertions (`assert_equal`, `assert_true`) instead of Python's `assert` statement for better error reporting.
+*   **Assertions:** You **MUST** use `src.inference_pio.tests.utils.test_utils` assertions (`assert_equal`, `assert_true`) instead of Python's `assert` statement for better error reporting.
 *   **Dependencies:** Unit tests **MUST NOT** rely on external services or large model weights (use mocks or small fixtures).
 *   **Cleanup:** Tests creating temporary files **MUST** clean them up (use `tempfile` or `try/finally`).
 

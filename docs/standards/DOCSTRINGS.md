@@ -129,7 +129,7 @@ def example_with_usage(items: List[str]) -> str:
 Since each model plugin is completely independent with its own configuration, tests, and benchmarks, documentation should:
 
 - Clearly indicate which components belong to which model
-- Use relative imports in examples: `from src.models.model_name.component import ...`
+- Use relative imports in examples: `from src.inference_pio.models.model_name.component import ...`
 - Reference model-specific configurations and optimizations
 - Include model-specific usage examples
 - Document model-specific parameters and options

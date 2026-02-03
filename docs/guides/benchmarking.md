@@ -13,27 +13,27 @@ The framework provides automated discovery, execution, and reporting of benchmar
 
 ## 2. Running Benchmarks
 
-Benchmarks are Python scripts located in the `benchmarks/` directory.
+Benchmarks are Python scripts located in the `src/inference_pio/benchmarks/` directory.
 
 ### Core Benchmarks
 ```bash
 # Run optimization benchmark (pruning, quantization effects)
-python benchmarks/core/benchmark_optimization.py
+python src/inference_pio/benchmarks/core/benchmark_optimization.py
 
 # Run resize benchmark (image processing)
-python benchmarks/core/benchmark_resize.py
+python src/inference_pio/benchmarks/core/benchmark_resize.py
 ```
 
 ### Discovery & Execution
 To run all available benchmarks or specific subsets:
 ```bash
 # Run all benchmarks using the discovery mechanism
-python -c "from benchmarks.core.benchmark_discovery import discover_and_run_all_benchmarks; discover_and_run_all_benchmarks()"
+python -c "from src.inference_pio.benchmarks.core.benchmark_discovery import discover_and_run_all_benchmarks; discover_and_run_all_benchmarks()"
 ```
 
 ## 3. Writing Benchmarks
 
-Benchmarks should be placed in `benchmarks/` or model-specific `benchmarks/` directories.
+Benchmarks should be placed in `src/inference_pio/benchmarks/` or model-specific `src/inference_pio/models/<model>/benchmarks/` directories.
 
 ### Structure
 ```python

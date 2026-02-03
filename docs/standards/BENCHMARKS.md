@@ -3,9 +3,9 @@
 **Reference Guide:** For instructions on running and writing benchmarks, see [Benchmarking Guide](../guides/benchmarking.md).
 
 ## 1. Directory Structure
-*   Core framework scripts **MUST** be in `benchmarks/core/`.
+*   Core framework scripts **MUST** be in `src/inference_pio/benchmarks/core/`.
 *   Model-specific benchmarks **SHOULD** be in `src/inference_pio/models/<model>/benchmarks/`.
-*   Runner scripts **MUST** be in `benchmarks/scripts/`.
+*   Runner scripts **MUST** be in `src/inference_pio/benchmarks/scripts/`.
 
 ## 2. Naming Conventions
 *   **Files:** Must start with `benchmark_` (e.g., `benchmark_latency.py`).

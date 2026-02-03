@@ -73,7 +73,7 @@ Create a `config.py` file inheriting from `BaseConfig`:
 ```python
 from dataclasses import dataclass
 from typing import Optional
-from ...common.model_config_base import BaseConfig
+from src.inference_pio.common.config.model_config_base import BaseConfig
 
 @dataclass
 class ModelNameConfig(BaseConfig):

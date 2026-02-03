@@ -9,21 +9,25 @@ The project follows a modular structure:
 ```
 src/
 └── inference_pio/
+    ├── benchmarks/
+    ├── common/
+    │   └── hardware_analyzer.py
+    ├── configs/
+    ├── core/
+    │   └── tools/
+    │       └── scripts/
     ├── models/
     │   └── {model_name}/
     │       ├── model.py
     │       ├── config.py
     │       ├── processor.py
     │       └── attention/
-    ├── common/
-    │   └── hardware_analyzer.py
-    └── plugin_system/
-tests/
-├── unit/
-├── integration/
-└── performance/
-benchmarks/
-scripts/
+    ├── plugins/
+    ├── tests/
+    │   ├── unit/
+    │   ├── integration/
+    │   └── performance/
+    └── utils/
 docs/
 ```
 
