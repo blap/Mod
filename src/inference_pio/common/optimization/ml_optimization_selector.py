@@ -26,7 +26,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-from .input_complexity_analyzer import ComplexityMetrics, get_complexity_analyzer
+from ..processing.input_complexity_analyzer import ComplexityMetrics, get_complexity_analyzer
 from .optimization_config import ModelFamily
 from .optimization_manager import OptimizationConfig, get_optimization_manager
 

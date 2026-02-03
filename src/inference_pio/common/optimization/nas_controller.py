@@ -15,9 +15,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from .adaptive_batch_manager import AdaptiveBatchManager
-from .input_complexity_analyzer import ComplexityMetrics, InputComplexityAnalyzer
-from .memory_manager import MemoryManager
+from ..processing.adaptive_batch_manager import AdaptiveBatchManager
+from ..processing.input_complexity_analyzer import ComplexityMetrics, InputComplexityAnalyzer
+from ..hardware.memory_manager import MemoryManager
 
 logger = logging.getLogger(__name__)
 

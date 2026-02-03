@@ -5,24 +5,26 @@ This module contains comprehensive tests for the vision encoder optimization sys
 implemented for the Qwen3-VL-2B model.
 """
 import numpy as np
+import unittest
+from unittest.mock import patch
 import torch
 import torch.nn as nn
 
 from src.inference_pio.common.layers.vision_transformer_kernels import (
-    Qwen3VL2BVisionEncoderKernel,
+    GenericVisionEncoderKernel,
     VisionTransformerConfig,
 )
 from src.inference_pio.models.qwen3_vl_2b.config import Qwen3VL2BConfig
 from src.inference_pio.models.qwen3_vl_2b.vision_transformer import (
-    OptimizedVisionMLPKernel,
-    OptimizedVisionPatchEmbeddingKernel,
-    OptimizedVisionSelfAttentionKernel,
+    OptimizedGenericVisionMLPKernel,
+    OptimizedGenericVisionPatchEmbeddingKernel,
+    OptimizedGenericVisionSelfAttentionKernel,
     VisionEncoderOptimizationConfig,
     VisionEncoderOptimizer,
     apply_vision_encoder_optimizations_to_model,
     create_vision_encoder_optimizer,
 )
-from tests.utils.test_utils import (
+from .....utils.testing_utils import (
     assert_equal,
     assert_false,
     assert_greater,
@@ -40,9 +42,9 @@ from tests.utils.test_utils import (
 
 # TestVisionEncoderOptimizationConfig
 
-    """Test cases for VisionEncoderOptimizationConfig."""
+"""Test cases for VisionEncoderOptimizationConfig."""
 
-    def default_config_values(self)():
+def test_default_config_values():
         """Test that default configuration values are set correctly."""
         config = VisionEncoderOptimizationConfig()
 
@@ -57,7 +59,7 @@ from tests.utils.test_utils import (
         assert_equal(config.quantization_method)
         assert_false(config.enable_lora_adaptation)
 
-    def custom_config_values(self)():
+def test_custom_config_values():
         """Test that custom configuration values are set correctly."""
         config = VisionEncoderOptimizationConfig(
             enable_patch_embedding_optimization=False,
@@ -77,9 +79,9 @@ from tests.utils.test_utils import (
 
 # TestOptimizedVisionComponents
 
-    """Test cases for optimized vision components."""
+"""Test cases for optimized vision components."""
 
-    def setup_helper():
+def setup_helper():
         """Set up test fixtures."""
         vision_config = VisionTransformerConfig(
             hidden_size=512,
@@ -93,9 +95,9 @@ from tests.utils.test_utils import (
             use_cuda_kernels=True
         )
 
-    def optimized_patch_embedding_kernel(self)():
+def test_optimized_patch_embedding_kernel():
         """Test optimized patch embedding kernel."""
-        kernel = OptimizedVisionPatchEmbeddingKernel(vision_config)
+        kernel = OptimizedGenericVisionPatchEmbeddingKernel(vision_config)
 
         # Test forward pass
         batch_size = 2
@@ -107,11 +109,11 @@ from tests.utils.test_utils import (
         assert_equal(output.shape, (batch_size))
 
         # Check that output is not all zeros
-        assert_false(torch.allclose(output)))
+        assert_false(torch.allclose(output))
 
-    def optimized_attention_kernel(self)():
+def test_optimized_attention_kernel():
         """Test optimized attention kernel."""
-        kernel = OptimizedVisionSelfAttentionKernel(vision_config)
+        kernel = OptimizedGenericVisionSelfAttentionKernel(vision_config)
 
         # Test forward pass
         batch_size = 2
@@ -123,11 +125,11 @@ from tests.utils.test_utils import (
         assert_equal(output.shape, (batch_size))
 
         # Check that output is not all zeros
-        assert_false(torch.allclose(output)))
+        assert_false(torch.allclose(output))
 
-    def optimized_mlp_kernel(self)():
+def test_optimized_mlp_kernel():
         """Test optimized MLP kernel."""
-        kernel = OptimizedVisionMLPKernel(vision_config)
+        kernel = OptimizedGenericVisionMLPKernel(vision_config)
 
         # Test forward pass
         batch_size = 2
@@ -139,13 +141,13 @@ from tests.utils.test_utils import (
         assert_equal(output.shape, (batch_size))
 
         # Check that output is not all zeros
-        assert_false(torch.allclose(output)))
+        assert_false(torch.allclose(output))
 
 # TestVisionEncoderOptimizer
 
-    """Test cases for VisionEncoderOptimizer."""
+"""Test cases for VisionEncoderOptimizer."""
 
-    def setup_helper():
+def setup_helper():
         """Set up test fixtures."""
         optimization_config = VisionEncoderOptimizationConfig(
             enable_patch_embedding_optimization=True,
@@ -170,15 +172,15 @@ from tests.utils.test_utils import (
         model_config.vision_intermediate_size = 2048
         model_config.vision_layer_norm_eps = 1e-6
 
-    def create_vision_encoder_optimizer(self)():
+def test_create_vision_encoder_optimizer():
         """Test creating vision encoder optimizer."""
         optimizer = create_vision_encoder_optimizer(optimization_config)
 
         assert_is_instance(optimizer, VisionEncoderOptimizer)
         assert_equal(optimizer.config, optimization_config)
 
-    @patch('torch.utils.checkpoint.checkpoint')
-    def optimize_vision_encoder(self, mock_checkpoint)():
+@patch('torch.utils.checkpoint.checkpoint')
+def test_optimize_vision_encoder(mock_checkpoint):
         """Test optimizing a vision encoder."""
         # Create a mock vision encoder
         vision_config = VisionTransformerConfig(
@@ -193,7 +195,7 @@ from tests.utils.test_utils import (
             use_cuda_kernels=model_config.use_cuda_kernels
         )
 
-        original_vision_encoder = Qwen3VL2BVisionEncoderKernel(vision_config)
+        original_vision_encoder = GenericVisionEncoderKernel(vision_config)
 
         # Create optimizer
         optimizer = VisionEncoderOptimizer(optimization_config)
@@ -204,17 +206,17 @@ from tests.utils.test_utils import (
             model_config
         )
 
-        # Check that the optimized encoder is still a Qwen3VL2BVisionEncoderKernel
-        assert_is_instance(optimized_vision_encoder, Qwen3VL2BVisionEncoderKernel)
+        # Check that the optimized encoder is still a GenericVisionEncoderKernel
+        assert_is_instance(optimized_vision_encoder, GenericVisionEncoderKernel)
 
         # Check that patch embedding was optimized if enabled
         if optimization_config.enable_patch_embedding_optimization:
             assert_is_instance(
                 optimized_vision_encoder.patch_embedding,
-                OptimizedVisionPatchEmbeddingKernel
+                OptimizedGenericVisionPatchEmbeddingKernel
             )
 
-    def optimize_vision_encoder_with_quantization(self)():
+def test_optimize_vision_encoder_with_quantization():
         """Test optimizing a vision encoder with quantization enabled."""
         # Create a config with quantization enabled
         quant_config = VisionEncoderOptimizationConfig(
@@ -239,7 +241,7 @@ from tests.utils.test_utils import (
             use_cuda_kernels=model_config.use_cuda_kernels
         )
 
-        original_vision_encoder = Qwen3VL2BVisionEncoderKernel(vision_config)
+        original_vision_encoder = GenericVisionEncoderKernel(vision_config)
 
         # Create optimizer with quantization
         optimizer = VisionEncoderOptimizer(quant_config)
@@ -251,7 +253,7 @@ from tests.utils.test_utils import (
                 model_config
             )
             # If successful, the result should still be a vision encoder
-            assert_is_instance(optimized_vision_encoder, Qwen3VL2BVisionEncoderKernel)
+            assert_is_instance(optimized_vision_encoder, GenericVisionEncoderKernel)
         except Exception as e:
             # If there's an issue with quantization, that's acceptable for this test
             # as long as the optimization process handles it gracefully
@@ -259,9 +261,9 @@ from tests.utils.test_utils import (
 
 # TestApplyVisionEncoderOptimizationsToModel
 
-    """Test cases for applying vision encoder optimizations to a model."""
+"""Test cases for applying vision encoder optimizations to a model."""
 
-    def setup_helper():
+def setup_helper():
         """Set up test fixtures."""
         model_config = Qwen3VL2BConfig()
         model_config.hidden_size = 512
@@ -285,7 +287,7 @@ from tests.utils.test_utils import (
             enable_quantization=False
         )
 
-    def apply_vision_encoder_optimizations_to_model(self)():
+def test_apply_vision_encoder_optimizations_to_model():
         """Test applying vision encoder optimizations to a model."""
         # Create a mock model with a vision encoder
         class MockModel(nn.Module):
@@ -302,14 +304,14 @@ from tests.utils.test_utils import (
                     use_flash_attention=True,
                     use_cuda_kernels=True
                 )
-                vision_encoder = Qwen3VL2BVisionEncoderKernel(vision_config)
+                vision_encoder = GenericVisionEncoderKernel(vision_config)
                 language_model = nn.Linear(512, 1000)  # Mock language model
 
         model = MockModel()
 
         # Check initial state
         original_vision_encoder_type = type(model.vision_encoder)
-        assert_equal(original_vision_encoder_type, Qwen3VL2BVisionEncoderKernel)
+        assert_equal(original_vision_encoder_type, GenericVisionEncoderKernel)
 
         # Apply optimizations
         optimized_model = apply_vision_encoder_optimizations_to_model(
@@ -321,9 +323,9 @@ from tests.utils.test_utils import (
         # Check that the vision encoder was replaced with an optimized version
         # Note: The optimization process modifies the existing encoder in place,
         # so the type remains the same but internal components are optimized
-        assert_is_instance(optimized_model.vision_encoder, Qwen3VL2BVisionEncoderKernel)
+        assert_is_instance(optimized_model.vision_encoder, GenericVisionEncoderKernel)
 
-    def apply_vision_encoder_optimizations_no_vision_encoder(self)():
+def test_apply_vision_encoder_optimizations_no_vision_encoder():
         """Test applying optimizations to a model without a vision encoder."""
         # Create a model without a vision encoder
         class MockModelWithoutVision(nn.Module):
@@ -348,9 +350,9 @@ from tests.utils.test_utils import (
 
 # TestIntegrationWithQwen3VL2BModel
 
-    """Integration tests for vision encoder optimizations with Qwen3-VL-2B model."""
+"""Integration tests for vision encoder optimizations with Qwen3-VL-2B model."""
 
-    def setup_helper():
+def setup_helper():
         """Set up test fixtures."""
         model_config = Qwen3VL2BConfig()
         # Use smaller dimensions for testing
@@ -362,8 +364,8 @@ from tests.utils.test_utils import (
         model_config.vision_intermediate_size = 1024
         model_config.vision_layer_norm_eps = 1e-6
 
-    @unittest.skip("Skipping integration test that requires actual model loading")
-    def integration_with_real_model(self)():
+@unittest.skip("Skipping integration test that requires actual model loading")
+def test_integration_with_real_model():
         """Test integration with a real Qwen3-VL-2B model structure."""
         # This test would require the actual model implementation
         # For now, we'll just verify the configuration works

@@ -8,9 +8,9 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Union
 
-from .base_model import BaseModel
+from ..interfaces.base_model import BaseModel
 from .config_manager import BaseConfig
-from .standard_plugin_interface import ModelPluginInterface
+from ..interfaces.standard_plugin_interface import ModelPluginInterface
 
 logger = logging.getLogger(__name__)
 

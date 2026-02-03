@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import torch
 
-from ...common.model_config_base import (
+from ...common.config.model_config_base import (
     BaseConfig,
     ModelConfigError,
     get_default_model_path,
@@ -482,7 +482,7 @@ class Qwen3VLDynamicConfig(Qwen3VL2BConfig):
 
 
 # Register this configuration with the factory
-from ...common.config_factory import register_model_config
+from ...common.config.config_factory import register_model_config
 
 register_model_config("qwen3_vl_2b", Qwen3VL2BConfig)
 
