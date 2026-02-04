@@ -8,11 +8,18 @@ self-contained plugin architecture for the Inference-PIO system.
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Union
 
-from ...common.model_config_base import (
-    BaseConfig,
-    ModelConfigError,
-    get_default_model_path,
-)
+try:
+    from inference_pio.common.config.model_config_base import (
+        BaseConfig,
+        ModelConfigError,
+        get_default_model_path,
+    )
+except ImportError:
+    from ...common.model_config_base import (
+        BaseConfig,
+        ModelConfigError,
+        get_default_model_path,
+    )
 
 
 @dataclass
@@ -594,7 +601,10 @@ class GLM47DynamicConfig(GLM47FlashConfig):
 
 
 # Register this configuration with the factory
-from ...common.config_factory import register_model_config
+try:
+    from inference_pio.common.config.config_factory import register_model_config
+except ImportError:
+    from ...common.config_factory import register_model_config
 
 register_model_config("glm_4_7_flash", GLM47FlashConfig)
 

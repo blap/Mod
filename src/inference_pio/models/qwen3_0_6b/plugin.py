@@ -14,45 +14,64 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import torch
 
 try:
-    from ...common.improved_base_plugin_interface import (
+    from inference_pio.common.interfaces.improved_base_plugin_interface import (
         PluginMetadata,
         PluginType,
         TextModelPluginInterface,
     )
-    from ...common.interfaces.memory_interface import MemoryManagerInterface
-    from ...common.interfaces.distributed_execution_interface import DistributedExecutionManagerInterface
-    from ...common.interfaces.tensor_compression_interface import TensorCompressionManagerInterface
-    from ...common.interfaces.security_interface import SecurityManagerInterface
-    from ...common.interfaces.kernel_fusion_interface import KernelFusionManagerInterface
-    from ...common.interfaces.adaptive_batching_interface import AdaptiveBatchingManagerInterface
-    from ...common.interfaces.model_surgery_interface import ModelSurgeryManagerInterface
-    from ...common.interfaces.pipeline_interface import PipelineManagerInterface
-    from ...common.interfaces.sharding_interface import ShardingManagerInterface
-    from ...common.managers.memory_manager import MemoryManager
-    from ...common.managers.distributed_execution_manager import DistributedExecutionManager
-    from ...common.managers.tensor_compression_manager import TensorCompressionManager
+    from inference_pio.common.interfaces.memory_interface import MemoryManagerInterface
+    from inference_pio.common.interfaces.distributed_execution_interface import DistributedExecutionManagerInterface
+    from inference_pio.common.interfaces.tensor_compression_interface import TensorCompressionManagerInterface
+    from inference_pio.common.interfaces.security_interface import SecurityManagerInterface
+    from inference_pio.common.interfaces.kernel_fusion_interface import KernelFusionManagerInterface
+    from inference_pio.common.interfaces.adaptive_batching_interface import AdaptiveBatchingManagerInterface
+    from inference_pio.common.interfaces.model_surgery_interface import ModelSurgeryManagerInterface
+    from inference_pio.common.interfaces.pipeline_interface import PipelineManagerInterface
+    from inference_pio.common.interfaces.sharding_interface import ShardingManagerInterface
+    from inference_pio.common.managers.memory_manager import MemoryManager
+    from inference_pio.common.managers.distributed_execution_manager import DistributedExecutionManager
+    from inference_pio.common.managers.tensor_compression_manager import TensorCompressionManager
 except ImportError:
-    # Fallback para quando os imports relativos não funcionam
-    import sys
-    import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-    from src.inference_pio.common.interfaces.improved_base_plugin_interface import (
-        PluginMetadata,
-        PluginType,
-        TextModelPluginInterface,
-    )
-    from src.inference_pio.common.interfaces.memory_interface import MemoryManagerInterface
-    from src.inference_pio.common.interfaces.distributed_execution_interface import DistributedExecutionManagerInterface
-    from src.inference_pio.common.interfaces.tensor_compression_interface import TensorCompressionManagerInterface
-    from src.inference_pio.common.interfaces.security_interface import SecurityManagerInterface
-    from src.inference_pio.common.interfaces.kernel_fusion_interface import KernelFusionManagerInterface
-    from src.inference_pio.common.interfaces.adaptive_batching_interface import AdaptiveBatchingManagerInterface
-    from src.inference_pio.common.interfaces.model_surgery_interface import ModelSurgeryManagerInterface
-    from src.inference_pio.common.interfaces.pipeline_interface import PipelineManagerInterface
-    from src.inference_pio.common.interfaces.sharding_interface import ShardingManagerInterface
-    from src.inference_pio.common.managers.memory_manager import MemoryManager
-    from src.inference_pio.common.managers.distributed_execution_manager import DistributedExecutionManager
-    from src.inference_pio.common.managers.tensor_compression_manager import TensorCompressionManager
+    try:
+        from ...common.improved_base_plugin_interface import (
+            PluginMetadata,
+            PluginType,
+            TextModelPluginInterface,
+        )
+        from ...common.interfaces.memory_interface import MemoryManagerInterface
+        from ...common.interfaces.distributed_execution_interface import DistributedExecutionManagerInterface
+        from ...common.interfaces.tensor_compression_interface import TensorCompressionManagerInterface
+        from ...common.interfaces.security_interface import SecurityManagerInterface
+        from ...common.interfaces.kernel_fusion_interface import KernelFusionManagerInterface
+        from ...common.interfaces.adaptive_batching_interface import AdaptiveBatchingManagerInterface
+        from ...common.interfaces.model_surgery_interface import ModelSurgeryManagerInterface
+        from ...common.interfaces.pipeline_interface import PipelineManagerInterface
+        from ...common.interfaces.sharding_interface import ShardingManagerInterface
+        from ...common.managers.memory_manager import MemoryManager
+        from ...common.managers.distributed_execution_manager import DistributedExecutionManager
+        from ...common.managers.tensor_compression_manager import TensorCompressionManager
+    except ImportError:
+        # Fallback to absolute imports with path injection
+        import sys
+        import os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+        from src.inference_pio.common.interfaces.improved_base_plugin_interface import (
+            PluginMetadata,
+            PluginType,
+            TextModelPluginInterface,
+        )
+        from src.inference_pio.common.interfaces.memory_interface import MemoryManagerInterface
+        from src.inference_pio.common.interfaces.distributed_execution_interface import DistributedExecutionManagerInterface
+        from src.inference_pio.common.interfaces.tensor_compression_interface import TensorCompressionManagerInterface
+        from src.inference_pio.common.interfaces.security_interface import SecurityManagerInterface
+        from src.inference_pio.common.interfaces.kernel_fusion_interface import KernelFusionManagerInterface
+        from src.inference_pio.common.interfaces.adaptive_batching_interface import AdaptiveBatchingManagerInterface
+        from src.inference_pio.common.interfaces.model_surgery_interface import ModelSurgeryManagerInterface
+        from src.inference_pio.common.interfaces.pipeline_interface import PipelineManagerInterface
+        from src.inference_pio.common.interfaces.sharding_interface import ShardingManagerInterface
+        from src.inference_pio.common.managers.memory_manager import MemoryManager
+        from src.inference_pio.common.managers.distributed_execution_manager import DistributedExecutionManager
+        from src.inference_pio.common.managers.tensor_compression_manager import TensorCompressionManager
 from .config import Qwen3_0_6B_Config
 from .model import create_qwen3_0_6b_model
 
@@ -399,10 +418,17 @@ class Qwen3_0_6B_Plugin(
                         return True
 
                     def fuse_model(self, model):
-                        # In a real implementation, this would apply actual kernel fusion
-                        # For now, we just return the model as-is
-                        logger.info("Model fusion completed (stub implementation)")
-                        return model
+                        try:
+                            # Import the real graph fusion utility
+                            from inference_pio.common.optimization.graph_fusion import fuse_graph
+
+                            logger.info("Applying graph fusion optimizations...")
+                            fused_model = fuse_graph(model)
+                            logger.info("Model graph fusion completed")
+                            return fused_model
+                        except Exception as e:
+                            logger.error(f"Graph fusion failed: {e}")
+                            return model
 
                     def apply_custom_kernels(self, model):
                         # Apply custom kernels if available
@@ -671,6 +697,7 @@ class Qwen3_0_6B_Plugin(
                         self.surgeries_performed = []
                         self.components_removed = []
                         self.preserved_components = []
+                        self.original_states = {}  # Map component name to original module
 
                     def analyze_model(self, model):
                         """Analyze model to identify potential candidates for removal."""
@@ -719,31 +746,34 @@ class Qwen3_0_6B_Plugin(
                         if model is None:
                             return None
 
-                        # Create a copy of the model to modify
-                        import copy
-
-                        modified_model = copy.deepcopy(model)
-
+                        # For real restoration, we modify in-place but save original modules
+                        # Using deepcopy on large models is prohibitive
                         if components_to_remove:
                             # Actually remove the specified components
                             for comp_name in components_to_remove:
                                 try:
-                                    # Navigate to the component and remove it
+                                    # Navigate to the component
                                     *parent_path, child_name = comp_name.split(".")
-                                    parent_module = modified_model
+                                    parent_module = model
                                     for p in parent_path:
                                         parent_module = getattr(parent_module, p)
 
-                                    # Replace with Identity or remove if possible
+                                    # Save original module if not already saved
+                                    original_module = getattr(parent_module, child_name)
+                                    if comp_name not in self.original_states:
+                                        self.original_states[comp_name] = original_module
+
+                                    # Replace with Identity
                                     setattr(
                                         parent_module, child_name, torch.nn.Identity()
                                     )
+                                    self.components_removed.append(comp_name)
                                 except Exception as e:
                                     logger.warning(
                                         f"Could not remove component {comp_name}: {e}"
                                     )
 
-                        return modified_model
+                        return model
 
                 self._model_surgery_system = SimpleModelSurgerySystem()
 
@@ -820,10 +850,35 @@ class Qwen3_0_6B_Plugin(
     ) -> torch.nn.Module:
         """Restore a model from surgery by putting back removed components."""
         try:
-            # For this simple implementation, we'll return the original model
-            # since we don't have a way to store the original state
-            logger.info("Model restoration from surgery (stub implementation)")
-            return model or self._model
+            target_model = model if model is not None else self._model
+
+            if not hasattr(self, "_model_surgery_system") or self._model_surgery_system is None:
+                logger.warning("Surgery system not initialized, cannot restore")
+                return target_model
+
+            system = self._model_surgery_system
+            restored_count = 0
+
+            # Restore all components
+            for comp_name, original_module in list(system.original_states.items()):
+                try:
+                    *parent_path, child_name = comp_name.split(".")
+                    parent_module = target_model
+                    for p in parent_path:
+                        parent_module = getattr(parent_module, p)
+
+                    # Restore original module
+                    setattr(parent_module, child_name, original_module)
+                    restored_count += 1
+                except Exception as e:
+                    logger.error(f"Failed to restore component {comp_name}: {e}")
+
+            # Clear state
+            system.original_states.clear()
+            system.components_removed.clear()
+
+            logger.info(f"Model restored from surgery. {restored_count} components recovered.")
+            return target_model
         except Exception as e:
             logger.error(f"Failed to restore model from surgery: {e}")
             return model or self._model
