@@ -614,9 +614,17 @@ class GLM_4_7_Flash_Plugin(TextModelPluginInterface):
                             return model
 
                     def apply_custom_kernels(self, model):
-                        # Apply custom kernels if available
-                        logger.info("Custom kernels applied (stub implementation)")
-                        return model
+                        try:
+                            # Import local model-specific kernels
+                            from .specific_optimizations.kernels import apply_glm_kernels
+
+                            logger.info("Applying GLM-4.7 custom kernels...")
+                            model = apply_glm_kernels(model)
+                            logger.info("Custom kernels applied successfully")
+                            return model
+                        except Exception as e:
+                            logger.warning(f"Failed to apply custom kernels: {e}")
+                            return model
 
                 self._fusion_manager = SimpleFusionManager()
 

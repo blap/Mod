@@ -431,9 +431,17 @@ class Qwen3_0_6B_Plugin(
                             return model
 
                     def apply_custom_kernels(self, model):
-                        # Apply custom kernels if available
-                        logger.info("Custom kernels applied (stub implementation)")
-                        return model
+                        try:
+                            # Import local model-specific kernels
+                            from .specific_optimizations.kernels import apply_qwen_kernels
+
+                            logger.info("Applying Qwen3 custom kernels...")
+                            model = apply_qwen_kernels(model)
+                            logger.info("Custom kernels applied successfully")
+                            return model
+                        except Exception as e:
+                            logger.warning(f"Failed to apply custom kernels: {e}")
+                            return model
 
                 self._fusion_manager = SimpleFusionManager()
 
