@@ -9,9 +9,9 @@ Each model plugin is completely independent with its own configuration, tests, a
 import logging
 from typing import Any, Dict, Optional, Type, Union
 
-from .common.hardware_analyzer import SystemProfile, get_system_profile
-from .common.improved_base_plugin_interface import ModelPluginInterface
-from .plugins.manager import get_plugin_manager
+from inference_pio.common.hardware.hardware_analyzer import SystemProfile, get_system_profile
+from inference_pio.common.interfaces.improved_base_plugin_interface import ModelPluginInterface
+from inference_pio.plugins.manager import get_plugin_manager
 
 logger = logging.getLogger(__name__)
 
@@ -45,31 +45,31 @@ class ModelFactory:
 
         try:
             if "qwen3_0_6b" in model_name or "qwen3_0.6b" in model_name:
-                from .models.language.qwen3_0_6b.plugin import create_qwen3_0_6b_plugin
+                from src.inference_pio.models.qwen3_0_6b.plugin import create_qwen3_0_6b_plugin
 
                 plugin = create_qwen3_0_6b_plugin()
 
             elif "qwen3_vl" in model_name or "qwen3_vl_2b" in model_name:
-                from .models.vision_language.qwen3_vl_2b.plugin import (
+                from src.inference_pio.models.qwen3_vl_2b.plugin import (
                     create_qwen3_vl_2b_instruct_plugin,
                 )
 
                 plugin = create_qwen3_vl_2b_instruct_plugin()
 
             elif "glm_4_7" in model_name or "glm_4" in model_name:
-                from .models.specialized.glm_4_7_flash.plugin import create_glm_4_7_flash_plugin
+                from src.inference_pio.models.glm_4_7_flash.plugin import create_glm_4_7_flash_plugin
 
                 plugin = create_glm_4_7_flash_plugin()
 
             elif "qwen3_4b" in model_name:
-                from .models.language.qwen3_4b_instruct_2507.plugin import (
+                from src.inference_pio.models.qwen3_4b_instruct_2507.plugin import (
                     create_qwen3_4b_instruct_2507_plugin,
                 )
 
                 plugin = create_qwen3_4b_instruct_2507_plugin()
 
             elif "qwen3_coder" in model_name or "coder" in model_name:
-                from .models.coding.qwen3_coder_30b.plugin import create_qwen3_coder_30b_plugin
+                from src.inference_pio.models.qwen3_coder_30b.plugin import create_qwen3_coder_30b_plugin
 
                 plugin = create_qwen3_coder_30b_plugin()
 
