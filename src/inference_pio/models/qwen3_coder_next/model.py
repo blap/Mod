@@ -41,7 +41,7 @@ class Qwen3CoderNextModel(nn.Module):
         input_ids: torch.LongTensor = None,
         attention_mask: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
-        past_key_values: Optional[List[torch.FloatTensor]] = None,
+        past_key_values: Optional[List[Union[torch.Tensor, Tuple[torch.Tensor]]]] = None,
         inputs_embeds: Optional[torch.FloatTensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
@@ -70,18 +70,24 @@ class Qwen3CoderNextModel(nn.Module):
         if past_key_values is None:
             past_key_values = tuple([None] * len(self.layers))
 
-        if use_cache:
-            pkv_len = 0
-            # Heuristic to find KV length from the first layer if available
-            if past_key_values[0] is not None:
-                 # Check structure, Attention KV is tuple(k,v), DeltaNet State is Tensor
-                 if isinstance(past_key_values[0], tuple):
-                     pkv_len = past_key_values[0][0].shape[-2]
-                 else:
-                     # DeltaNet state doesn't have explicit sequence length in same way,
-                     # but we can infer or track global step.
-                     # For simplicity, assume pure generation mode if cache exists
-                     pass
+        pkv_len = 0
+        if use_cache and past_key_values is not None:
+            # Try to infer sequence length from past_key_values
+            # 1. Try to find an Attention layer cache (tuple of tensors)
+            found_len = False
+            for layer_past in past_key_values:
+                if layer_past is not None and isinstance(layer_past, tuple) and len(layer_past) > 0:
+                    # Expecting (key, value) where key is [bsz, heads, seq_len, head_dim]
+                    if hasattr(layer_past[0], 'shape'):
+                        pkv_len = layer_past[0].shape[-2]
+                        found_len = True
+                        break
+
+            # 2. If no attention layer found (unlikely in hybrid), or all None
+            # We rely on the caller to provide correct position_ids for DeltaNet-only generation steps
+            # if we can't infer it.
+            if not found_len:
+                 pass # Cannot infer, pkv_len remains 0 unless we track it externally
 
         if position_ids is None:
             device = input_ids.device if input_ids is not None else inputs_embeds.device
@@ -91,10 +97,10 @@ class Qwen3CoderNextModel(nn.Module):
                  position_ids = position_ids + pkv_len
 
         # Attention Mask Preparation
-        # Handle hybrid mask: DeltaNet (Linear/Recurrent) might not need causal mask in the same way
-        # But Attention layers do.
         if attention_mask is None:
              # Create causal mask
+             # For hybrid model, we generally use causal mask for attention layers
+             # DeltaNet handles causality via recurrence order/masking internally
              attention_mask = torch.triu(torch.ones(seq_length, seq_length), diagonal=1).bool()
              attention_mask = attention_mask.to(inputs_embeds.device)
 
@@ -140,7 +146,7 @@ class Qwen3CoderNextModel(nn.Module):
                 next_decoder_cache += (layer_outputs[1],)
 
             if output_attentions:
-                all_self_attns += (layer_outputs[2],) # Assuming layer returns attentions if requested
+                all_self_attns += (layer_outputs[2],) if len(layer_outputs) > 2 else (None,)
 
         hidden_states = self.norm(hidden_states)
 

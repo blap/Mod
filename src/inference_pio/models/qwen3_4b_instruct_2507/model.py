@@ -105,21 +105,7 @@ import sys
 
 from ...common.hardware_analyzer import get_system_profile
 from ...plugins.manager import get_plugin_manager
-
-
-def create_generic_cpu_plugin():
-    """Create a generic CPU plugin for processor tasks."""
-
-    # This is a placeholder implementation
-    class GenericCPUPlugin:
-        def __init__(self):
-            self.name = "GenericCPUPlugin"
-
-        def initialize(self, config):
-            pass
-
-    return GenericCPUPlugin()
-
+from ...plugins.cpu.cpu_plugin import create_generic_cpu_plugin
 
 from ...common.disk_offloading import (
     DiskOffloader,
