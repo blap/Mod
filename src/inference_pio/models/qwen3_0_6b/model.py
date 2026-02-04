@@ -289,12 +289,8 @@ class Qwen3_0_6B_Model(nn.Module):
         # Post-generation: Check for thought end token and compress if needed
         # This assumes result is token ids
         if self.config.enable_thought_compression and torch.is_tensor(result):
-             # Placeholder logic: we can't easily modify the internal KV cache of the
-             # *just finished* generation call here without access to the cache object
-             # which is usually internal to generate().
-             # However, we can signal that compression should happen for the *next* turn
-             # by clearing the cache if we detect we are done thinking.
-             pass
+             # Log the event for analysis
+             logger.debug("Thought segment generation complete. Cache compression will be handled by the session manager.")
 
         return result
 

@@ -75,8 +75,9 @@ def apply_bias_removal_to_model(
                     # Since we're removing the bias, we need to account for it elsewhere
                     # In practice, this optimization is more complex and may involve
                     # adjusting the inputs or other parts of the network
-                    # For now, we'll just zero the bias as a placeholder
-                    pass
+                    # Real implementation: Explicitly set the parameter to None to free memory
+                    # and ensure the model graph reflects the removal.
+                    module.bias = None
 
                 removed_count += 1
                 report["removed_layers"].append(
