@@ -89,21 +89,7 @@ import sys
 
 from ...common.hardware_analyzer import get_system_profile
 from ...plugins.manager import get_plugin_manager
-
-
-def get_processor_plugin():
-    """Placeholder function for processor plugin."""
-
-    # This is a placeholder implementation
-    class ProcessorPlugin:
-        def __init__(self):
-            self.name = "ProcessorPlugin"
-
-        def initialize(self, config):
-            pass
-
-    return ProcessorPlugin()
-
+from ...plugins.cpu.cpu_plugin import create_generic_cpu_plugin
 
 from ...common.disk_offloading import (
     DiskOffloader,
@@ -535,36 +521,7 @@ class Qwen3Coder30BModel(nn.Module):
         """
         Apply optimizations based on the configuration settings.
         """
-        # Apply code-specific optimizations if enabled
-        if getattr(self.config, "code_syntax_aware_attention", False):
-            self._apply_code_syntax_aware_attention()
-
-        if getattr(self.config, "code_identifiers_extraction", False):
-            self._apply_code_identifiers_extraction()
-
-        if getattr(self.config, "code_syntax_validation", False):
-            self._apply_code_syntax_validation()
-
-        if getattr(self.config, "code_comment_generation", False):
-            self._apply_code_comment_generation()
-
-        if getattr(self.config, "code_refactoring_support", False):
-            self._apply_code_refactoring_support()
-
-        if getattr(self.config, "code_error_correction", False):
-            self._apply_code_error_correction()
-
-        if getattr(self.config, "code_style_consistency", False):
-            self._apply_code_style_consistency()
-
-        if getattr(self.config, "code_library_detection", False):
-            self._apply_code_library_detection()
-
-        if getattr(self.config, "code_security_scanning", False):
-            self._apply_code_security_scanning()
-
-        if getattr(self.config, "code_complexity_optimization", False):
-            self._apply_code_complexity_optimization()
+        # Removed stub methods for code-specific optimizations as they were just placeholders.
 
         # Check if ML-based optimization is enabled
         if getattr(self.config, "use_ml_optimizations", False):
@@ -582,156 +539,6 @@ class Qwen3Coder30BModel(nn.Module):
         else:
             # Apply traditional optimizations for backward compatibility
             self._apply_traditional_optimizations()
-
-    def _apply_code_syntax_aware_attention(self):
-        """
-        Apply syntax-aware attention mechanism for code understanding.
-        """
-        try:
-            logger.info("Applying syntax-aware attention for Qwen3-Coder-30B model...")
-
-            # This would involve modifying attention mechanisms to be aware of code syntax
-            # For now, we'll log that this optimization is applied
-            logger.info("Syntax-aware attention applied successfully")
-        except Exception as e:
-            logger.error(f"Error applying syntax-aware attention: {e}")
-            # Continue without optimization if it fails
-            pass
-
-    def _apply_code_identifiers_extraction(self):
-        """
-        Apply identifier extraction and caching for code understanding.
-        """
-        try:
-            logger.info("Applying identifier extraction for Qwen3-Coder-30B model...")
-
-            # This would involve extracting and caching identifiers in the code
-            # For now, we'll log that this optimization is applied
-            logger.info("Identifier extraction applied successfully")
-        except Exception as e:
-            logger.error(f"Error applying identifier extraction: {e}")
-            # Continue without optimization if it fails
-            pass
-
-    def _apply_code_syntax_validation(self):
-        """
-        Apply syntax validation during code generation.
-        """
-        try:
-            logger.info("Applying syntax validation for Qwen3-Coder-30B model...")
-
-            # This would involve validating syntax during generation
-            # For now, we'll log that this optimization is applied
-            logger.info("Syntax validation applied successfully")
-        except Exception as e:
-            logger.error(f"Error applying syntax validation: {e}")
-            # Continue without optimization if it fails
-            pass
-
-    def _apply_code_comment_generation(self):
-        """
-        Apply comment generation alongside code.
-        """
-        try:
-            logger.info("Applying comment generation for Qwen3-Coder-30B model...")
-
-            # This would involve generating comments along with code
-            # For now, we'll log that this optimization is applied
-            logger.info("Comment generation applied successfully")
-        except Exception as e:
-            logger.error(f"Error applying comment generation: {e}")
-            # Continue without optimization if it fails
-            pass
-
-    def _apply_code_refactoring_support(self):
-        """
-        Apply refactoring suggestions during code generation.
-        """
-        try:
-            logger.info("Applying refactoring support for Qwen3-Coder-30B model...")
-
-            # This would involve suggesting refactoring during generation
-            # For now, we'll log that this optimization is applied
-            logger.info("Refactoring support applied successfully")
-        except Exception as e:
-            logger.error(f"Error applying refactoring support: {e}")
-            # Continue without optimization if it fails
-            pass
-
-    def _apply_code_error_correction(self):
-        """
-        Apply error correction in generated code.
-        """
-        try:
-            logger.info("Applying error correction for Qwen3-Coder-30B model...")
-
-            # This would involve correcting errors in generated code
-            # For now, we'll log that this optimization is applied
-            logger.info("Error correction applied successfully")
-        except Exception as e:
-            logger.error(f"Error applying error correction: {e}")
-            # Continue without optimization if it fails
-            pass
-
-    def _apply_code_style_consistency(self):
-        """
-        Apply style consistency in generated code.
-        """
-        try:
-            logger.info("Applying style consistency for Qwen3-Coder-30B model...")
-
-            # This would involve maintaining consistent style in generated code
-            # For now, we'll log that this optimization is applied
-            logger.info("Style consistency applied successfully")
-        except Exception as e:
-            logger.error(f"Error applying style consistency: {e}")
-            # Continue without optimization if it fails
-            pass
-
-    def _apply_code_library_detection(self):
-        """
-        Apply library detection and suggestion.
-        """
-        try:
-            logger.info("Applying library detection for Qwen3-Coder-30B model...")
-
-            # This would involve detecting and suggesting appropriate libraries
-            # For now, we'll log that this optimization is applied
-            logger.info("Library detection applied successfully")
-        except Exception as e:
-            logger.error(f"Error applying library detection: {e}")
-            # Continue without optimization if it fails
-            pass
-
-    def _apply_code_security_scanning(self):
-        """
-        Apply security scanning for potential issues in code.
-        """
-        try:
-            logger.info("Applying security scanning for Qwen3-Coder-30B model...")
-
-            # This would involve scanning for security issues in generated code
-            # For now, we'll log that this optimization is applied
-            logger.info("Security scanning applied successfully")
-        except Exception as e:
-            logger.error(f"Error applying security scanning: {e}")
-            # Continue without optimization if it fails
-            pass
-
-    def _apply_code_complexity_optimization(self):
-        """
-        Apply optimization for code performance and complexity.
-        """
-        try:
-            logger.info("Applying complexity optimization for Qwen3-Coder-30B model...")
-
-            # This would involve optimizing generated code for performance
-            # For now, we'll log that this optimization is applied
-            logger.info("Complexity optimization applied successfully")
-        except Exception as e:
-            logger.error(f"Error applying complexity optimization: {e}")
-            # Continue without optimization if it fails
-            pass
 
     def _apply_traditional_optimizations(self):
         """

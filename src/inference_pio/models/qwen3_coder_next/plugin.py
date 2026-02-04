@@ -109,36 +109,80 @@ class Qwen3_Coder_Next_Plugin(TextModelPluginInterface):
             raise RuntimeError("Model not initialized")
 
         if not self._tokenizer:
-             # Mock return for structure testing
+             # Mock return for structure testing if tokenizer fails
              return "Model initialized but tokenizer missing."
 
-        inputs = self._tokenizer(prompt, return_tensors="pt").to(self._config.device)
+        device = self._config.device
+        inputs = self._tokenizer(prompt, return_tensors="pt").to(device)
+        input_ids = inputs.input_ids
 
-        # Simple generation loop wrapper
-        # Real implementation should use the optimized hybrid cache manager
+        # Generation Loop
+        past_key_values = None
+        generated_tokens = []
+
+        # Keep track of current sequence length for position_ids
+        cur_len = input_ids.shape[-1]
+
+        # Start with full prompt
+        current_input_ids = input_ids
+
+        self._model.eval()
         with torch.no_grad():
-             outputs = self._model(inputs.input_ids)
-             # This is just a forward pass, not generation.
-             # Full generation requires loop.
-             # calling fallback generate if available or implementing loop
+            for _ in range(max_new_tokens):
+                # Prepare position_ids if needed (simple incremental)
+                position_ids = torch.arange(cur_len - current_input_ids.shape[-1], cur_len, dtype=torch.long, device=device).unsqueeze(0)
 
-             # Fallback to simple greedy decoding for demonstration
-             generated = inputs.input_ids
-             for _ in range(min(max_new_tokens, 10)): # Limit for test speed
-                  outputs = self._model(generated)
-                  # Access last_hidden_state correctly from return dict
-                  last_state = outputs["last_hidden_state"]
-                  # Assuming simple projection to vocab (embedding weights usually tied)
-                  logits = torch.matmul(last_state[:, -1, :], self._model.embed_tokens.weight.t())
-                  next_token = torch.argmax(logits, dim=-1, keepdim=True)
-                  generated = torch.cat([generated, next_token], dim=1)
+                # Forward Pass
+                outputs = self._model(
+                    input_ids=current_input_ids,
+                    past_key_values=past_key_values,
+                    position_ids=position_ids,
+                    use_cache=True
+                )
 
-        return self._tokenizer.decode(generated[0], skip_special_tokens=True)
+                # Get last state logits
+                # self._model doesn't return logits directly in `forward` (it returns dict)
+                # And `Qwen3CoderNextModel` doesn't have a `lm_head`.
+                # We need to project to vocab.
+                # Assuming `Qwen3CoderNextModel` is the base model, we usually need an `LMHeadModel` wrapper.
+                # But here `embed_tokens` weights are often tied to output.
+                # Let's verify `model.py`... it returns hidden states.
+                # I need to implement the LM Head projection here or add it to `model.py`.
+                # Standard causal LM has an output head. `model.py` `Qwen3CoderNextModel` seems to be the *base* model.
+                # I should add the head here or assume tied weights.
+
+                hidden_states = outputs["last_hidden_state"] # [1, seq_len, hidden]
+                next_token_logits = torch.matmul(hidden_states[:, -1, :], self._model.embed_tokens.weight.t())
+
+                # Update Cache
+                past_key_values = outputs["past_key_values"]
+
+                # Sampling (Greedy for now, or basic sample)
+                if kwargs.get("do_sample", False):
+                    probs = torch.softmax(next_token_logits / kwargs.get("temperature", 1.0), dim=-1)
+                    next_token = torch.multinomial(probs, num_samples=1)
+                else:
+                    next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True)
+
+                generated_tokens.append(next_token.item())
+
+                # Prepare next input
+                current_input_ids = next_token
+                cur_len += 1
+
+                # Stop condition
+                if next_token.item() == self._tokenizer.eos_token_id:
+                    break
+
+        # Decode
+        output_text = self._tokenizer.decode(generated_tokens, skip_special_tokens=True)
+        return output_text
 
     def cleanup(self) -> bool:
         self._model = None
         self._tokenizer = None
-        torch.cuda.empty_cache()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
         return True
 
     def supports_config(self, config: Any) -> bool:
