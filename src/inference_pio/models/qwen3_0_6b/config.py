@@ -12,21 +12,28 @@ from typing import Any, Dict, List, Optional, Union
 import torch
 
 try:
-    from ...common.model_config_base import (
+    from inference_pio.common.config.model_config_base import (
         BaseConfig,
         ModelConfigError,
         get_default_model_path,
     )
 except ImportError:
-    # Fallback para quando os imports relativos não funcionam
-    import sys
-    import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-    from src.inference_pio.common.config.model_config_base import (
-        BaseConfig,
-        ModelConfigError,
-        get_default_model_path,
-    )
+    # Fallback
+    try:
+        from ...common.model_config_base import (
+            BaseConfig,
+            ModelConfigError,
+            get_default_model_path,
+        )
+    except ImportError:
+        import sys
+        import os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+        from src.inference_pio.common.config.model_config_base import (
+            BaseConfig,
+            ModelConfigError,
+            get_default_model_path,
+        )
 
 
 @dataclass
@@ -184,13 +191,15 @@ class Qwen3_0_6B_DynamicConfig(Qwen3_0_6B_Config):
 
 # Register this configuration with the factory
 try:
-    from ...common.config_factory import register_model_config
+    from inference_pio.common.config.config_factory import register_model_config
 except ImportError:
-    # Fallback para quando os imports relativos não funcionam
-    import sys
-    import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-    from src.inference_pio.common.config.config_factory import register_model_config
+    try:
+        from ...common.config_factory import register_model_config
+    except ImportError:
+        import sys
+        import os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+        from src.inference_pio.common.config.config_factory import register_model_config
 
 register_model_config("qwen3_0_6b", Qwen3_0_6B_Config)
 

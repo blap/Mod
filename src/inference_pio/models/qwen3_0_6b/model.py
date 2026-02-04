@@ -28,13 +28,16 @@ import subprocess
 import sys
 
 try:
-    from ...common.hardware_analyzer import get_system_profile
+    from inference_pio.common.hardware.hardware_analyzer import get_system_profile
 except ImportError:
-    # Fallback para quando os imports relativos não funcionam
-    import sys
-    import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-    from src.inference_pio.common.hardware.hardware_analyzer import get_system_profile
+    try:
+        from ...common.hardware.hardware_analyzer import get_system_profile
+    except ImportError:
+        # Fallback to absolute
+        import sys
+        import os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+        from src.inference_pio.common.hardware.hardware_analyzer import get_system_profile
 
 from .architecture import Qwen3ForCausalLM as SelfContainedQwen3
 from .config import Qwen3_0_6B_Config

@@ -11,15 +11,24 @@ import torch
 import torch.nn as nn
 
 from ...common.config_integration import ConfigurableModelPlugin
-from ...common.config_manager import GLM47DynamicConfig
-from ...common.config_validator import get_config_validator
-from ...common.improved_base_plugin_interface import (
-    PluginMetadata as ModelPluginMetadata,
-)
-from ...common.improved_base_plugin_interface import (
-    PluginType,
-)
-from ...common.optimization_manager import get_optimization_manager
+try:
+    from inference_pio.common.config.config_integration import ConfigurableModelPlugin
+    from inference_pio.common.config.config_validator import get_config_validator
+    from inference_pio.common.interfaces.improved_base_plugin_interface import (
+        PluginMetadata as ModelPluginMetadata,
+        PluginType,
+    )
+    # from inference_pio.common.managers.optimization_manager import get_optimization_manager
+    get_optimization_manager = None
+except ImportError:
+    from ...common.config_integration import ConfigurableModelPlugin
+    from ...common.config_validator import get_config_validator
+    from ...common.improved_base_plugin_interface import (
+        PluginMetadata as ModelPluginMetadata,
+        PluginType,
+    )
+    # from ...common.managers.optimization_manager import get_optimization_manager
+    get_optimization_manager = None
 
 logger = logging.getLogger(__name__)
 

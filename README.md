@@ -59,7 +59,48 @@ Inference-PIO is a modular, high-performance inference system built on a self-co
 
 ```bash
 pip install -r requirements.txt
-python -c "from src.inference_pio.core.model_factory import create_model; m=create_model('glm_4_7_flash'); m.initialize(); print(m.infer('Hello'))"
+python src/inference_pio/__main__.py run --model glm-4-7-flash --prompt "Hello"
+```
+
+## 💻 CLI Usage
+
+Inference-PIO provides a user-friendly CLI to interact with models.
+
+### List Models
+List all available models in the system.
+```bash
+python src/inference_pio/__main__.py list
+```
+
+### Run Inference
+Run a single inference command.
+```bash
+python src/inference_pio/__main__.py run --model qwen3-0.6b --prompt "Hello, how are you?"
+```
+
+### Interactive Chat
+Start an interactive chat session with a model.
+```bash
+python src/inference_pio/__main__.py chat --model qwen3-0.6b
+```
+
+### View Model Info
+Display detailed information about a model plugin.
+```bash
+python src/inference_pio/__main__.py info --model qwen3-0.6b
+```
+
+### Manage Config
+List and view configuration files.
+```bash
+python src/inference_pio/__main__.py config list
+python src/inference_pio/__main__.py config view --file global_config.py
+```
+
+### Run Benchmarks
+Run standardized benchmarks across models.
+```bash
+python src/inference_pio/__main__.py benchmark --suite performance
 ```
 
 ## 🧩 Plugin Discovery System
