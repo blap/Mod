@@ -1,3 +1,9 @@
+"""
+Rich Logging Utilities
+
+This module configures the Rich library for beautiful console output and logging.
+"""
+
 import logging
 import os
 from rich.console import Console
@@ -14,6 +20,7 @@ custom_theme = Theme({
 })
 
 console = Console(theme=custom_theme)
+
 
 def setup_rich_logging(debug: bool = False, log_file: str = None):
     """
@@ -41,7 +48,7 @@ def setup_rich_logging(debug: bool = False, log_file: str = None):
         datefmt="[%X]",
         handlers=[
             RichHandler(console=console, rich_tracebacks=True),
-            *( [file_handler] if log_file else [] )
+            *([file_handler] if log_file else [])
         ]
     )
 

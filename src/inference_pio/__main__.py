@@ -1,15 +1,8 @@
-"""
-Inference-PIO Main Entry Point
-
-This module provides the main entry point for the Inference-PIO system.
-"""
-
 import argparse
 import logging
 import os
 import sys
 from datetime import datetime
-from typing import Any
 
 # Add the src directory to the path to allow imports
 src_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -17,25 +10,31 @@ if src_dir not in sys.path:
     sys.path.insert(0, src_dir)
 
 from inference_pio.core.model_factory import ModelFactory, create_model
-from inference_pio.core.tools.system_check import perform_system_check, print_system_check_report
+from inference_pio.core.tools.system_check import (
+    perform_system_check,
+    print_system_check_report
+)
 from inference_pio.core.tools.rich_utils import setup_rich_logging, console
 from inference_pio.core.tools.init_wizard import interactive_init
 from inference_pio.core.tools.cleaner import clean_project
 from rich.table import Table
 from rich.panel import Panel
-from rich.text import Text
 
 __version__ = "1.0.0"
 __author__ = "Inference-PIO Team"
 
 logger = logging.getLogger(__name__)
 
+
 def setup_logging(debug: bool):
     """Configure logging based on debug flag."""
-    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'logs')
+    log_dir = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), '..', '..', 'logs'
+    )
     timestamp = datetime.now().strftime("%Y%m%d")
     log_file = os.path.join(log_dir, f"inference_pio_{timestamp}.log")
     setup_rich_logging(debug=debug, log_file=log_file)
+
 
 def handle_list(args: argparse.Namespace):
     """Handle list command."""
@@ -49,6 +48,7 @@ def handle_list(args: argparse.Namespace):
 
     console.print(table)
 
+
 def handle_run(args: argparse.Namespace):
     """Handle run command."""
     console.print(f"[bold blue]Loading model:[/bold blue] {args.model}")
@@ -56,26 +56,38 @@ def handle_run(args: argparse.Namespace):
         model = create_model(args.model)
 
         console.print("[yellow]Initializing model...[/yellow]")
-        with console.status("[bold green]Loading weights...[/bold green]") as status:
+        with console.status("[bold green]Loading weights...[/bold green]") as st:
             # We initialize with default configuration.
-            # In a real scenario, we might want to pass more config options here.
             model.initialize()
-            status.update("[bold green]Model loaded![/bold green]")
+            st.update("[bold green]Model loaded![/bold green]")
 
-        console.print(Panel(args.prompt, title="[bold]Input Prompt[/bold]", border_style="blue"))
+        console.print(
+            Panel(
+                args.prompt,
+                title="[bold]Input Prompt[/bold]",
+                border_style="blue"
+            )
+        )
 
-        # Use simple status spinner for generation as well
-        # Note: True progress bar requires callback support inside generate_text
-        with console.status("[bold cyan]Generating response...[/bold cyan]", spinner="dots"):
+        with console.status("[bold cyan]Generating...[/bold cyan]", spinner="dots"):
             if hasattr(model, 'generate_text'):
                 result = model.generate_text(args.prompt)
             elif hasattr(model, 'infer'):
                 result = model.infer(args.prompt)
             else:
-                console.print("[bold red]Error: Model does not support 'generate_text' or 'infer' methods.[/bold red]")
+                console.print(
+                    "[bold red]Error: Model does not support "
+                    "'generate_text' or 'infer' methods.[/bold red]"
+                )
                 return
 
-        console.print(Panel(str(result), title="[bold]Model Output[/bold]", border_style="green"))
+        console.print(
+            Panel(
+                str(result),
+                title="[bold]Model Output[/bold]",
+                border_style="green"
+            )
+        )
 
     except Exception as e:
         logger.error(f"Failed to run model: {e}")
@@ -84,18 +96,18 @@ def handle_run(args: argparse.Namespace):
         else:
             console.print(f"[bold red]Error running model:[/bold red] {e}")
 
+
 def handle_chat(args: argparse.Namespace):
     """Handle chat command."""
-    print(f"Loading model: {args.model}")
+    console.print(f"[bold blue]Loading model:[/bold blue] {args.model}")
     try:
         model = create_model(args.model)
         model.initialize()
 
-        print("\nStarting interactive chat session.")
-        print("Type 'exit' or 'quit' to end the session.")
-        print("-" * 40)
+        console.print("\n[bold green]Starting interactive chat session.[/bold green]")
+        console.print("Type 'exit' or 'quit' to end the session.")
+        console.print("-" * 40)
 
-        # Check if model supports chat_completion, otherwise fallback to generate_text
         use_chat = hasattr(model, 'chat_completion')
         messages = []
 
@@ -110,26 +122,26 @@ def handle_chat(args: argparse.Namespace):
                     response = model.chat_completion(messages)
                     messages.append({"role": "assistant", "content": response})
                 elif hasattr(model, 'generate_text'):
-                     # Simple one-shot for models that don't support chat history management
-                     response = model.generate_text(user_input)
+                    response = model.generate_text(user_input)
                 else:
                     response = "Model does not support text generation."
 
-                print(f"AI: {response}\n")
+                console.print(f"[bold cyan]AI:[/bold cyan] {response}\n")
 
             except KeyboardInterrupt:
                 break
             except Exception as e:
-                print(f"Error: {e}")
+                console.print(f"[red]Error: {e}[/red]")
 
-        print("\nChat session ended.")
+        console.print("\n[yellow]Chat session ended.[/yellow]")
 
     except Exception as e:
         logger.error(f"Failed to start chat: {e}")
         if args.debug:
             raise
         else:
-            print(f"Error starting chat: {e}")
+            console.print(f"[red]Error starting chat: {e}[/red]")
+
 
 def handle_info(args: argparse.Namespace):
     """Handle info command."""
@@ -151,14 +163,20 @@ def handle_info(args: argparse.Namespace):
         if hasattr(model, 'get_model_info'):
             info = model.get_model_info()
             for key, value in info.items():
-                if key not in ['name', 'description']: # Avoid duplication
+                if key not in ['name', 'description']:  # Avoid duplication
                     table.add_row(key.replace('_', ' ').title(), str(value))
 
         console.print(table)
 
         # Print docstring if available
         if model.__doc__:
-             console.print(Panel(model.__doc__.strip(), title="Docstring", border_style="dim"))
+            console.print(
+                Panel(
+                    model.__doc__.strip(),
+                    title="Docstring",
+                    border_style="dim"
+                )
+            )
 
     except Exception as e:
         logger.error(f"Failed to get info: {e}")
@@ -167,83 +185,99 @@ def handle_info(args: argparse.Namespace):
         else:
             console.print(f"[bold red]Error getting info:[/bold red] {e}")
 
+
 def handle_config(args: argparse.Namespace):
     """Handle config command."""
-    # src_dir is already defined at module level but we need to be careful
-    # src_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    # We can rely on relative path from this file
     base_dir = os.path.dirname(os.path.abspath(__file__))
     config_dir = os.path.join(base_dir, 'configs')
 
     if args.action == 'list':
-        print(f"Configuration files in {config_dir}:")
+        console.print(f"Configuration files in {config_dir}:")
         if os.path.exists(config_dir):
-            files = [f for f in os.listdir(config_dir) if f.endswith(('.json', '.yaml', '.yml', '.ini', '.py')) and not f.startswith('__')]
+            files = [
+                f for f in os.listdir(config_dir)
+                if f.endswith(('.json', '.yaml', '.yml', '.ini', '.py'))
+                and not f.startswith('__')
+            ]
             for f in files:
-                print(f"  - {f}")
+                console.print(f"  - {f}")
         else:
-            print("Config directory not found.")
+            console.print("[red]Config directory not found.[/red]")
 
     elif args.action == 'view':
         if not args.file:
-             print("Error: --file argument is required for view action.")
-             return
+            console.print("[red]Error: --file argument is required.[/red]")
+            return
 
         filepath = os.path.join(config_dir, args.file)
-        # basic path traversal protection
         if '..' in args.file or args.file.startswith('/'):
-             print("Error: Invalid file name.")
-             return
+            console.print("[red]Error: Invalid file name.[/red]")
+            return
 
         if os.path.exists(filepath) and os.path.isfile(filepath):
-            print(f"Content of {args.file}:")
-            print("-" * 40)
+            console.print(f"Content of {args.file}:")
+            console.print("-" * 40)
             try:
                 with open(filepath, 'r') as f:
-                    print(f.read())
+                    console.print(f.read())
             except Exception as e:
-                print(f"Error reading file: {e}")
-            print("-" * 40)
+                console.print(f"[red]Error reading file: {e}[/red]")
+            console.print("-" * 40)
         else:
-            print(f"Error: File {args.file} not found in config directory.")
+            console.print(f"[red]Error: File {args.file} not found.[/red]")
+
 
 def handle_benchmark(args: argparse.Namespace):
     """Handle benchmark command."""
-    print(f"Running benchmark suite: {args.suite}")
+    console.print(f"Running benchmark suite: {args.suite}")
     try:
-        from inference_pio.benchmarks.scripts.standardized_runner import run_standardized_benchmarks
+        from inference_pio.benchmarks.scripts.standardized_runner import (
+            run_standardized_benchmarks
+        )
         run_standardized_benchmarks(benchmark_suite=args.suite)
     except ImportError as e:
         logger.error(f"Failed to import benchmark runner: {e}")
-        print(f"Error: Could not import benchmark runner. {e}")
+        console.print(f"[red]Error: Could not import benchmark runner. {e}[/red]")
     except Exception as e:
         logger.error(f"Benchmark failed: {e}")
         if args.debug:
             raise
         else:
-            print(f"Error running benchmark: {e}")
+            console.print(f"[red]Error running benchmark: {e}[/red]")
+
 
 def handle_check(args: argparse.Namespace):
     """Handle check command."""
-    print("Performing system check...")
+    console.print("Performing system check...")
     report = perform_system_check()
     print_system_check_report(report)
+
 
 def handle_init(args: argparse.Namespace):
     """Handle init command."""
     interactive_init()
 
+
 def handle_clean(args: argparse.Namespace):
     """Handle clean command."""
     clean_project()
 
+
 def main():
     """Main entry point for the Inference-PIO CLI."""
     parser = argparse.ArgumentParser(
-        description="Inference-PIO: Self-Contained Plugin Architecture for Advanced Model Inference"
+        description="Inference-PIO: Self-Contained Plugin Architecture"
     )
-    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
-    parser.add_argument("--version", action="version", version=f"Inference-PIO {__version__}")
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging"
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"Inference-PIO {__version__}"
+    )
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
@@ -253,12 +287,14 @@ def main():
 
     # Command: run
     parser_run = subparsers.add_parser("run", help="Run single inference")
-    parser_run.add_argument("--model", required=True, help="Model name (e.g., qwen3-0.6b)")
+    parser_run.add_argument(
+        "--model", required=True, help="Model name (e.g., qwen3-0.6b)"
+    )
     parser_run.add_argument("--prompt", required=True, help="Input prompt")
     parser_run.set_defaults(func=handle_run)
 
     # Command: chat
-    parser_chat = subparsers.add_parser("chat", help="Start interactive chat session")
+    parser_chat = subparsers.add_parser("chat", help="Start chat session")
     parser_chat.add_argument("--model", required=True, help="Model name")
     parser_chat.set_defaults(func=handle_chat)
 
@@ -269,25 +305,40 @@ def main():
 
     # Command: config
     parser_config = subparsers.add_parser("config", help="Manage configuration")
-    parser_config.add_argument("action", choices=["list", "view"], help="Action to perform")
-    parser_config.add_argument("--file", help="Config file name (required for view)")
+    parser_config.add_argument(
+        "action", choices=["list", "view"], help="Action to perform"
+    )
+    parser_config.add_argument(
+        "--file", help="Config file name (required for view)"
+    )
     parser_config.set_defaults(func=handle_config)
 
     # Command: benchmark
     parser_bench = subparsers.add_parser("benchmark", help="Run benchmarks")
-    parser_bench.add_argument("--suite", default="full", choices=["full", "performance", "accuracy"], help="Benchmark suite to run")
+    parser_bench.add_argument(
+        "--suite",
+        default="full",
+        choices=["full", "performance", "accuracy"],
+        help="Benchmark suite to run"
+    )
     parser_bench.set_defaults(func=handle_benchmark)
 
     # Command: check
-    parser_check = subparsers.add_parser("check", help="Check system health and compatibility")
+    parser_check = subparsers.add_parser(
+        "check", help="Check system health and compatibility"
+    )
     parser_check.set_defaults(func=handle_check)
 
     # Command: init
-    parser_init = subparsers.add_parser("init", help="Initialize configuration wizard")
+    parser_init = subparsers.add_parser(
+        "init", help="Initialize configuration wizard"
+    )
     parser_init.set_defaults(func=handle_init)
 
     # Command: clean
-    parser_clean = subparsers.add_parser("clean", help="Clean up temporary files and caches")
+    parser_clean = subparsers.add_parser(
+        "clean", help="Clean up temporary files and caches"
+    )
     parser_clean.set_defaults(func=handle_clean)
 
     args = parser.parse_args()
@@ -300,20 +351,21 @@ def main():
 
     try:
         if args.command == 'config' and args.action == 'view' and not args.file:
-             parser.error("the following arguments are required: --file")
+            parser.error("the following arguments are required: --file")
 
         args.func(args)
 
     except KeyboardInterrupt:
-        print("\nOperation cancelled by user.")
+        console.print("\n[yellow]Operation cancelled by user.[/yellow]")
         sys.exit(0)
     except Exception as e:
         if args.debug:
             logger.exception("An error occurred:")
         else:
-            print(f"Error: {e}")
-            print("Use --debug for more details.")
+            console.print(f"[red]Error: {e}[/red]")
+            console.print("Use --debug for more details.")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

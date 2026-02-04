@@ -5,7 +5,6 @@ This module provides functionality to check system hardware and compatibility
 for running inference models.
 """
 
-import os
 import platform
 import psutil
 import logging
@@ -17,6 +16,7 @@ except ImportError:
     torch = None
 
 logger = logging.getLogger(__name__)
+
 
 def get_cpu_info() -> Dict[str, Any]:
     """Get CPU information."""
@@ -35,6 +35,7 @@ def get_cpu_info() -> Dict[str, Any]:
         "frequency_current": psutil.cpu_freq().current if psutil.cpu_freq() else 0,
     }
 
+
 def get_memory_info() -> Dict[str, Any]:
     """Get system memory information."""
     vm = psutil.virtual_memory()
@@ -48,6 +49,7 @@ def get_memory_info() -> Dict[str, Any]:
         "swap_total_gb": swap.total / (1024**3),
         "swap_used_gb": swap.used / (1024**3),
     }
+
 
 def get_gpu_info() -> List[Dict[str, Any]]:
     """Get GPU information if available."""
@@ -69,10 +71,8 @@ def get_gpu_info() -> List[Dict[str, Any]]:
                 "type": "NVIDIA (CUDA)",
             })
 
-    # Fallback/Additional check using pynvml if needed could go here
-    # For now, torch.cuda is the primary way we interact with GPUs
-
     return gpus
+
 
 def get_disk_info() -> Dict[str, Any]:
     """Get disk information, specifically checking H: drive if on Windows."""
@@ -96,7 +96,7 @@ def get_disk_info() -> Dict[str, Any]:
             # Check for H: drive specifically
             if platform.system() == 'Windows' and 'H:' in p.device:
                 h_drive_found = True
-            elif platform.system() != 'Windows' and '/mnt/h' in p.mountpoint: # WSL/Linux assumption
+            elif platform.system() != 'Windows' and '/mnt/h' in p.mountpoint:
                 h_drive_found = True
 
         except PermissionError:
@@ -106,6 +106,7 @@ def get_disk_info() -> Dict[str, Any]:
         "disks": disks,
         "h_drive_detected": h_drive_found
     }
+
 
 def perform_system_check() -> Dict[str, Any]:
     """Perform a full system check."""
@@ -119,6 +120,7 @@ def perform_system_check() -> Dict[str, Any]:
         "torch_version": torch.__version__ if torch else "Not installed",
         "cuda_available": torch.cuda.is_available() if torch else False,
     }
+
 
 def print_system_check_report(report: Dict[str, Any]):
     """Print the system check report to stdout using Rich."""
@@ -135,7 +137,9 @@ def print_system_check_report(report: Dict[str, Any]):
     sys_table.add_row("PyTorch", report['torch_version'])
 
     cuda_style = "bold green" if report['cuda_available'] else "bold red"
-    sys_table.add_row("CUDA Available", str(report['cuda_available']), style=cuda_style)
+    sys_table.add_row(
+        "CUDA Available", str(report['cuda_available']), style=cuda_style
+    )
 
     console.print(sys_table)
 
@@ -144,7 +148,11 @@ def print_system_check_report(report: Dict[str, Any]):
     cpu_table.add_column("Property", style="cyan")
     cpu_table.add_column("Value", style="white")
     cpu_table.add_row("Brand", report['cpu']['brand'])
-    cpu_table.add_row("Cores", f"{report['cpu']['cores_physical']} physical, {report['cpu']['cores_logical']} logical")
+    cpu_table.add_row(
+        "Cores",
+        f"{report['cpu']['cores_physical']} physical, "
+        f"{report['cpu']['cores_logical']} logical"
+    )
     cpu_table.add_row("Usage", f"{report['cpu']['usage_percent']}%")
     console.print(cpu_table)
 
@@ -181,6 +189,7 @@ def print_system_check_report(report: Dict[str, Any]):
     storage_table.add_column("Property", style="cyan")
     storage_table.add_column("Value", style="white")
 
-    h_style = "bold green" if report['disks']['h_drive_detected'] else "bold yellow"
-    storage_table.add_row("H: Drive Detected", str(report['disks']['h_drive_detected']), style=h_style)
+    h_drive = report['disks']['h_drive_detected']
+    h_style = "bold green" if h_drive else "bold yellow"
+    storage_table.add_row("H: Drive Detected", str(h_drive), style=h_style)
     console.print(storage_table)
