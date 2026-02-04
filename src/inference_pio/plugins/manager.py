@@ -16,8 +16,8 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, Union
 
-from ..common.improved_base_plugin_interface import ModelPluginInterface
-from ..common.security_manager import (
+from ..common.interfaces.improved_base_plugin_interface import ModelPluginInterface
+from ..common.security.security_manager import (
     ResourceLimits,
     SecurityLevel,
     cleanup_plugin_isolation,
