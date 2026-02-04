@@ -8,6 +8,7 @@ import argparse
 import logging
 import os
 import sys
+from datetime import datetime
 from typing import Any
 
 # Add the src directory to the path to allow imports
@@ -16,6 +17,13 @@ if src_dir not in sys.path:
     sys.path.insert(0, src_dir)
 
 from inference_pio.core.model_factory import ModelFactory, create_model
+from inference_pio.core.tools.system_check import perform_system_check, print_system_check_report
+from inference_pio.core.tools.rich_utils import setup_rich_logging, console
+from inference_pio.core.tools.init_wizard import interactive_init
+from inference_pio.core.tools.cleaner import clean_project
+from rich.table import Table
+from rich.panel import Panel
+from rich.text import Text
 
 __version__ = "1.0.0"
 __author__ = "Inference-PIO Team"
@@ -24,50 +32,57 @@ logger = logging.getLogger(__name__)
 
 def setup_logging(debug: bool):
     """Configure logging based on debug flag."""
-    level = logging.DEBUG if debug else logging.INFO
-    logging.basicConfig(
-        level=level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
+    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'logs')
+    timestamp = datetime.now().strftime("%Y%m%d")
+    log_file = os.path.join(log_dir, f"inference_pio_{timestamp}.log")
+    setup_rich_logging(debug=debug, log_file=log_file)
 
 def handle_list(args: argparse.Namespace):
     """Handle list command."""
     models = ModelFactory.list_supported_models()
-    print("Available Models:")
+    table = Table(title="Available Models")
+    table.add_column("Model Name", style="cyan", no_wrap=True)
+    table.add_column("Status", style="green")
+
     for model in models:
-        print(f"  - {model}")
+        table.add_row(model, "Supported")
+
+    console.print(table)
 
 def handle_run(args: argparse.Namespace):
     """Handle run command."""
-    print(f"Loading model: {args.model}")
+    console.print(f"[bold blue]Loading model:[/bold blue] {args.model}")
     try:
         model = create_model(args.model)
 
-        print("Initializing model...")
-        # We initialize with default configuration.
-        # In a real scenario, we might want to pass more config options here.
-        model.initialize()
+        console.print("[yellow]Initializing model...[/yellow]")
+        with console.status("[bold green]Loading weights...[/bold green]") as status:
+            # We initialize with default configuration.
+            # In a real scenario, we might want to pass more config options here.
+            model.initialize()
+            status.update("[bold green]Model loaded![/bold green]")
 
-        print(f"Running inference with prompt: '{args.prompt}'")
-        print("-" * 40)
+        console.print(Panel(args.prompt, title="[bold]Input Prompt[/bold]", border_style="blue"))
 
-        if hasattr(model, 'generate_text'):
-            result = model.generate_text(args.prompt)
-        elif hasattr(model, 'infer'):
-            result = model.infer(args.prompt)
-        else:
-            print("Error: Model does not support 'generate_text' or 'infer' methods.")
-            return
+        # Use simple status spinner for generation as well
+        # Note: True progress bar requires callback support inside generate_text
+        with console.status("[bold cyan]Generating response...[/bold cyan]", spinner="dots"):
+            if hasattr(model, 'generate_text'):
+                result = model.generate_text(args.prompt)
+            elif hasattr(model, 'infer'):
+                result = model.infer(args.prompt)
+            else:
+                console.print("[bold red]Error: Model does not support 'generate_text' or 'infer' methods.[/bold red]")
+                return
 
-        print(result)
-        print("-" * 40)
+        console.print(Panel(str(result), title="[bold]Model Output[/bold]", border_style="green"))
 
     except Exception as e:
         logger.error(f"Failed to run model: {e}")
         if args.debug:
             raise
         else:
-            print(f"Error running model: {e}")
+            console.print(f"[bold red]Error running model:[/bold red] {e}")
 
 def handle_chat(args: argparse.Namespace):
     """Handle chat command."""
@@ -121,35 +136,36 @@ def handle_info(args: argparse.Namespace):
     try:
         model = create_model(args.model)
 
-        print(f"\nModel Information for {args.model}:")
-        print("-" * 40)
+        table = Table(title=f"Model Information: {args.model}")
+        table.add_column("Property", style="cyan")
+        table.add_column("Value", style="white")
 
         # Print metadata if available
         if hasattr(model, 'metadata'):
-            print(f"Name: {model.metadata.name}")
-            print(f"Version: {model.metadata.version}")
-            print(f"Author: {model.metadata.author}")
-            print(f"Type: {model.metadata.plugin_type.value}")
-            print(f"Description: {model.metadata.description}")
+            table.add_row("Name", str(model.metadata.name))
+            table.add_row("Version", str(model.metadata.version))
+            table.add_row("Author", str(model.metadata.author))
+            table.add_row("Type", str(model.metadata.plugin_type.value))
+            table.add_row("Description", str(model.metadata.description))
 
         if hasattr(model, 'get_model_info'):
             info = model.get_model_info()
-            print("\nDetails:")
             for key, value in info.items():
                 if key not in ['name', 'description']: # Avoid duplication
-                    print(f"  {key.replace('_', ' ').title()}: {value}")
+                    table.add_row(key.replace('_', ' ').title(), str(value))
 
-        # Print docstring if metadata didn't cover it or for extra detail
-        if model.__doc__ and not getattr(model, 'metadata', None):
-             print("\nDocstring:")
-             print(model.__doc__.strip())
+        console.print(table)
+
+        # Print docstring if available
+        if model.__doc__:
+             console.print(Panel(model.__doc__.strip(), title="Docstring", border_style="dim"))
 
     except Exception as e:
         logger.error(f"Failed to get info: {e}")
         if args.debug:
             raise
         else:
-            print(f"Error getting info: {e}")
+            console.print(f"[bold red]Error getting info:[/bold red] {e}")
 
 def handle_config(args: argparse.Namespace):
     """Handle config command."""
@@ -207,6 +223,20 @@ def handle_benchmark(args: argparse.Namespace):
         else:
             print(f"Error running benchmark: {e}")
 
+def handle_check(args: argparse.Namespace):
+    """Handle check command."""
+    print("Performing system check...")
+    report = perform_system_check()
+    print_system_check_report(report)
+
+def handle_init(args: argparse.Namespace):
+    """Handle init command."""
+    interactive_init()
+
+def handle_clean(args: argparse.Namespace):
+    """Handle clean command."""
+    clean_project()
+
 def main():
     """Main entry point for the Inference-PIO CLI."""
     parser = argparse.ArgumentParser(
@@ -247,6 +277,18 @@ def main():
     parser_bench = subparsers.add_parser("benchmark", help="Run benchmarks")
     parser_bench.add_argument("--suite", default="full", choices=["full", "performance", "accuracy"], help="Benchmark suite to run")
     parser_bench.set_defaults(func=handle_benchmark)
+
+    # Command: check
+    parser_check = subparsers.add_parser("check", help="Check system health and compatibility")
+    parser_check.set_defaults(func=handle_check)
+
+    # Command: init
+    parser_init = subparsers.add_parser("init", help="Initialize configuration wizard")
+    parser_init.set_defaults(func=handle_init)
+
+    # Command: clean
+    parser_clean = subparsers.add_parser("clean", help="Clean up temporary files and caches")
+    parser_clean.set_defaults(func=handle_clean)
 
     args = parser.parse_args()
 

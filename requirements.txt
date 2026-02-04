@@ -138,3 +138,4 @@ plotly==5.18.0
 
 # Plugin system dependencies
 dependency-injector==4.41.0
+rich>=13.0.0
