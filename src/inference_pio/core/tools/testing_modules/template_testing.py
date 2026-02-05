@@ -82,7 +82,7 @@ class CustomFunctionalTest(TemplateTestBase):
 
     def get_target_object(self):
         """Override this method to return the object to test."""
-        raise NotImplementedError("Subclasses must implement get_target_object")
+        raise NotImplementedError("Method not implemented")
 
     def setUp(self):
         """Set up the target object for testing."""
@@ -94,7 +94,7 @@ class CustomFunctionalTest(TemplateTestBase):
         if not self.target:
             self.skipTest("Target object not available")
 
-        # TODO: Implement your custom functionality test
+        # TODO: Implement this functionality
         # Example:
         # result = self.target.custom_method()
         # self.assertIsNotNone(result)
@@ -113,7 +113,7 @@ class StressTest(TemplateTestBase):
 
     def get_target_object(self):
         """Override this method to return the object to test."""
-        raise NotImplementedError("Subclasses must implement get_target_object")
+        raise NotImplementedError("Method not implemented")
 
     def setUp(self):
         """Set up the target object for testing."""
@@ -125,7 +125,7 @@ class StressTest(TemplateTestBase):
         if not self.target:
             self.skipTest("Target object not available")
 
-        # TODO: Implement stress test
+        # TODO: Implement this functionality
         # Example:
         # import time
         # start_time = time.time()
@@ -147,7 +147,7 @@ class CompatibilityTest(TemplateTestBase):
 
     def get_target_object(self):
         """Override this method to return the object to test."""
-        raise NotImplementedError("Subclasses must implement get_target_object")
+        raise NotImplementedError("Method not implemented")
 
     def setUp(self):
         """Set up the target object for testing."""
@@ -159,7 +159,7 @@ class CompatibilityTest(TemplateTestBase):
         if not self.target:
             self.skipTest("Target object not available")
 
-        # TODO: Implement compatibility test
+        # TODO: Implement this functionality
         # Example:
         # import platform
         # system = platform.system()

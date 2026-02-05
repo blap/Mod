@@ -49,7 +49,7 @@ class ModelFunctionalTest(FunctionalTestBase):
     
     def get_model_plugin_class(self):
         """Override this method to return the model plugin class to test."""
-        raise NotImplementedError("Subclasses must implement get_model_plugin_class")
+        raise NotImplementedError("Method not implemented")
     
     def setUp(self):
         """Set up the model plugin for testing."""
@@ -97,7 +97,7 @@ class PluginFunctionalTest(FunctionalTestBase):
     
     def get_plugin_class(self):
         """Override this method to return the plugin class to test."""
-        raise NotImplementedError("Subclasses must implement get_plugin_class")
+        raise NotImplementedError("Method not implemented")
     
     def setUp(self):
         """Set up the plugin for testing."""

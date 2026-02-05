@@ -400,7 +400,7 @@ class CrossModalAlignmentManager:
 
     def get_alignment_optimizer(
         self, method_name: str
-    ) -> Optional[Qwen3VL2BCrossModalAlignmentOptimizer]:
+    ) -> Optional['Qwen3VL2BCrossModalAlignmentOptimizer']:
         """
         Get a registered alignment optimizer.
 

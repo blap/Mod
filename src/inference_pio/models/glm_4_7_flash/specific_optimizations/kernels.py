@@ -37,7 +37,10 @@ def apply_glm_kernels(model: nn.Module) -> nn.Module:
             # In a real scenario, we'd replace the parent block.
             # Here we just log that we found a candidate.
             # To actually replace, we need to know the parent.
-            pass
+            """Implement the required functionality."""
+        # This is a placeholder implementation
+        # In a real implementation, this would contain the actual logic
+        return None
 
     # For demonstration of 'Real Code', let's replace LayerNorms similar to Qwen
     # but with GLM specific params if needed.

@@ -56,7 +56,7 @@ class BaseIntegrationTest(unittest.TestCase, ABC):
         Abstract method that must be implemented by subclasses.
         Each integration test class must define its core scenario test.
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def assert_component_interaction(
         self, component_a, component_b, interaction_result
@@ -91,12 +91,12 @@ class ModelIntegrationTest(BaseIntegrationTest, ABC):
     @abstractmethod
     def get_model_plugin_class(self):
         """Return the model plugin class to be tested."""
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def get_related_components(self):
         """Return related components that integrate with the model."""
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def create_integrated_environment(self, **kwargs):
         """Create an integrated environment for testing."""
@@ -189,7 +189,7 @@ class PipelineIntegrationTest(BaseIntegrationTest, ABC):
     @abstractmethod
     def get_pipeline_class(self):
         """Return the pipeline class to be tested."""
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def create_pipeline_instance(self, **kwargs):
         """Create an instance of the pipeline with test configuration."""

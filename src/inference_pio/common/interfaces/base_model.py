@@ -35,7 +35,8 @@ class BaseModel(nn.Module):
 
         This method should be implemented by subclasses.
         """
-        raise NotImplementedError("Forward method must be implemented by subclass")
+        # Default implementation raises an error to ensure subclasses implement it
+        raise NotImplementedError("Method not implemented")
 
     def generate(self, *args, **kwargs):
         """
@@ -43,7 +44,8 @@ class BaseModel(nn.Module):
 
         This method should be implemented by subclasses.
         """
-        raise NotImplementedError("Generate method must be implemented by subclass")
+        # Default implementation raises an error to ensure subclasses implement it
+        raise NotImplementedError("Method not implemented")
 
     def prepare_inputs_for_generation(
         self, input_ids: torch.Tensor, **kwargs
@@ -165,7 +167,7 @@ class BaseModel(nn.Module):
         Tie weights between input and output embeddings if applicable.
         """
         # Default implementation does nothing
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def init_weights(self):
         """
@@ -228,7 +230,7 @@ class BaseModel(nn.Module):
             Loaded model instance
         """
         # This method should be implemented by subclasses
-        raise NotImplementedError("from_pretrained must be implemented by subclass")
+        raise NotImplementedError("Method not implemented")
 
     def to(self, *args, **kwargs):
         """
@@ -254,7 +256,7 @@ class BaseModel(nn.Module):
         Update any device-dependent attributes after moving the model.
         """
         # Default implementation does nothing
-        pass
+        raise NotImplementedError("Method not implemented")
 
 
 class BaseTextModel(BaseModel):
@@ -278,7 +280,7 @@ class BaseTextModel(BaseModel):
         Returns:
             Generated text
         """
-        raise NotImplementedError("generate_text must be implemented by subclass")
+        raise NotImplementedError("Method not implemented")
 
     def encode(self, text: str, **kwargs) -> torch.Tensor:
         """
@@ -291,7 +293,7 @@ class BaseTextModel(BaseModel):
         Returns:
             Encoded embeddings
         """
-        raise NotImplementedError("encode must be implemented by subclass")
+        raise NotImplementedError("Method not implemented")
 
     def decode(self, embeddings: torch.Tensor, **kwargs) -> str:
         """
@@ -304,7 +306,7 @@ class BaseTextModel(BaseModel):
         Returns:
             Decoded text
         """
-        raise NotImplementedError("decode must be implemented by subclass")
+        raise NotImplementedError("Method not implemented")
 
 
 class BaseVisionLanguageModel(BaseModel):
@@ -345,7 +347,7 @@ class BaseVisionLanguageModel(BaseModel):
         Returns:
             Encoded image embeddings
         """
-        raise NotImplementedError("encode_image must be implemented by subclass")
+        raise NotImplementedError("Method not implemented")
 
     def encode_text(self, text: str, **kwargs) -> torch.Tensor:
         """
@@ -358,7 +360,7 @@ class BaseVisionLanguageModel(BaseModel):
         Returns:
             Encoded text embeddings
         """
-        raise NotImplementedError("encode_text must be implemented by subclass")
+        raise NotImplementedError("Method not implemented")
 
 
 __all__ = ["BaseModel", "BaseTextModel", "BaseVisionLanguageModel"]

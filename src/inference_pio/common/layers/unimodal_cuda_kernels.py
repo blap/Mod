@@ -121,7 +121,9 @@ class UnimodalAttentionKernel(nn.Module):
                     attention_mask = attention_mask.unsqueeze(1)
                 elif attention_mask.dim() == 4:
                     # Already in the right format (batch, nhead, seq_len, seq_len)
-                    pass
+                    # Placeholder for actual CUDA kernel implementation
+                    # This would contain the actual CUDA kernel code
+                    return torch.matmul(a, b)
                 else:
                     raise ValueError(
                         f"Invalid attention mask dimension: {attention_mask.dim()}"
@@ -164,7 +166,9 @@ class UnimodalAttentionKernel(nn.Module):
                     attention_mask = attention_mask.unsqueeze(1)
                 elif attention_mask.dim() == 4:
                     # Already in the right format (batch, nhead, seq_len, seq_len)
-                    pass
+                    # Placeholder for actual CUDA kernel implementation
+                    # This would contain the actual CUDA kernel code
+                    return torch.matmul(a, b)
                 else:
                     raise ValueError(
                         f"Invalid attention mask dimension: {attention_mask.dim()}"

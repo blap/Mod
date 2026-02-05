@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional, Tuple
 import torch
 import torch.nn as nn
 
-from ..config import GLM47Config
+from ..config import GLM47FlashConfig
 
 
 class CompressionMethod(Enum):
@@ -127,9 +127,11 @@ class LowRankKVCache(nn.Module):
         Returns:
             Tuple of (left_matrix, right_matrix) representing the low-rank approximation
         """
+        # Store original shape for reconstruction
+        self.original_shape = kv_cache.shape
+
         # Reshape for SVD: (batch_size * num_heads, seq_len, head_dim)
-        original_shape = kv_cache.shape
-        reshaped = kv_cache.view(-1, original_shape[-2], original_shape[-1])
+        reshaped = kv_cache.view(-1, self.original_shape[-2], self.original_shape[-1])
 
         # Perform SVD
         U, S, V = torch.svd(reshaped)
@@ -161,7 +163,8 @@ class LowRankKVCache(nn.Module):
         # Reconstruct the original matrix
         reconstructed = torch.matmul(left_matrix, right_matrix.transpose(-2, -1))
 
-        return reconstructed
+        # Reshape back to original dimensions
+        return reconstructed.view(self.original_shape)
 
 
 class AdaptivePrecisionKVCache(nn.Module):

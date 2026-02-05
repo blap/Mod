@@ -26,7 +26,7 @@ def test_standard_plugin_interface_abstract():
     with pytest.raises(TypeError):
 
         class ConcreteStandardPlugin(StandardPluginInterface):
-            pass
+            raise NotImplementedError("Method not implemented")
 
         ConcreteStandardPlugin(Mock())
 
@@ -36,7 +36,7 @@ def test_model_plugin_interface_abstract():
     with pytest.raises(TypeError):
 
         class ConcreteModelPlugin(ModelPluginInterface):
-            pass
+            raise NotImplementedError("Method not implemented")
 
         metadata = PluginMetadata(
             name="TestModel",
@@ -57,7 +57,7 @@ def test_text_model_plugin_interface_abstract():
     with pytest.raises(TypeError):
 
         class ConcreteTextModelPlugin(TextModelPluginInterface):
-            pass
+            raise NotImplementedError("Method not implemented")
 
         metadata = PluginMetadata(
             name="TestModel",

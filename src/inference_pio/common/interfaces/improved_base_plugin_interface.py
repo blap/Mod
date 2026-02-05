@@ -813,7 +813,7 @@ class ModelPluginInterface(StandardPluginInterface):
             context_id: Context ID to clean up
             force_unload: Whether to force unload all shards for this context
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def get_sharding_stats(self) -> Dict[str, Any]:
         """

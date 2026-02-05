@@ -127,4 +127,7 @@ def pytest_configure(config):
 def pytest_collection_modifyitems(config, items):
     """Modify test items during collection."""
     # This hook can be used to modify test collection behavior
-    pass
+    # For now, we'll just log that the hook was called
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Modified {len(items)} test items during collection")

@@ -437,12 +437,18 @@ class ModalitySpecificAttention(nn.Module):
         if self.modality == "image":
             # For images, we might want to add spatial awareness
             # This is a simplified approach - in practice, you'd need to reshape appropriately
-            pass
+            # Placeholder for actual multimodal attention implementation
+            # This would contain the actual multimodal attention algorithm
+            logger.warning("Multimodal attention not implemented for this operation")
+            return x
         elif self.modality == "audio":
             # For audio, we'll skip the convolution for now to avoid dimensional issues
             # The temporal_conv layer expects different channel dimensions than what we have
             # This is a placeholder for future implementation
-            pass
+            # Placeholder for actual multimodal attention implementation
+            # This would contain the actual multimodal attention algorithm
+            logger.warning("Multimodal attention not implemented for this operation")
+            return x
 
         # Apply dropout if configured
         if self.dropout_module is not None:

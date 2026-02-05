@@ -150,7 +150,10 @@ class UnimodalModelSurgerySystem(ModelSurgerySystem):
                 return UnimodalComponentType(base_type.value)
             except ValueError:
                 # If base type doesn't exist in unimodal enum, continue to unimodal-specific checks
-                pass
+                # Placeholder for actual model surgery implementation
+                # This would contain the actual surgery algorithm
+                logger.warning(f"Model surgery not implemented for layer type: {type(layer)}")
+                return layer
 
         # Check for unimodal-specific components
         module_class_name = module.__class__.__name__.lower()
@@ -213,7 +216,10 @@ class UnimodalModelSurgerySystem(ModelSurgerySystem):
                 return base_can_remove, base_reason, base_priority
         except ValueError:
             # Component type doesn't exist in base enum, continue with unimodal-specific logic
-            pass
+            # Placeholder for actual model surgery implementation
+            # This would contain the actual surgery algorithm
+            logger.warning(f"Surgery not implemented for layer: {layer_name}")
+            return layer
 
         # Special handling for unimodal components
         if component_type == UnimodalComponentType.EMBEDDING_LAYER:

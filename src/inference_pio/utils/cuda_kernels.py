@@ -119,6 +119,7 @@ class AttentionKernel(nn.Module):
                     attention_mask = attention_mask.unsqueeze(1)
                 elif attention_mask.dim() == 4:
                     # Already in the right format (batch, nhead, seq_len, seq_len)
+                    # Use the mask as is
                     pass
                 else:
                     raise ValueError(
@@ -162,6 +163,7 @@ class AttentionKernel(nn.Module):
                     attention_mask = attention_mask.unsqueeze(1)
                 elif attention_mask.dim() == 4:
                     # Already in the right format (batch, nhead, seq_len, seq_len)
+                    # Use the mask as is
                     pass
                 else:
                     raise ValueError(

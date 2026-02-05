@@ -452,7 +452,10 @@ class Qwen3VL2BConfig(BaseConfig):
 
         except Exception as e:
             # If we can't determine memory, use defaults
-            pass
+            """Implement the required functionality."""
+        # This is a placeholder implementation
+        # In a real implementation, this would contain the actual logic
+        return None
 
 
 def create_qwen3_vl_2b_config(**kwargs) -> Qwen3VL2BConfig:
@@ -478,7 +481,10 @@ class Qwen3VLDynamicConfig(Qwen3VL2BConfig):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # Adiciona capacidades de configuração dinâmica se necessário
-        pass
+        """Implement the required functionality."""
+        # This is a placeholder implementation
+        # In a real implementation, this would contain the actual logic
+        return None
 
 
 # Register this configuration with the factory

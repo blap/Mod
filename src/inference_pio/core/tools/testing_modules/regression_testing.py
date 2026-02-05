@@ -130,7 +130,7 @@ class ModelRegressionTest(RegressionTestBase):
     
     def get_model_plugin_class(self):
         """Override this method to return the model plugin class to test."""
-        raise NotImplementedError("Subclasses must implement get_model_plugin_class")
+        raise NotImplementedError("Method not implemented")
     
     def setUp(self):
         """Set up the model plugin for regression testing."""
@@ -207,11 +207,11 @@ class FeatureRegressionTest(RegressionTestBase):
     
     def get_feature_component(self):
         """Override this method to return the component with the feature to test."""
-        raise NotImplementedError("Subclasses must implement get_feature_component")
+        raise NotImplementedError("Method not implemented")
     
     def get_feature_name(self):
         """Override this method to return the name of the feature being tested."""
-        raise NotImplementedError("Subclasses must implement get_feature_name")
+        raise NotImplementedError("Method not implemented")
     
     def setUp(self):
         """Set up the feature component for regression testing."""
@@ -240,7 +240,7 @@ class FeatureRegressionTest(RegressionTestBase):
         Execute the specific feature test.
         Override this method to implement the actual feature test logic.
         """
-        raise NotImplementedError("Subclasses must implement execute_feature_test")
+        raise NotImplementedError("Method not implemented")
 
 
 class SystemRegressionTest(RegressionTestBase):
@@ -251,7 +251,7 @@ class SystemRegressionTest(RegressionTestBase):
     
     def get_system_component(self):
         """Override this method to return the system component to test."""
-        raise NotImplementedError("Subclasses must implement get_system_component")
+        raise NotImplementedError("Method not implemented")
     
     def setUp(self):
         """Set up the system component for regression testing."""
@@ -291,7 +291,7 @@ class SystemRegressionTest(RegressionTestBase):
         Execute a standard system workflow.
         Override this method to implement the actual workflow test logic.
         """
-        raise NotImplementedError("Subclasses must implement execute_standard_workflow")
+        raise NotImplementedError("Method not implemented")
 
 
 def run_regression_tests(test_classes: List[Type[unittest.TestCase]], verbosity: int = 2):

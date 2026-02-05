@@ -114,10 +114,10 @@ class TestActivationOffloadingBenchmark(ModelBenchmarkTest):
             plugin.setup_activation_offloading(invalid_param="invalid")
         except TypeError:
             # Expected behavior - invalid parameters should cause TypeError
-            pass
+            raise NotImplementedError("Method not implemented")
         except Exception:
             # Other exceptions are also acceptable as long as they're handled
-            pass
+            raise NotImplementedError("Method not implemented")
 
         # Test that the plugin can handle multiple consecutive operations safely
         for i in range(3):

@@ -182,11 +182,11 @@ class TestDiskPipeline(unittest.TestCase):
                             self.assertTrue(setup_success)
                         except (AttributeError, RuntimeError):
                             # Expected if model isn't properly loaded
-                            pass
+                            raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
     def test_plugin_execute_pipeline(self):
         """Test that plugins can execute the pipeline."""
@@ -206,11 +206,11 @@ class TestDiskPipeline(unittest.TestCase):
                         self.assertIsNotNone(result)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
     def test_plugin_create_pipeline_stages(self):
         """Test that plugins can create pipeline stages."""
@@ -228,11 +228,11 @@ class TestDiskPipeline(unittest.TestCase):
                         self.assertIsNotNone(stages)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
     def test_plugin_get_pipeline_stats(self):
         """Test that plugins can report pipeline statistics."""
@@ -250,11 +250,11 @@ class TestDiskPipeline(unittest.TestCase):
                         self.assertIsInstance(stats, dict)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
             assert_in("pipeline_enabled", stats)
             assert_in("num_stages", stats)
 
@@ -274,11 +274,11 @@ class TestDiskPipeline(unittest.TestCase):
                         self.assertIsNotNone(result)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
             # Get pipeline stats
             pipeline_stats = plugin.get_pipeline_stats()
@@ -304,7 +304,7 @@ class TestDiskPipeline(unittest.TestCase):
                         self.assertIsNotNone(result)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
 
                 # Get pipeline stats (if method exists)
                 if hasattr(plugin, "get_pipeline_stats"):
@@ -314,11 +314,11 @@ class TestDiskPipeline(unittest.TestCase):
                             self.assertIn("pipeline_enabled", stats)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
     def test_pipeline_with_multiple_concurrent_stages(self):
         """Test pipeline with multiple concurrent stages."""
@@ -374,7 +374,7 @@ class TestDiskPipeline(unittest.TestCase):
                     plugin.cleanup()
                 except:
                     # Ignore cleanup errors
-                    pass
+                    raise NotImplementedError("Method not implemented")
 
 
 if __name__ == "__main__":

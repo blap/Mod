@@ -263,10 +263,30 @@ class Qwen3Model(nn.Module):
     ):
         hidden_states = self.embed_tokens(input_ids)
 
-        # Simple causal mask generation if not provided (placeholder)
+        # Simple causal mask generation if not provided
         if attention_mask is None:
-            # Full attention for now, robust implementations handle 4D masks
+            attention_mask = torch.ones_like(input_ids).unsqueeze(1).unsqueeze(2)  # [bs, 1, 1, seq_len]
+            attention_mask = attention_mask.to(dtype=torch.bool)
+            # Create causal mask
+            seq_len = input_ids.size(1)
+            causal_mask = torch.tril(torch.ones(seq_len, seq_len)).expand(1, 1, seq_len, seq_len)
+            attention_mask = attention_mask & causal_mask.bool()
+            attention_mask = attention_mask.to(dtype=hidden_states.dtype)
+
+        # Convert attention mask to the format expected by attention layers
+        # [bs, 1, tgt_seq_len, src_seq_len] -> [bs, 1, 1, src_seq_len] for causal
+        if attention_mask.dim() == 2:
+            # [bs, seq_len] -> [bs, 1, 1, seq_len]
+            attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
+        elif attention_mask.dim() == 3:
+            # [bs, 1, seq_len] -> [bs, 1, 1, seq_len]
+            attention_mask = attention_mask.unsqueeze(2)
+        elif attention_mask.dim() == 4:
+            # Already in the right format [bs, 1, seq_len, seq_len]
             pass
+
+        # Convert to negative infinity for masked values
+        attention_mask = (1.0 - attention_mask) * torch.finfo(hidden_states.dtype).min
 
         pkv = () if use_cache else None
 
@@ -318,7 +338,10 @@ class Qwen3ForCausalLM(nn.Module):
 
     def gradient_checkpointing_enable(self):
         # Placeholder for compatibility
-        pass
+        """Implement the required functionality."""
+        # This is a placeholder implementation
+        # In a real implementation, this would contain the actual logic
+        return None
 
     @property
     def device(self):

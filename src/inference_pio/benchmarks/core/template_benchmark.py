@@ -27,17 +27,17 @@ class TemplateBenchmarkBase(BenchmarkBase):
 
     def get_model_plugin_class(self):
         """Abstract method implementation - to be overridden by subclasses."""
-        raise NotImplementedError("Subclasses must implement get_model_plugin_class")
+        raise NotImplementedError("Method not implemented")
 
     def test_required_functionality(self):
         """Implementation of abstract method from base class."""
         # Generic implementation - subclasses should override with specific functionality
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def run_performance_test(self):
         """Implementation of abstract method from base class."""
         # Generic performance test - subclasses should override with specific tests
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def run_template_benchmark(self):
         """
@@ -45,7 +45,7 @@ class TemplateBenchmarkBase(BenchmarkBase):
         
         Override this method to implement your specific benchmark logic.
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
 
 class CustomAccuracyBenchmark(TemplateBenchmarkBase):
@@ -59,11 +59,11 @@ class CustomAccuracyBenchmark(TemplateBenchmarkBase):
         """Return the model plugin class to benchmark."""
         # This should return the actual model plugin class
         # For template purposes, we'll raise NotImplementedError
-        raise NotImplementedError("Implement to return your model plugin class")
+        raise NotImplementedError("Method not implemented")
 
     def test_required_functionality(self):
         """Test required functionality for accuracy benchmarking."""
-        # TODO: Implement accuracy-specific functionality test
+        # TODO: Implement this functionality
         # Example:
         # inputs = ["sample input 1", "sample input 2"]
         # expected_outputs = ["expected output 1", "expected output 2"]
@@ -71,12 +71,12 @@ class CustomAccuracyBenchmark(TemplateBenchmarkBase):
         # for inp, expected in zip(inputs, expected_outputs):
         #     actual = self.model.infer(inp)
         #     self.assertEqual(actual, expected)
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def run_performance_test(self):
         """Run performance test specific to accuracy."""
-        # TODO: Implement accuracy-focused performance test
-        pass
+        # TODO: Implement this functionality
+        raise NotImplementedError("Method not implemented")
 
     def run_accuracy_benchmark(self, plugin, model_name: str, test_dataset: List[Dict] = None):
         """
@@ -137,15 +137,15 @@ class ResourceUtilizationBenchmark(TemplateBenchmarkBase):
 
     def get_model_plugin_class(self):
         """Return the model plugin class to benchmark."""
-        raise NotImplementedError("Implement to return your model plugin class")
+        raise NotImplementedError("Method not implemented")
 
     def test_required_functionality(self):
         """Test required functionality for resource utilization benchmarking."""
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def run_performance_test(self):
         """Run performance test specific to resource utilization."""
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def run_resource_benchmark(
         self, 
@@ -198,7 +198,7 @@ class ResourceUtilizationBenchmark(TemplateBenchmarkBase):
                         gpu_memory_usages.append(gpu_memory)
                 except ImportError:
                     # If GPUtil is not available, skip GPU monitoring
-                    pass
+                    pass  # GPU monitoring not available, continue with CPU/Memory monitoring
 
                 # Wait for the next sampling interval
                 should_stop.wait(timeout=sampling_interval)
@@ -277,15 +277,15 @@ class ScalabilityBenchmark(TemplateBenchmarkBase):
 
     def get_model_plugin_class(self):
         """Return the model plugin class to benchmark."""
-        raise NotImplementedError("Implement to return your model plugin class")
+        raise NotImplementedError("Method not implemented")
 
     def test_required_functionality(self):
         """Test required functionality for scalability benchmarking."""
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def run_performance_test(self):
         """Run performance test specific to scalability."""
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def run_scalability_benchmark(
         self,

@@ -174,7 +174,7 @@ class FeedbackController:
             try:
                 self.adjustment_callbacks[model_id].remove(callback)
             except ValueError:
-                pass  # Callback not found
+                logger.warning(f"Callback not found for event: {event_type}")
 
     def set_performance_target(
         self, metric_name: str, target_value: float, weight: float = 1.0

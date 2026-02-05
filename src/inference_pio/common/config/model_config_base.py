@@ -18,7 +18,6 @@ import yaml
 
 class ModelConfigError(Exception):
     """Custom exception for model configuration errors."""
-
     pass
 
 
@@ -69,6 +68,7 @@ class BaseConfig(ABC):
     @abstractmethod
     def get_model_specific_params(self) -> Dict[str, Any]:
         """Return model-specific parameters."""
+        # This will be implemented by subclasses
         pass
 
     def _validate_config(self):

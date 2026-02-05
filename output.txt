@@ -1,0 +1,39 @@
+C:\Users\Admin\AppData\Roaming\Python\Python312\site-packages\torch\cuda\__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+test_memory_usage_comparison (__main__.TestMemoryEfficiency.test_memory_usage_comparison)
+Compare memory usage between custom and standard implementations. ... INFO:__main__:Using device: cuda
+INFO:__main__:Custom kernel peak memory: 13.38 MB
+INFO:__main__:Standard implementation peak memory: 20.14 MB
+ok
+test_attention_performance_comparison (__main__.TestPerformanceComparison.test_attention_performance_comparison)
+Compare performance of custom attention kernel vs standard implementation. ... INFO:__main__:Using device: cuda
+INFO:__main__:Custom Attention - Avg time: 0.000203s ± 0.000608s
+INFO:__main__:Standard Attention - Avg time: 0.000205s ± 0.000601s
+INFO:__main__:Speedup: 1.01x
+ok
+test_mlp_performance_comparison (__main__.TestPerformanceComparison.test_mlp_performance_comparison)
+Compare performance of custom MLP kernel vs standard implementation. ... INFO:__main__:Using device: cuda
+INFO:__main__:Custom MLP - Avg time: 0.001013s ± 0.002437s
+INFO:__main__:Standard MLP - Avg time: 0.000000s ± 0.000000s
+INFO:__main__:Speedup: 0.00x
+FAIL
+test_rmsnorm_performance_comparison (__main__.TestPerformanceComparison.test_rmsnorm_performance_comparison)
+Compare performance of custom RMSNorm kernel vs standard implementation. ... INFO:__main__:Using device: cuda
+INFO:__main__:Custom RMSNorm - Avg time: 0.000000s ± 0.000000s
+INFO:__main__:Standard RMSNorm - Avg time: 0.000000s ± 0.000000s
+INFO:__main__:Speedup: infx
+ok
+
+======================================================================
+FAIL: test_mlp_performance_comparison (__main__.TestPerformanceComparison.test_mlp_performance_comparison)
+Compare performance of custom MLP kernel vs standard implementation.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\Admin\Documents\GitHub\Mod\test_cuda_kernels_performance_comparison.py", line 229, in test_mlp_performance_comparison
+    self.assertLessEqual(custom_avg_time, standard_avg_time * 2.0,
+AssertionError: np.float64(0.0010126352310180664) not less than or equal to np.float64(0.0) : Custom MLP should not be significantly slower than standard
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.840s
+
+FAILED (failures=1)

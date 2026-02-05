@@ -50,6 +50,36 @@ class OptimizationConfig:
     # System adaptivity settings
     enable_intelligent_pagination: bool = True
 
+    def _get_h_drive_path(self):
+        """Get the H drive path for this model if available."""
+        import os
+        import platform
+        
+        # Determine the model-specific path on H drive
+        model_name_clean = self.model_name.replace("_", "-").replace(" ", "")
+        h_drive_paths = [
+            f"H:/{model_name_clean}",
+            f"H:/models/{model_name_clean}",
+            f"H:/AI/models/{model_name_clean}",
+        ]
+        
+        # Check platform-specific paths
+        if platform.system() == 'Windows':
+            for path in h_drive_paths:
+                if os.path.exists(path):
+                    return path
+        else:
+            # For Linux/WSL, common mount points
+            mount_points = ['/mnt/h', '/media/h', '/drives/h']
+            for mount_point in mount_points:
+                for path in h_drive_paths:
+                    alt_path = path.replace('H:/', f'{mount_point}/')
+                    if os.path.exists(alt_path):
+                        return alt_path
+        
+        return None
+
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
         return {k: v for k, v in self.__dict__.items() if not k.startswith("_")}

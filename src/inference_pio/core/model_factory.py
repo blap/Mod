@@ -80,7 +80,11 @@ class ModelFactory:
             config['model_path'] = resolved_path
 
         try:
-            if "qwen3_0_6b" in model_name or "qwen3_0.6b" in model_name:
+            # First, check if the model is registered
+            if model_name in _REGISTERED_MODELS:
+                model_class = _REGISTERED_MODELS[model_name]
+                plugin = model_class()
+            elif "qwen3_0_6b" in model_name or "qwen3_0.6b" in model_name:
                 from inference_pio.models.qwen3_0_6b.plugin import (
                     create_qwen3_0_6b_plugin
                 )
@@ -149,13 +153,16 @@ class ModelFactory:
         """
         Returns a list of supported model names.
         """
-        return [
+        base_models = [
             "qwen3-0.6b",
             "qwen3-vl-2b",
             "glm-4-7-flash",
             "qwen3-4b",
             "qwen3-coder-30b",
         ]
+        # Add any registered models
+        registered_models = list(_REGISTERED_MODELS.keys())
+        return base_models + registered_models
 
 
 def create_model(
@@ -184,11 +191,40 @@ def get_model_class(model_name: str) -> Type[ModelPluginInterface]:
     Returns:
         The class of the requested model plugin.
     """
-    # This function would return the class itself, not an instance
-    # For now, we'll raise an exception since this functionality
-    # isn't fully implemented
-    raise NotImplementedError("get_model_class is not implemented yet")
+    model_name = model_name.lower().replace("-", "_").replace(" ", "_")
 
+    if "qwen3_0_6b" in model_name or "qwen3_0.6b" in model_name:
+        from inference_pio.models.qwen3_0_6b.plugin import Qwen3_0_6bPlugin
+        return Qwen3_0_6bPlugin
+
+    elif "qwen3_vl" in model_name or "qwen3_vl_2b" in model_name:
+        from inference_pio.models.qwen3_vl_2b.plugin import Qwen3Vl2bInstructPlugin
+        return Qwen3Vl2bInstructPlugin
+
+    elif "glm_4_7" in model_name or "glm_4" in model_name:
+        from inference_pio.models.glm_4_7_flash.plugin import Glm47FlashPlugin
+        return Glm47FlashPlugin
+
+    elif "qwen3_4b" in model_name:
+        from inference_pio.models.qwen3_4b_instruct_2507.plugin import Qwen34bInstruct2507Plugin
+        return Qwen34bInstruct2507Plugin
+
+    elif "qwen3_coder" in model_name or "coder" in model_name:
+        from inference_pio.models.qwen3_coder_30b.plugin import Qwen3Coder30bPlugin
+        return Qwen3Coder30bPlugin
+
+    else:
+        # Return a generic plugin class if model name not recognized
+        from inference_pio.common.interfaces.improved_base_plugin_interface import ModelPluginInterface
+        raise ValueError(
+            f"Unsupported model name: {model_name}. "
+            "Available models: qwen3-0.6b, qwen3-vl-2b, glm-4-7-flash, "
+            "qwen3-4b, qwen3-coder"
+        )
+
+
+# Dictionary to store registered model classes
+_REGISTERED_MODELS = {}
 
 def register_model(model_name: str, model_class: Type[ModelPluginInterface]):
     """
@@ -197,11 +233,17 @@ def register_model(model_name: str, model_class: Type[ModelPluginInterface]):
     Args:
         model_name: The name to register the model under.
         model_class: The model plugin class to register.
+
+    Returns:
+        True if registration was successful, False otherwise
     """
-    # This function would allow registering new models
-    # For now, we'll raise an exception since this functionality
-    # isn't fully implemented
-    raise NotImplementedError("register_model is not implemented yet")
+    try:
+        _REGISTERED_MODELS[model_name.lower()] = model_class
+        logger.info(f"Successfully registered model: {model_name}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to register model {model_name}: {e}")
+        return False
 
 
 __all__ = [

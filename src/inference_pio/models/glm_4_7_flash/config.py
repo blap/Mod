@@ -183,6 +183,56 @@ class GLM47FlashConfig(BaseConfig):
     prefix_cache_min_prefix_length: int = 8
     prefix_cache_warmup_threshold: int = 3
 
+    # Intelligent caching settings
+    use_intelligent_caching: bool = True
+    intelligent_cache_max_size: int = 1024 * 1024 * 512  # 512MB
+    intelligent_cache_precision: str = "float16"
+    intelligent_cache_compression_enabled: bool = True
+    intelligent_cache_compression_method: str = "intelligent"  # Options: "fp16", "int8", "sparse", "intelligent"
+    intelligent_cache_policy: str = "intelligent"  # Options: "lru", "fifo", "lfu", "predictive", "intelligent"
+    intelligent_cache_enable_prefetching: bool = True
+    intelligent_cache_prefetch_distance: int = 2
+    intelligent_cache_max_prefix_length: int = 4096
+    intelligent_cache_min_prefix_length: int = 4
+    intelligent_cache_warmup_threshold: int = 2
+    intelligent_cache_prediction_horizon: int = 10
+    intelligent_cache_prediction_confidence_threshold: float = 0.7
+    intelligent_cache_enable_adaptive_eviction: bool = True
+    intelligent_cache_enable_adaptive_prefetching: bool = True
+    intelligent_cache_adaptive_window_size: int = 100
+    intelligent_cache_enable_performance_monitoring: bool = True
+    intelligent_cache_performance_log_interval: int = 100
+
+    # Intelligent scheduling settings
+    enable_intelligent_scheduling: bool = True
+    intelligent_scheduling_max_concurrent_ops: int = 16
+    intelligent_scheduling_policy: str = "intelligent"  # Options: "fifo", "priority", "round_robin", "predictive", "intelligent"
+    intelligent_scheduling_enable_prediction: bool = True
+    intelligent_scheduling_prediction_horizon: int = 10
+    intelligent_scheduling_enable_adaptive: bool = True
+    intelligent_scheduling_adaptive_window: int = 100
+    intelligent_scheduling_enable_resource_opt: bool = True
+    intelligent_scheduling_resource_buffer: float = 0.1
+    intelligent_scheduling_enable_priority_boost: bool = True
+    intelligent_scheduling_priority_decay: float = 0.95
+    intelligent_scheduling_enable_load_balancing: bool = True
+    intelligent_scheduling_load_balance_interval: float = 0.1
+    intelligent_scheduling_performance_log_interval: int = 50
+
+    # Cross-Alignment Optimization settings
+    enable_cross_alignment: bool = True  # Enable cross-alignment optimization
+    cross_alignment_temperature: float = 0.5  # Temperature for alignment computation
+    cross_alignment_lambda: float = 0.1  # Weight for alignment loss in total loss
+    use_cross_alignment_contrastive: bool = True  # Whether to use contrastive alignment loss
+    enable_dynamic_cross_alignment: bool = True  # Whether to enable dynamic alignment based on input complexity
+    cross_alignment_frequency: int = 10  # Frequency of alignment updates (every N steps)
+    cross_alignment_threshold: float = 0.8  # Threshold for alignment quality
+    use_cross_alignment_attention: bool = True  # Whether to use attention-based alignment
+    use_cross_alignment_learned: bool = True  # Whether to use learned alignment projections
+    cross_alignment_projection_dim: int = 512  # Dimension for alignment projections
+    enable_cross_alignment_similarity: bool = True  # Whether to enable similarity-based alignment
+    cross_alignment_method: str = "glm_specific"  # Default alignment method
+
     # CUDA kernels settings
     use_cuda_kernels: bool = True
     cuda_kernel_gelu_enabled: bool = True
@@ -474,6 +524,15 @@ class GLM47FlashConfig(BaseConfig):
         if not self.model_path:
             self.model_path = get_default_model_path(self.model_name)
 
+        # Ensure the model path points to the H drive for GLM-4.7-Flash model
+        if (
+            not self.model_path
+            or "glm_4_7_flash" in self.model_path.lower()
+            or "glm-4.7" in self.model_path.lower()
+            or "glm_4_7" in self.model_path.lower()
+        ):
+            self.model_path = "H:/GLM-4.7-Flash"
+
         # Call parent's post_init to validate config
         super().__post_init__()
 
@@ -597,7 +656,10 @@ class GLM47DynamicConfig(GLM47FlashConfig):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # Adiciona capacidades de configuração dinâmica se necessário
-        pass
+        """Implement the required functionality."""
+        # This is a placeholder implementation
+        # In a real implementation, this would contain the actual logic
+        return None
 
 
 # Register this configuration with the factory

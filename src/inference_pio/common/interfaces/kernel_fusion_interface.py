@@ -26,7 +26,7 @@ class KernelFusionManagerInterface(ABC):
         Returns:
             True if setup was successful, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def apply_kernel_fusion(self, model: torch.nn.Module = None) -> bool:
@@ -39,7 +39,7 @@ class KernelFusionManagerInterface(ABC):
         Returns:
             True if optimization was successful, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def get_fusion_manager(self):

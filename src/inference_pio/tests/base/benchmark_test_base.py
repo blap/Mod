@@ -60,7 +60,7 @@ class BaseBenchmarkTest(unittest.TestCase, ABC):
         Abstract method that must be implemented by subclasses.
         Each benchmark test class must define its core performance test.
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def measure_execution_time(self, func, *args, **kwargs) -> Dict[str, float]:
         """Measure execution time of a function."""
@@ -150,7 +150,7 @@ class ModelBenchmarkTest(BaseBenchmarkTest, ABC):
     @abstractmethod
     def get_model_plugin_class(self):
         """Return the model plugin class to be benchmarked."""
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def create_model_instance(self, **kwargs):
         """Create an instance of the model plugin with test configuration."""

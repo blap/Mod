@@ -8,11 +8,22 @@ self-contained plugin architecture for the Inference-PIO system.
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Union
 
-from ...common.model_config_base import (
-    BaseConfig,
-    ModelConfigError,
-    get_default_model_path,
-)
+try:
+    from ...common.config.model_config_base import (
+        BaseConfig,
+        ModelConfigError,
+        get_default_model_path,
+    )
+except ImportError:
+    # Fallback import
+    import sys
+    import os
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+    from src.inference_pio.common.config.model_config_base import (
+        BaseConfig,
+        ModelConfigError,
+        get_default_model_path,
+    )
 
 
 @dataclass
@@ -430,6 +441,56 @@ class Qwen34BInstruct2507Config(BaseConfig):
         5.0  # Interval for proactive pagination (seconds)
     )
 
+    # Intelligent Cache settings
+    intelligent_cache_enabled: bool = True  # Enable intelligent caching system
+    intelligent_cache_max_size: int = 1024 * 1024 * 256  # 256MB
+    intelligent_cache_precision: str = "float16"  # Cache precision
+    intelligent_cache_compression_enabled: bool = True  # Enable compression
+    intelligent_cache_compression_method: str = "intelligent"  # Compression method
+    intelligent_cache_policy: str = "intelligent"  # Cache policy: lru, fifo, lfu, predictive, intelligent
+    intelligent_cache_enable_prefetching: bool = True  # Enable prefetching
+    intelligent_cache_prefetch_distance: int = 1  # Distance for prefetching
+    intelligent_cache_max_prefix_length: int = 2048  # Max length for cached prefixes
+    intelligent_cache_min_prefix_length: int = 8  # Min length for cached prefixes
+    intelligent_cache_warmup_threshold: int = 3  # Threshold for warming up cache entries
+    intelligent_cache_prediction_horizon: int = 10  # Number of steps to predict ahead
+    intelligent_cache_prediction_confidence_threshold: float = 0.7  # Minimum confidence for predictions
+    intelligent_cache_enable_adaptive_eviction: bool = True  # Enable adaptive eviction
+    intelligent_cache_enable_adaptive_prefetching: bool = True  # Enable adaptive prefetching
+    intelligent_cache_adaptive_window_size: int = 100  # Window size for adaptive algorithms
+    intelligent_cache_enable_performance_monitoring: bool = True  # Enable performance monitoring
+    intelligent_cache_performance_log_interval: int = 100  # Log interval for performance metrics
+
+    # Intelligent scheduling settings
+    enable_intelligent_scheduling: bool = True
+    intelligent_scheduling_max_concurrent_ops: int = 32
+    intelligent_scheduling_policy: str = "intelligent"  # Options: "fifo", "priority", "round_robin", "predictive", "intelligent"
+    intelligent_scheduling_enable_prediction: bool = True
+    intelligent_scheduling_prediction_horizon: int = 15
+    intelligent_scheduling_enable_adaptive: bool = True
+    intelligent_scheduling_adaptive_window: int = 150
+    intelligent_scheduling_enable_resource_opt: bool = True
+    intelligent_scheduling_resource_buffer: float = 0.15
+    intelligent_scheduling_enable_priority_boost: bool = True
+    intelligent_scheduling_priority_decay: float = 0.92
+    intelligent_scheduling_enable_load_balancing: bool = True
+    intelligent_scheduling_load_balance_interval: float = 0.08
+    intelligent_scheduling_performance_log_interval: int = 75
+
+    # Cross-Alignment Optimization settings
+    enable_cross_alignment: bool = True  # Enable cross-alignment optimization
+    cross_alignment_temperature: float = 0.5  # Temperature for alignment computation
+    cross_alignment_lambda: float = 0.1  # Weight for alignment loss in total loss
+    use_cross_alignment_contrastive: bool = True  # Whether to use contrastive alignment loss
+    enable_dynamic_cross_alignment: bool = True  # Whether to enable dynamic alignment based on input complexity
+    cross_alignment_frequency: int = 10  # Frequency of alignment updates (every N steps)
+    cross_alignment_threshold: float = 0.8  # Threshold for alignment quality
+    use_cross_alignment_attention: bool = True  # Whether to use attention-based alignment
+    use_cross_alignment_learned: bool = True  # Whether to use learned alignment projections
+    cross_alignment_projection_dim: int = 512  # Dimension for alignment projections
+    enable_cross_alignment_similarity: bool = True  # Whether to enable similarity-based alignment
+    cross_alignment_method: str = "qwen3_instruct_specific"  # Default alignment method
+
     # Continuous NAS settings
     enable_continuous_nas: bool = (
         False  # Enable continuous NAS for architecture adaptation
@@ -565,11 +626,21 @@ class Qwen34BDynamicConfig(Qwen34BInstruct2507Config):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # Adiciona capacidades de configuração dinâmica se necessário
-        pass
+        """Implement the required functionality."""
+        # This is a placeholder implementation
+        # In a real implementation, this would contain the actual logic
+        return None
 
 
 # Register this configuration with the factory
-from ...common.config_factory import register_model_config
+try:
+    from ...common.config.config_factory import register_model_config
+except ImportError:
+    # Fallback import
+    import sys
+    import os
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+    from src.inference_pio.common.config.config_factory import register_model_config
 
 register_model_config("qwen3_4b_instruct_2507", Qwen34BInstruct2507Config)
 

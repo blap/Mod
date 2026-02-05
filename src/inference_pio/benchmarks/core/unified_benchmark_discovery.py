@@ -471,7 +471,7 @@ def discover_and_run_all_benchmarks() -> Dict[str, Any]:
 class BenchmarkDiscovery(UnifiedBenchmarkDiscoverer):
     """Backward compatible wrapper for the old discovery system."""
 
-    pass
+    raise NotImplementedError("Method not implemented")
 
 
 if __name__ == "__main__":

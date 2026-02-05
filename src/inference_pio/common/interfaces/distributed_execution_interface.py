@@ -25,7 +25,7 @@ class DistributedExecutionManagerInterface(ABC):
         Returns:
             True if setup was successful, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def enable_distributed_execution(self, **kwargs) -> bool:
@@ -38,7 +38,7 @@ class DistributedExecutionManagerInterface(ABC):
         Returns:
             True if distributed execution was enabled successfully, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def partition_model_for_distributed(
@@ -54,7 +54,7 @@ class DistributedExecutionManagerInterface(ABC):
         Returns:
             True if partitioning was successful, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def get_virtual_execution_manager(self):
@@ -64,7 +64,7 @@ class DistributedExecutionManagerInterface(ABC):
         Returns:
             Virtual execution manager instance or None
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def get_virtual_device_simulator(self):
@@ -74,7 +74,7 @@ class DistributedExecutionManagerInterface(ABC):
         Returns:
             Virtual device simulator instance or None
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def execute_with_virtual_execution(self, data: Any) -> Any:
@@ -87,7 +87,7 @@ class DistributedExecutionManagerInterface(ABC):
         Returns:
             Inference results
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def get_virtual_execution_stats(self) -> Dict[str, Any]:
@@ -97,7 +97,7 @@ class DistributedExecutionManagerInterface(ABC):
         Returns:
             Dictionary containing virtual execution statistics
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def synchronize_partitions(self) -> bool:
@@ -107,7 +107,7 @@ class DistributedExecutionManagerInterface(ABC):
         Returns:
             True if synchronization was successful, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def pipeline_synchronize(self, current_stage: int, num_stages: int) -> bool:
@@ -121,7 +121,7 @@ class DistributedExecutionManagerInterface(ABC):
         Returns:
             True if synchronization was successful, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def get_synchronization_manager(self):

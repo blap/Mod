@@ -59,7 +59,7 @@ class BaseRegressionTest(unittest.TestCase, ABC):
         Abstract method that must be implemented by subclasses.
         Each regression test class must define its core scenario test.
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def save_baseline_data(self, data: Any, identifier: str):
         """Save baseline data for regression testing."""
@@ -170,7 +170,7 @@ class ModelRegressionTest(BaseRegressionTest, ABC):
     @abstractmethod
     def get_model_plugin_class(self):
         """Return the model plugin class to be tested."""
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def create_model_instance(self, **kwargs):
         """Create an instance of the model plugin with test configuration."""
@@ -243,7 +243,7 @@ class FeatureRegressionTest(BaseRegressionTest, ABC):
     @abstractmethod
     def get_feature_identifier(self) -> str:
         """Return a unique identifier for the feature being tested."""
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def test_feature_functionality(self):
         """Test that the feature works as expected."""
@@ -263,4 +263,4 @@ class FeatureRegressionTest(BaseRegressionTest, ABC):
     @abstractmethod
     def execute_feature(self):
         """Execute the feature and return the result."""
-        pass
+        raise NotImplementedError("Method not implemented")

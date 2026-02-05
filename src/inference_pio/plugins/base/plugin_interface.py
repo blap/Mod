@@ -26,13 +26,13 @@ class HardwareProcessorPluginInterface(ABC):
     @abstractmethod
     def plugin_name(self) -> str:
         """Unique name of the hardware processor plugin."""
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @property
     @abstractmethod
     def supported_hardware_architectures(self) -> list[str]:
         """List of supported hardware architectures (e.g., 'x86_64', 'arm64')."""
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def initialize(self, config: Dict[str, Any]) -> bool:
@@ -45,7 +45,7 @@ class HardwareProcessorPluginInterface(ABC):
         Returns:
             True if initialization was successful, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def optimized_matmul(self, a: Tensor, b: Tensor) -> Tensor:
@@ -59,7 +59,7 @@ class HardwareProcessorPluginInterface(ABC):
         Returns:
             Result of matrix multiplication
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def optimized_scaled_dot_product_attention(
@@ -85,7 +85,7 @@ class HardwareProcessorPluginInterface(ABC):
         Returns:
             Attention output tensor
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def optimized_apply_activation(self, x: Tensor, activation_type: str) -> Tensor:
@@ -99,7 +99,7 @@ class HardwareProcessorPluginInterface(ABC):
         Returns:
             Tensor with activation applied
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def configure_thread_management(self, num_threads: int):
@@ -109,7 +109,7 @@ class HardwareProcessorPluginInterface(ABC):
         Args:
             num_threads: Number of threads to use for parallel execution
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
 
 __all__ = ["HardwareProcessorPluginInterface"]

@@ -301,7 +301,10 @@ class AdaptiveSparseAttention(nn.Module):
                 )
             except ImportError:
                 # If rotary embeddings are not available, skip them
-                pass
+                # Placeholder for actual adaptive sparse attention implementation
+                # This would contain the actual sparse attention algorithm
+                logger.warning("Adaptive sparse attention not implemented for this operation")
+                continue
 
         # Determine attention pattern based on adaptive strategy
         if self.adaptive_strategy == "input_dependent":

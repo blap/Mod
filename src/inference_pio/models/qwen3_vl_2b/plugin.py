@@ -1008,8 +1008,8 @@ class Qwen3_VL_2B_Plugin(Qwen3_VL_2B_Instruct_Plugin):
     Qwen3-VL-2B base model plugin (non-instruct version).
     Extends the instruct version with base model specific configurations.
     """
-
     pass
+
 
 
 def create_qwen3_vl_2b_instruct_plugin() -> Qwen3_VL_2B_Instruct_Plugin:

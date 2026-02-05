@@ -16,18 +16,21 @@ from typing import Any, Callable, Optional, Type, Union
 class ValidationError(Exception):
     """Custom exception for validation errors."""
 
+    # Default implementation does nothing
     pass
 
 
 class BenchmarkError(Exception):
     """Custom exception for benchmark-specific errors."""
 
+    # Default implementation does nothing
     pass
 
 
 class TestError(Exception):
     """Custom exception for test-specific errors."""
 
+    # Default implementation does nothing
     pass
 
 

@@ -58,7 +58,7 @@ class BaseFunctionalTest(unittest.TestCase, ABC):
         Abstract method that must be implemented by subclasses.
         Each functional test class must define its core requirement test.
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def run_system_command(self, command: str) -> subprocess.CompletedProcess:
         """Run a system command and return the result."""
@@ -99,7 +99,7 @@ class ModelFunctionalTest(BaseFunctionalTest, ABC):
     @abstractmethod
     def get_model_plugin_class(self):
         """Return the model plugin class to be tested."""
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def create_model_instance(self, **kwargs):
         """Create an instance of the model plugin with test configuration."""
@@ -193,7 +193,7 @@ class SystemFunctionalTest(BaseFunctionalTest, ABC):
             )  # This might fail, which is OK for testing
         except Exception:
             # Expected if mock_model doesn't exist
-            pass
+            raise NotImplementedError("Method not implemented")
 
         # The test passes if no critical errors occur during the workflow simulation
         self.assertTrue(True)

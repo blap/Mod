@@ -25,7 +25,7 @@ class MemoryManagerInterface(ABC):
         Returns:
             True if setup was successful, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def enable_tensor_paging(self, **kwargs) -> bool:
@@ -38,7 +38,7 @@ class MemoryManagerInterface(ABC):
         Returns:
             True if tensor paging was enabled successfully, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def enable_smart_swap(self, **kwargs) -> bool:
@@ -51,7 +51,7 @@ class MemoryManagerInterface(ABC):
         Returns:
             True if smart swap was enabled successfully, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def get_memory_stats(self) -> Dict[str, Any]:
@@ -61,7 +61,7 @@ class MemoryManagerInterface(ABC):
         Returns:
             Dictionary containing memory statistics
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def force_memory_cleanup(self) -> bool:
@@ -71,7 +71,7 @@ class MemoryManagerInterface(ABC):
         Returns:
             True if cleanup was successful, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def start_predictive_memory_management(self, **kwargs) -> bool:
@@ -84,7 +84,7 @@ class MemoryManagerInterface(ABC):
         Returns:
             True if predictive management was started successfully, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def stop_predictive_memory_management(self) -> bool:
@@ -94,7 +94,7 @@ class MemoryManagerInterface(ABC):
         Returns:
             True if predictive management was stopped successfully, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def clear_cuda_cache(self) -> bool:
@@ -104,7 +104,7 @@ class MemoryManagerInterface(ABC):
         Returns:
             True if cache was cleared successfully, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def setup_activation_offloading(self, **kwargs) -> bool:
@@ -117,7 +117,7 @@ class MemoryManagerInterface(ABC):
         Returns:
             True if setup was successful, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def enable_activation_offloading(self, **kwargs) -> bool:
@@ -130,7 +130,7 @@ class MemoryManagerInterface(ABC):
         Returns:
             True if activation offloading was enabled successfully, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def offload_activations(self, **kwargs) -> bool:
@@ -143,7 +143,7 @@ class MemoryManagerInterface(ABC):
         Returns:
             True if offloading was successful, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def predict_activation_access(self, **kwargs) -> Dict[str, Any]:
@@ -156,7 +156,7 @@ class MemoryManagerInterface(ABC):
         Returns:
             Dictionary mapping activation names to access probabilities
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def get_activation_offloading_stats(self) -> Dict[str, Any]:
@@ -166,7 +166,7 @@ class MemoryManagerInterface(ABC):
         Returns:
             Dictionary containing activation offloading statistics
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def setup_disk_offloading(self, **kwargs) -> bool:
@@ -179,7 +179,7 @@ class MemoryManagerInterface(ABC):
         Returns:
             True if setup was successful, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def enable_disk_offloading(self, **kwargs) -> bool:
@@ -192,7 +192,7 @@ class MemoryManagerInterface(ABC):
         Returns:
             True if disk offloading was enabled successfully, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def offload_model_parts(self, **kwargs) -> bool:
@@ -205,7 +205,7 @@ class MemoryManagerInterface(ABC):
         Returns:
             True if offloading was successful, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def predict_model_part_access(self, **kwargs) -> Dict[str, Any]:
@@ -218,7 +218,7 @@ class MemoryManagerInterface(ABC):
         Returns:
             Dictionary mapping model part names to access probabilities
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def get_offloading_stats(self) -> Dict[str, Any]:

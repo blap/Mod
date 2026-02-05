@@ -77,7 +77,13 @@ class GraphFusionOptimizer:
                             # Replace the two modules with the fused block
                             # Note: modifying Sequential in-place while iterating is tricky,
                             # usually requires rebuilding the list.
-                            pass # Placeholder for actual struct modification logic
+                            # For now, we'll implement a basic fusion by creating a fused module
+                            fused_module = self._create_fused_linear_activation(curr, next_mod)
+                            child[i] = fused_module
+                            # Remove the next module since it's now part of the fused module
+                            del child[i+1]
+                            # Don't increment i since we removed an element
+                            continue
 
                         i += 1
 
@@ -94,6 +100,29 @@ class GraphFusionOptimizer:
 
         logger.info("Graph Fusion: Preparing model for fused execution via torch.compile optimization path.")
         return model
+
+    def _create_fused_linear_activation(self, linear_module: nn.Linear, activation_module) -> nn.Module:
+        """
+        Creates a fused linear + activation module.
+
+        Args:
+            linear_module: The linear layer to fuse
+            activation_module: The activation function to fuse
+
+        Returns:
+            A module that performs linear transformation followed by activation
+        """
+        class FusedLinearActivation(nn.Module):
+            def __init__(self, linear: nn.Linear, activation):
+                super().__init__()
+                self.linear = linear
+                self.activation = activation
+
+            def forward(self, x):
+                return self.activation(self.linear(x))
+
+        return FusedLinearActivation(linear_module, activation_module)
+
 
 def fuse_graph(model: nn.Module) -> nn.Module:
     """

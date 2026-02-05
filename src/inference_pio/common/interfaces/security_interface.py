@@ -25,7 +25,7 @@ class SecurityManagerInterface(ABC):
         Returns:
             True if initialization was successful, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def validate_file_access(self, file_path: str) -> bool:
@@ -38,7 +38,7 @@ class SecurityManagerInterface(ABC):
         Returns:
             True if access is allowed, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def validate_network_access(self, host: str) -> bool:
@@ -51,7 +51,7 @@ class SecurityManagerInterface(ABC):
         Returns:
             True if access is allowed, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def get_resource_usage(self) -> Dict[str, Any]:
@@ -61,7 +61,7 @@ class SecurityManagerInterface(ABC):
         Returns:
             Dictionary with resource usage information
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def cleanup_security(self) -> bool:

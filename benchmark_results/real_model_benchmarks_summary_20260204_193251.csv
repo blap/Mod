@@ -1,0 +1,2 @@
+Model Name,Avg Inference Time (s),Std Inference Time (s),Avg Memory Usage (MB),Peak Memory Usage (MB),Tokens Per Second (est),Successful Runs,Total Runs
+qwen3_vl_2b,nan,nan,0.00,0.00,0.00,0,3

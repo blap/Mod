@@ -18,25 +18,21 @@ import torch
 
 class ValidationError(Exception):
     """Custom exception for validation errors."""
-
     pass
 
 
 class BenchmarkError(Exception):
     """Custom exception for benchmark-specific errors."""
-
     pass
 
 
 class TestError(Exception):
     """Custom exception for test-specific errors."""
-
     pass
 
 
 class ModelError(Exception):
     """Custom exception for model-related errors."""
-
     pass
 
 

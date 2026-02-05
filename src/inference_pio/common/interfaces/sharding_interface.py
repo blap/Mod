@@ -30,7 +30,7 @@ class ShardingManagerInterface(ABC):
         Returns:
             True if sharding was enabled successfully, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def disable_sharding(self) -> bool:
@@ -40,7 +40,7 @@ class ShardingManagerInterface(ABC):
         Returns:
             True if sharding was disabled successfully, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def shard_model(self, model: torch.nn.Module, num_shards: int = 500) -> bool:
@@ -54,7 +54,7 @@ class ShardingManagerInterface(ABC):
         Returns:
             True if sharding was successful, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def prepare_inference_context(
@@ -71,7 +71,7 @@ class ShardingManagerInterface(ABC):
         Returns:
             List of shard IDs loaded for this context
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def execute_with_shards(
@@ -87,7 +87,7 @@ class ShardingManagerInterface(ABC):
         Returns:
             Output tensor from the computation
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def cleanup_inference_context(self, context_id: str, force_unload: bool = True):
@@ -98,7 +98,7 @@ class ShardingManagerInterface(ABC):
             context_id: Context ID to clean up
             force_unload: Whether to force unload all shards for this context
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def get_sharding_stats(self) -> Dict[str, Any]:

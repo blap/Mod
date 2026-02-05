@@ -381,7 +381,7 @@ class AsyncUnimodalProcessor:
             try:
                 await self.processing_task
             except asyncio.CancelledError:
-                pass
+                raise NotImplementedError("Method not implemented")
         self.executor.shutdown(wait=True)
         logger.info("Stopped asynchronous unimodal processing system")
 

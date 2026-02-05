@@ -210,7 +210,9 @@ class IntelCometLakePlugin(HardwareProcessorPluginInterface):
 
         # Ensure we don't put 0 if we have some space, unless it's really tiny
         if (layers_on_gpu == 0 and safe_vram > 0.3):
-            pass
+            # If we have enough VRAM for at least one layer, put one layer on GPU
+            layers_on_gpu = 1
+            layers_on_cpu = total_layers - 1
 
         layers_on_cpu = total_layers - layers_on_gpu
 

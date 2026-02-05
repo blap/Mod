@@ -75,7 +75,7 @@ class BaseBenchmark(abc.ABC):
     @abc.abstractmethod
     def run(self) -> BenchmarkResult:
         """Execute the benchmark and return results."""
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def warmup(self, num_iterations: int = 3):
         """Perform warmup runs to stabilize measurements."""

@@ -366,6 +366,56 @@ class Qwen3Coder30BConfig(BaseConfig):
         10  # How often to adapt (in terms of inference calls)
     )
 
+    # Intelligent Cache settings
+    intelligent_cache_enabled: bool = True  # Enable intelligent caching system
+    intelligent_cache_max_size: int = 1024 * 1024 * 512  # 512MB for larger model
+    intelligent_cache_precision: str = "float16"  # Cache precision
+    intelligent_cache_compression_enabled: bool = True  # Enable compression
+    intelligent_cache_compression_method: str = "intelligent"  # Compression method
+    intelligent_cache_policy: str = "intelligent"  # Cache policy: lru, fifo, lfu, predictive, intelligent
+    intelligent_cache_enable_prefetching: bool = True  # Enable prefetching
+    intelligent_cache_prefetch_distance: int = 1  # Distance for prefetching
+    intelligent_cache_max_prefix_length: int = 4096  # Max length for cached prefixes (larger for coding)
+    intelligent_cache_min_prefix_length: int = 8  # Min length for cached prefixes
+    intelligent_cache_warmup_threshold: int = 2  # Threshold for warming up cache entries (lower for coding)
+    intelligent_cache_prediction_horizon: int = 15  # Number of steps to predict ahead
+    intelligent_cache_prediction_confidence_threshold: float = 0.65  # Minimum confidence for predictions
+    intelligent_cache_enable_adaptive_eviction: bool = True  # Enable adaptive eviction
+    intelligent_cache_enable_adaptive_prefetching: bool = True  # Enable adaptive prefetching
+    intelligent_cache_adaptive_window_size: int = 200  # Window size for adaptive algorithms
+    intelligent_cache_enable_performance_monitoring: bool = True  # Enable performance monitoring
+    intelligent_cache_performance_log_interval: int = 100  # Log interval for performance metrics
+
+    # Intelligent scheduling settings
+    enable_intelligent_scheduling: bool = True
+    intelligent_scheduling_max_concurrent_ops: int = 64
+    intelligent_scheduling_policy: str = "intelligent"  # Options: "fifo", "priority", "round_robin", "predictive", "intelligent"
+    intelligent_scheduling_enable_prediction: bool = True
+    intelligent_scheduling_prediction_horizon: int = 20
+    intelligent_scheduling_enable_adaptive: bool = True
+    intelligent_scheduling_adaptive_window: int = 250
+    intelligent_scheduling_enable_resource_opt: bool = True
+    intelligent_scheduling_resource_buffer: float = 0.2
+    intelligent_scheduling_enable_priority_boost: bool = True
+    intelligent_scheduling_priority_decay: float = 0.90
+    intelligent_scheduling_enable_load_balancing: bool = True
+    intelligent_scheduling_load_balance_interval: float = 0.05
+    intelligent_scheduling_performance_log_interval: int = 100
+
+    # Cross-Alignment Optimization settings
+    enable_cross_alignment: bool = True  # Enable cross-alignment optimization
+    cross_alignment_temperature: float = 0.5  # Temperature for alignment computation
+    cross_alignment_lambda: float = 0.1  # Weight for alignment loss in total loss
+    use_cross_alignment_contrastive: bool = True  # Whether to use contrastive alignment loss
+    enable_dynamic_cross_alignment: bool = True  # Whether to enable dynamic alignment based on input complexity
+    cross_alignment_frequency: int = 10  # Frequency of alignment updates (every N steps)
+    cross_alignment_threshold: float = 0.8  # Threshold for alignment quality
+    use_cross_alignment_attention: bool = True  # Whether to use attention-based alignment
+    use_cross_alignment_learned: bool = True  # Whether to use learned alignment projections
+    cross_alignment_projection_dim: int = 512  # Dimension for alignment projections
+    enable_cross_alignment_similarity: bool = True  # Whether to enable similarity-based alignment
+    cross_alignment_method: str = "qwen3_coder_specific"  # Default alignment method
+
     # Code-specific optimizations
     code_generation_temperature: float = (
         0.2  # Lower temperature for more deterministic code generation
@@ -614,7 +664,10 @@ class Qwen3CoderDynamicConfig(Qwen3Coder30BConfig):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # Adiciona capacidades de configuração dinâmica se necessário
-        pass
+        """Implement the required functionality."""
+        # This is a placeholder implementation
+        # In a real implementation, this would contain the actual logic
+        return None
 
 
 # Register this configuration with the factory

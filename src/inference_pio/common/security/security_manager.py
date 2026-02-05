@@ -332,9 +332,8 @@ class SecurityManager:
                         logger.error(
                             f"Resource limits exceeded for plugin {plugin_id}, taking action..."
                         )
-                        # TODO: Implement resource limit violation response
-                        # For now, just log the violation
-                        pass
+                        # Implement resource limit violation response
+                        self._handle_resource_limit_violation(plugin_id)
                     time.sleep(interval)
                 except Exception as e:
                     logger.error(
@@ -436,6 +435,70 @@ class SecurityManager:
         if not context:
             return False
         return context.access_token == token
+
+    def _handle_resource_limit_violation(self, plugin_id: str):
+        """
+        Handle a resource limit violation for a plugin.
+
+        Args:
+            plugin_id: ID of the plugin that violated resource limits
+        """
+        context = self.get_security_context(plugin_id)
+        if not context:
+            logger.warning(f"No security context found for plugin {plugin_id} during violation handling")
+            return
+
+        # Log the violation
+        logger.critical(f"Resource limit violation detected for plugin {plugin_id}. Security level: {context.security_level.value}")
+
+        # Take action based on security level
+        if context.security_level == SecurityLevel.UNTRUSTED:
+            # For untrusted plugins, immediately terminate and clean up
+            logger.critical(f"Terminating untrusted plugin {plugin_id} due to resource violation")
+            self.cleanup_security_context(plugin_id)
+        elif context.security_level in [SecurityLevel.LOW_TRUST, SecurityLevel.MEDIUM_TRUST]:
+            # For low/medium trust, reduce privileges and throttle
+            logger.warning(f"Throttling plugin {plugin_id} due to resource violation")
+            self._throttle_plugin_resources(plugin_id)
+        elif context.security_level in [SecurityLevel.HIGH_TRUST, SecurityLevel.TRUSTED]:
+            # For trusted plugins, issue warning and log for review
+            logger.warning(f"Trusted plugin {plugin_id} exceeded resource limits, monitoring closely")
+            # Still apply some throttling to prevent system overload
+            self._throttle_plugin_resources(plugin_id, aggressive=False)
+
+    def _throttle_plugin_resources(self, plugin_id: str, aggressive: bool = True):
+        """
+        Throttle resources for a plugin that has violated limits.
+
+        Args:
+            plugin_id: ID of the plugin to throttle
+            aggressive: Whether to apply aggressive throttling
+        """
+        context = self.get_security_context(plugin_id)
+        if not context:
+            return
+
+        # Reduce resource allocation temporarily
+        limits = context.resource_limits
+
+        if aggressive:
+            # More severe throttling for aggressive mode
+            if limits.cpu_percent is not None:
+                limits.cpu_percent = max(limits.cpu_percent * 0.5, 10.0)  # Reduce to 50%, minimum 10%
+            if limits.memory_gb is not None:
+                limits.memory_gb = max(limits.memory_gb * 0.7, 0.5)  # Reduce to 70%, minimum 0.5GB
+            if limits.gpu_memory_gb is not None:
+                limits.gpu_memory_gb = max(limits.gpu_memory_gb * 0.5, 0.1)  # Reduce to 50%, minimum 0.1GB
+        else:
+            # Mild throttling for trusted plugins
+            if limits.cpu_percent is not None:
+                limits.cpu_percent = max(limits.cpu_percent * 0.8, 20.0)  # Reduce to 80%, minimum 20%
+            if limits.memory_gb is not None:
+                limits.memory_gb = max(limits.memory_gb * 0.9, 1.0)  # Reduce to 90%, minimum 1.0GB
+            if limits.gpu_memory_gb is not None:
+                limits.gpu_memory_gb = max(limits.gpu_memory_gb * 0.8, 0.5)  # Reduce to 80%, minimum 0.5GB
+
+        logger.info(f"Applied resource throttling to plugin {plugin_id}. New limits: CPU={limits.cpu_percent}%, Memory={limits.memory_gb}GB, GPU={limits.gpu_memory_gb}GB")
 
 
 class ResourceIsolationManager:

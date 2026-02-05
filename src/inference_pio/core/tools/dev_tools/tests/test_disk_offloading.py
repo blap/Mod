@@ -173,11 +173,11 @@ class TestDiskOffloading(unittest.TestCase):
                             plugin.setup_disk_offloading()
                         except (AttributeError, RuntimeError):
                             # Expected if model isn't properly loaded
-                            pass
+                            raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
     def test_plugin_enable_disk_offloading(self):
         """Test that plugins can enable disk offloading."""
@@ -196,11 +196,11 @@ class TestDiskOffloading(unittest.TestCase):
                         self.assertTrue(enable_success)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
     def test_plugin_offload_model_parts(self):
         """Test that plugins can offload model parts."""
@@ -219,11 +219,11 @@ class TestDiskOffloading(unittest.TestCase):
                         self.assertTrue(offload_success)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
     def test_plugin_predict_model_part_access(self):
         """Test that plugins can predict model part access."""
@@ -240,11 +240,11 @@ class TestDiskOffloading(unittest.TestCase):
                         self.assertIsInstance(predictions, dict)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
     def test_plugin_get_offloading_stats(self):
         """Test that plugins can report offloading statistics."""
@@ -265,11 +265,11 @@ class TestDiskOffloading(unittest.TestCase):
                             self.assertIn("system_memory_percent", stats)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
     def test_disk_offloading_with_memory_management(self):
         """Test disk offloading working with memory management."""
@@ -287,11 +287,11 @@ class TestDiskOffloading(unittest.TestCase):
                         self.assertTrue(offload_success)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
             # Get offloading stats
             offloading_stats = plugin.get_offloading_stats()
@@ -317,11 +317,11 @@ class TestDiskOffloading(unittest.TestCase):
                         self.assertTrue(offload_success)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
             # Get offloading stats
             stats = plugin.get_offloading_stats()
@@ -373,7 +373,7 @@ class TestDiskOffloading(unittest.TestCase):
                     plugin.cleanup()
                 except:
                     # Ignore cleanup errors
-                    pass
+                    raise NotImplementedError("Method not implemented")
 
 
 if __name__ == "__main__":

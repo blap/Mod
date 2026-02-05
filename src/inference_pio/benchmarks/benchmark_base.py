@@ -38,12 +38,12 @@ class BenchmarkBase(ModelBenchmarkTest):
         """Abstract method implementation - to be overridden by subclasses."""
         # This is a generic base, so we'll raise NotImplementedError
         # Subclasses should implement this method
-        raise NotImplementedError("Subclasses must implement get_model_plugin_class")
+        raise NotImplementedError("Method not implemented")
 
     def test_required_functionality(self):
         """Implementation of abstract method from base class."""
         # Generic implementation - subclasses should override with specific functionality
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def initialize_model(self, model_name: str, create_func, device: str = "cpu"):
         """
@@ -70,7 +70,7 @@ class BenchmarkBase(ModelBenchmarkTest):
     def run_performance_test(self):
         """Implementation of abstract method from base class."""
         # Generic performance test - subclasses should override with specific tests
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def benchmark_inference_speed(
         self, plugin, model_name: str, input_length: int = 50, num_iterations: int = 10

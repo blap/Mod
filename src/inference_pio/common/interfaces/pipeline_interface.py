@@ -26,7 +26,7 @@ class PipelineManagerInterface(ABC):
         Returns:
             True if setup was successful, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def execute_pipeline(
@@ -42,7 +42,7 @@ class PipelineManagerInterface(ABC):
         Returns:
             Inference results from the pipeline
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def create_pipeline_stages(self, **kwargs) -> List["PipelineStage"]:
@@ -55,7 +55,7 @@ class PipelineManagerInterface(ABC):
         Returns:
             List of PipelineStage objects
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def get_pipeline_manager(self):
@@ -65,7 +65,7 @@ class PipelineManagerInterface(ABC):
         Returns:
             Pipeline manager instance or None
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def get_pipeline_stats(self) -> Dict[str, Any]:

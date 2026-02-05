@@ -106,11 +106,11 @@ class TestAdaptiveBatching(unittest.TestCase):
                             plugin.setup_adaptive_batching()
                         except (AttributeError, RuntimeError):
                             # Expected if model isn't properly loaded
-                            pass
+                            raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
     def test_plugin_get_optimal_batch_size(self):
         """Test that plugins can get optimal batch sizes."""
@@ -129,11 +129,11 @@ class TestAdaptiveBatching(unittest.TestCase):
                         self.assertGreaterEqual(optimal_size, 1)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
     def test_plugin_batch_size_adjustment(self):
         """Test that plugins can adjust batch sizes."""
@@ -157,11 +157,11 @@ class TestAdaptiveBatching(unittest.TestCase):
                             self.assertIsInstance(result, int)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
     def test_plugin_batching_status(self):
         """Test that plugins can report batching status."""
@@ -183,11 +183,11 @@ class TestAdaptiveBatching(unittest.TestCase):
                             self.assertIn(key, status)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
     def test_memory_pressure_response(self):
         """Test that adaptive batching responds to memory pressure."""
@@ -237,11 +237,11 @@ class TestAdaptiveBatching(unittest.TestCase):
                             )
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
     def test_adaptive_batching_with_other_optimizations(self):
         """Test adaptive batching working with other optimizations."""
@@ -262,11 +262,11 @@ class TestAdaptiveBatching(unittest.TestCase):
                         self.assertGreaterEqual(optimal_size, 1)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
 
 if __name__ == "__main__":

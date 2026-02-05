@@ -14,7 +14,6 @@ class ConfigValidationError(Exception):
     """
     Exception raised when configuration validation fails.
     """
-
     pass
 
 

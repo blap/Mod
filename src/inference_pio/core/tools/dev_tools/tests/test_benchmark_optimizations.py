@@ -39,7 +39,7 @@ class TestOptimizationBenchmarks(unittest.TestCase):
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
             base_memory_stats = plugin.get_memory_stats()
 
             # Initialize with memory optimizations
@@ -72,11 +72,11 @@ class TestOptimizationBenchmarks(unittest.TestCase):
                         self.assertIsNotNone(fusion_manager)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
     def test_tensor_compression_ratio_benchmark(self):
         """Benchmark tensor compression ratio."""
@@ -96,7 +96,7 @@ class TestOptimizationBenchmarks(unittest.TestCase):
                         self.assertTrue(compression_success)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
 
                 # Test compression stats if method exists
                 if hasattr(plugin, "get_compression_stats"):
@@ -105,11 +105,11 @@ class TestOptimizationBenchmarks(unittest.TestCase):
                         self.assertIsInstance(compression_stats, dict)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
             assert_in("average_compression_ratio", compression_stats)
 
     def test_model_surgery_size_reduction_benchmark(self):
@@ -128,7 +128,7 @@ class TestOptimizationBenchmarks(unittest.TestCase):
                         plugin.perform_model_surgery()
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
 
                 # Test surgery stats if method exists
                 if hasattr(plugin, "get_surgery_stats"):
@@ -137,11 +137,11 @@ class TestOptimizationBenchmarks(unittest.TestCase):
                         self.assertIsInstance(surgery_stats, dict)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
     def test_adaptive_batching_throughput_benchmark(self):
         """Benchmark adaptive batching throughput improvement."""
@@ -159,7 +159,7 @@ class TestOptimizationBenchmarks(unittest.TestCase):
                         self.assertIn("current_batch_size", initial_status)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
 
                 # Test optimal batch size if method exists
                 if hasattr(plugin, "get_optimal_batch_size"):
@@ -170,11 +170,11 @@ class TestOptimizationBenchmarks(unittest.TestCase):
                         self.assertIsInstance(optimal_size, int)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
     def test_disk_offloading_memory_savings_benchmark(self):
         """Benchmark disk offloading memory savings."""
@@ -192,7 +192,7 @@ class TestOptimizationBenchmarks(unittest.TestCase):
                         self.assertIsInstance(initial_stats, dict)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
 
                 # Test offloading if method exists
                 if hasattr(plugin, "offload_model_parts"):
@@ -201,7 +201,7 @@ class TestOptimizationBenchmarks(unittest.TestCase):
                         self.assertTrue(offload_success)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
 
                 # Test updated stats if method exists
                 if hasattr(plugin, "get_offloading_stats"):
@@ -210,11 +210,11 @@ class TestOptimizationBenchmarks(unittest.TestCase):
                         self.assertIsInstance(updated_stats, dict)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
     def test_activation_offloading_efficiency_benchmark(self):
         """Benchmark activation offloading efficiency."""
@@ -232,7 +232,7 @@ class TestOptimizationBenchmarks(unittest.TestCase):
                         self.assertIsInstance(initial_stats, dict)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
 
                 # Test offloading activations if method exists
                 if hasattr(plugin, "offload_activations"):
@@ -241,7 +241,7 @@ class TestOptimizationBenchmarks(unittest.TestCase):
                         self.assertTrue(activation_success)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
 
                 # Test updated stats if method exists
                 if hasattr(plugin, "get_activation_offloading_stats"):
@@ -250,11 +250,11 @@ class TestOptimizationBenchmarks(unittest.TestCase):
                         self.assertIsInstance(updated_stats, dict)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
     def test_pipeline_performance_benchmark(self):
         """Benchmark pipeline performance improvement."""
@@ -272,7 +272,7 @@ class TestOptimizationBenchmarks(unittest.TestCase):
                         self.assertIsInstance(initial_stats, dict)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
 
                 # Test executing pipeline if method exists
                 if hasattr(plugin, "execute_pipeline"):
@@ -281,11 +281,11 @@ class TestOptimizationBenchmarks(unittest.TestCase):
                         self.assertIsNotNone(result)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
             # Get updated stats
             updated_stats = plugin.get_pipeline_stats()
@@ -307,7 +307,7 @@ class TestOptimizationBenchmarks(unittest.TestCase):
                         self.assertIsInstance(memory_stats, dict)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
 
                 if hasattr(plugin, "get_batching_status"):
                     try:
@@ -315,7 +315,7 @@ class TestOptimizationBenchmarks(unittest.TestCase):
                         self.assertIsInstance(batching_status, dict)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
 
                 if hasattr(plugin, "get_compression_stats"):
                     try:
@@ -323,7 +323,7 @@ class TestOptimizationBenchmarks(unittest.TestCase):
                         self.assertIsInstance(compression_stats, dict)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
 
                 if hasattr(plugin, "get_offloading_stats"):
                     try:
@@ -331,7 +331,7 @@ class TestOptimizationBenchmarks(unittest.TestCase):
                         self.assertIsInstance(offloading_stats, dict)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
 
                 if hasattr(plugin, "get_surgery_stats"):
                     try:
@@ -339,7 +339,7 @@ class TestOptimizationBenchmarks(unittest.TestCase):
                         self.assertIsInstance(surgery_stats, dict)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
 
                 if hasattr(plugin, "get_pipeline_stats"):
                     try:
@@ -347,7 +347,7 @@ class TestOptimizationBenchmarks(unittest.TestCase):
                         self.assertIsInstance(pipeline_stats, dict)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
 
                 if hasattr(plugin, "get_activation_offloading_stats"):
                     try:
@@ -355,11 +355,11 @@ class TestOptimizationBenchmarks(unittest.TestCase):
                         self.assertIsInstance(activation_stats, dict)
                     except (AttributeError, RuntimeError):
                         # Expected if model isn't properly loaded
-                        pass
+                        raise NotImplementedError("Method not implemented")
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
     def test_optimization_startup_time_benchmark(self):
         """Benchmark optimization startup time overhead."""
@@ -380,7 +380,7 @@ class TestOptimizationBenchmarks(unittest.TestCase):
             except Exception:
                 # Some plugins may not initialize properly without full model files
                 # This is expected in test environments
-                pass
+                raise NotImplementedError("Method not implemented")
 
     def tearDown(self):
         """Clean up after each test method."""
@@ -391,7 +391,7 @@ class TestOptimizationBenchmarks(unittest.TestCase):
                     plugin.cleanup()
                 except:
                     # Ignore cleanup errors
-                    pass
+                    raise NotImplementedError("Method not implemented")
 
 
 if __name__ == "__main__":

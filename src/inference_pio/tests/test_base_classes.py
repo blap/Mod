@@ -121,7 +121,9 @@ class ConcreteModelUnitTest(ModelUnitTest):
         # Return a mock class for testing
         class MockPlugin:
             def __init__(self, **kwargs):
-                pass
+                # Initialize mock plugin with provided kwargs
+                for key, value in kwargs.items():
+                    setattr(self, key, value)
 
             def initialize(self, **kwargs):
                 return True

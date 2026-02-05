@@ -394,7 +394,7 @@ def setup_environment():
     """
     print("Setting up benchmark environment with real performance monitoring...")
     # Add any necessary setup here
-    pass
+    raise NotImplementedError("Method not implemented")
 
 
 def apply_modifications():
@@ -403,7 +403,7 @@ def apply_modifications():
     """
     print("Applying benchmark modifications with real performance tracking...")
     # Add any necessary modifications here
-    pass
+    raise NotImplementedError("Method not implemented")
 
 
 def remove_modifications():
@@ -414,7 +414,7 @@ def remove_modifications():
         "Removing benchmark modifications and cleaning up real performance tracking..."
     )
     # Add any necessary cleanup here
-    pass
+    raise NotImplementedError("Method not implemented")
 
 
 if __name__ == "__main__":

@@ -26,7 +26,7 @@ class ModelSurgeryManagerInterface(ABC):
         Returns:
             True if setup was successful, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def enable_model_surgery(self, **kwargs) -> bool:
@@ -40,7 +40,7 @@ class ModelSurgeryManagerInterface(ABC):
         Returns:
             True if model surgery was enabled successfully, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def perform_model_surgery(
@@ -60,7 +60,7 @@ class ModelSurgeryManagerInterface(ABC):
         Returns:
             Modified model with surgery applied
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def restore_model_from_surgery(
@@ -76,7 +76,7 @@ class ModelSurgeryManagerInterface(ABC):
         Returns:
             Restored model
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def analyze_model_for_surgery(self, model: torch.nn.Module = None) -> Dict[str, Any]:
@@ -89,7 +89,7 @@ class ModelSurgeryManagerInterface(ABC):
         Returns:
             Dictionary containing analysis results
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def get_surgery_stats(self) -> Dict[str, Any]:

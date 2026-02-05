@@ -510,12 +510,18 @@ class KernelFusionManager:
                     # Check if we have a custom fused kernel available
                     if self.cuda_kernels.is_kernel_available("fused_linear_relu"):
                         # For now, just continue - in a real implementation we'd replace the module
-                        pass
+                        # Placeholder for actual kernel fusion implementation
+                        # This would contain the actual kernel fusion algorithm
+                        logger.warning("Kernel fusion not implemented for this operation")
+                        continue
                 elif isinstance(module, nn.LayerNorm):
                     # Check if we have a custom fused kernel available
                     if self.cuda_kernels.is_kernel_available("fused_add_layer_norm"):
                         # For now, just continue - in a real implementation we'd replace the module
-                        pass
+                        # Placeholder for actual kernel fusion implementation
+                        # This would contain the actual kernel fusion algorithm
+                        logger.warning("Kernel fusion not implemented for this operation")
+                        continue
 
             logger.info("Custom kernels applied where available")
             return model

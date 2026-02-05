@@ -41,6 +41,13 @@ except ImportError:
 
 from .architecture import Qwen3ForCausalLM as SelfContainedQwen3
 from .config import Qwen3_0_6B_Config
+from .intelligent_cache.intelligent_cache_manager import (
+    apply_intelligent_caching_to_model,
+    create_intelligent_cache_for_qwen3_0_6b
+)
+
+# Import the specialized Sparse Attention for Qwen3-0.6B
+from ...common.attention.sparse_attention import SparseAttention, create_sparse_attention
 
 # Import Optimization Floor Modules
 try:
@@ -266,6 +273,12 @@ class Qwen3_0_6B_Model(nn.Module):
             logger.info("Thinking Mode: Baseline repetition penalty set to 1.1")
 
     def forward(self, *args, **kwargs):
+        # Apply intelligent caching if enabled
+        if hasattr(self.config, 'intelligent_cache_enabled') and self.config.intelligent_cache_enabled:
+            # Apply intelligent caching to the model
+            if not hasattr(self, 'intelligent_cache_manager'):
+                self.intelligent_cache_manager = create_intelligent_cache_for_qwen3_0_6b(self.config)
+
         return self._model(*args, **kwargs)
 
     def generate(self, *args, **kwargs):

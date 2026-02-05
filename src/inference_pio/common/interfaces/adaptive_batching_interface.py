@@ -25,7 +25,7 @@ class AdaptiveBatchingManagerInterface(ABC):
         Returns:
             True if setup was successful, False otherwise
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def get_optimal_batch_size(
@@ -41,7 +41,7 @@ class AdaptiveBatchingManagerInterface(ABC):
         Returns:
             Recommended batch size for the next batch
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def adjust_batch_size(self) -> Tuple[int, bool, Optional[str]]:
@@ -51,7 +51,7 @@ class AdaptiveBatchingManagerInterface(ABC):
         Returns:
             Tuple of (new_batch_size, was_adjusted, reason_for_adjustment)
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def get_batching_status(self) -> Dict[str, Any]:

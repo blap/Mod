@@ -453,23 +453,27 @@ def create_config_from_profile(
     try:
         manager = get_unified_config_manager()
 
-        # Create a base configuration based on model type
+        # Create a base configuration based on model type using dynamic imports to avoid cross-dependencies
         if model_type == "glm":
-            from .models.glm_4_7_flash.config import GLM47FlashConfig
-
-            config_class = GLM47FlashConfig
+            # Use dynamic import to avoid direct dependency
+            import importlib
+            config_module = importlib.import_module('.models.glm_4_7_flash.config', package='src.inference_pio.common.config')
+            config_class = getattr(config_module, 'GLM47FlashConfig')
         elif model_type == "qwen3_4b":
-            from .models.qwen3_4b_instruct_2507.config import Qwen34BInstruct2507Config
-
-            config_class = Qwen34BInstruct2507Config
+            # Use dynamic import to avoid direct dependency
+            import importlib
+            config_module = importlib.import_module('.models.qwen3_4b_instruct_2507.config', package='src.inference_pio.common.config')
+            config_class = getattr(config_module, 'Qwen34BInstruct2507Config')
         elif model_type == "qwen3_coder":
-            from .models.qwen3_coder_30b.config import Qwen3Coder30BConfig
-
-            config_class = Qwen3Coder30BConfig
+            # Use dynamic import to avoid direct dependency
+            import importlib
+            config_module = importlib.import_module('.models.qwen3_coder_30b.config', package='src.inference_pio.common.config')
+            config_class = getattr(config_module, 'Qwen3Coder30BConfig')
         elif model_type == "qwen3_vl":
-            from .models.qwen3_vl_2b.config import Qwen3VL2BConfig
-
-            config_class = Qwen3VL2BConfig
+            # Use dynamic import to avoid direct dependency
+            import importlib
+            config_module = importlib.import_module('.models.qwen3_vl_2b.config', package='src.inference_pio.common.config')
+            config_class = getattr(config_module, 'Qwen3VL2BConfig')
         else:
             raise ValueError(f"Unknown model type: {model_type}")
 

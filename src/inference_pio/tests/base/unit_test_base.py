@@ -54,7 +54,7 @@ class BaseUnitTest(unittest.TestCase, ABC):
         Abstract method that must be implemented by subclasses.
         Each unit test class must define its core functionality test.
         """
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def assert_tensor_shape(self, tensor: torch.Tensor, expected_shape: tuple):
         """Assert that a tensor has the expected shape."""
@@ -84,12 +84,12 @@ class ModelUnitTest(BaseUnitTest, ABC):
         """Set up test fixtures for model unit tests."""
         super().setUp()
         # Don't create mock model, use real models for testing
-        pass
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def get_model_plugin_class(self):
         """Return the model plugin class to be tested."""
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def create_model_instance(self, **kwargs):
         """Create an instance of the model plugin with test configuration."""
@@ -125,7 +125,7 @@ class PluginUnitTest(BaseUnitTest, ABC):
     @abstractmethod
     def get_plugin_class(self):
         """Return the plugin class to be tested."""
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def create_plugin_instance(self, **kwargs):
         """Create an instance of the plugin with test configuration."""

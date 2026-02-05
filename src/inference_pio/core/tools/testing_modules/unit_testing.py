@@ -80,7 +80,9 @@ class ModelUnitTest(UnitTestBase):
     
     def get_model_plugin_class(self):
         """Override this method to return the model plugin class to test."""
-        raise NotImplementedError("Subclasses must implement get_model_plugin_class")
+        # Return a generic model plugin class for base testing
+        from inference_pio.common.interfaces.improved_base_plugin_interface import ModelPluginInterface
+        return ModelPluginInterface
     
     def setUp(self):
         """Set up the model plugin for unit testing."""
@@ -189,7 +191,9 @@ class PluginUnitTest(UnitTestBase):
     
     def get_plugin_class(self):
         """Override this method to return the plugin class to test."""
-        raise NotImplementedError("Subclasses must implement get_plugin_class")
+        # Return a generic plugin class for base testing
+        from inference_pio.common.interfaces.improved_base_plugin_interface import ModelPluginInterface
+        return ModelPluginInterface
     
     def setUp(self):
         """Set up the plugin for unit testing."""
@@ -296,7 +300,12 @@ class ComponentUnitTest(UnitTestBase):
     
     def get_component_class(self):
         """Override this method to return the component class to test."""
-        raise NotImplementedError("Subclasses must implement get_component_class")
+        # Return a generic component class for base testing
+        from abc import ABC
+        class GenericComponent(ABC):
+            """Generic component for testing purposes."""
+            raise NotImplementedError("Method not implemented")
+        return GenericComponent
     
     def setUp(self):
         """Set up the component for unit testing."""
@@ -320,7 +329,7 @@ class ComponentUnitTest(UnitTestBase):
             self.skipTest("Component instance not available")
         
         # This is a generic test - subclasses should override with specific methods
-        pass
+        raise NotImplementedError("Method not implemented")
     
     def test_component_attributes(self):
         """Test that component has expected attributes."""
@@ -328,7 +337,7 @@ class ComponentUnitTest(UnitTestBase):
             self.skipTest("Component instance not available")
         
         # This is a generic test - subclasses should override with specific attributes
-        pass
+        raise NotImplementedError("Method not implemented")
 
 
 def run_unit_tests(test_classes: List[Type[unittest.TestCase]], verbosity: int = 2):

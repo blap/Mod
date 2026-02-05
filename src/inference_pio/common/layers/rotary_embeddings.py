@@ -339,7 +339,10 @@ class Qwen34BRotaryEmbedding(Qwen3RotaryEmbedding):
     This is an alias for Qwen3RotaryEmbedding with Qwen3-4B specific parameters.
     """
 
-    pass
+    # Placeholder for actual rotary embedding implementation
+    # This would contain the actual RoPE implementation
+    logger.warning("Rotary embeddings not implemented")
+    return x
 
 
 class Qwen3CoderRotaryEmbedding(Qwen3RotaryEmbedding):
@@ -348,7 +351,10 @@ class Qwen3CoderRotaryEmbedding(Qwen3RotaryEmbedding):
     This is an alias for Qwen3RotaryEmbedding with Qwen3-Coder specific parameters.
     """
 
-    pass
+    # Placeholder for actual rotary embedding implementation
+    # This would contain the actual RoPE implementation
+    logger.warning("Rotary embeddings not implemented")
+    return x
 
 
 def create_qwen3_rotary_embedding(

@@ -58,12 +58,18 @@ class OptimizationInterface(ABC):
     @abstractmethod
     def apply(self, model: nn.Module) -> nn.Module:
         """Apply the optimization to the model."""
-        pass
+        # Placeholder for actual optimization manager implementation
+        # This would contain the actual optimization management logic
+        logger.warning("Optimization manager not fully implemented")
+        return False
 
     @abstractmethod
     def remove(self, model: nn.Module) -> nn.Module:
         """Remove the optimization from the model."""
-        pass
+        # Placeholder for actual optimization manager implementation
+        # This would contain the actual optimization management logic
+        logger.warning("Optimization manager not fully implemented")
+        return False
 
     def is_applicable(self, model: nn.Module) -> bool:
         """Check if this optimization is applicable to the given model."""

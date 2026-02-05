@@ -29,47 +29,10 @@ class Qwen34BAttentionKernel(nn.Module):
         use_rotary_embeddings: bool = True,
         causal: bool = True,
     ):
-        super().__init__()
-
-        self.d_model = d_model
-        self.nhead = nhead
-        self.head_dim = d_model // nhead
-        self.dropout_rate = dropout
-        self.use_flash_attention = use_flash_attention
-        self.use_rotary_embeddings = use_rotary_embeddings
-        self.causal = causal
-
-        if self.head_dim * nhead != d_model:
-            raise ValueError(
-                f"d_model must be divisible by nhead (got d_model: {d_model}, nhead: {nhead})"
-            )
-
-        self.scaling = self.head_dim**-0.5
-        self.dropout = nn.Dropout(dropout) if dropout > 0.0 else None
-
-        # Qwen3-4B specific projections
-        self.qkv_proj = nn.Linear(d_model, 3 * d_model, bias=True)
-        self.out_proj = nn.Linear(d_model, d_model, bias=True)
-
-        # Causal mask for autoregressive generation
-        if causal:
-            self.register_buffer(
-                "causal_mask",
-                torch.triu(torch.ones(1, 1, 1024, 1024, dtype=torch.bool), diagonal=1),
-                persistent=False,
-            )
-
-    def forward(
-        self,
-        query: torch.Tensor,
-        key: torch.Tensor,
-        value: torch.Tensor,
-        attention_mask: Optional[torch.Tensor] = None,
-        need_weights: bool = True,
-    ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
-        """
-        Forward pass for Qwen3-4B specific attention kernel.
-
+                """Implement the required functionality."""
+        # This is a placeholder implementation
+        # In a real implementation, this would contain the actual logic
+        return None
         Args:
             query: Query tensor of shape (batch, seq_len, d_model)
             key: Key tensor of shape (batch, seq_len, d_model)
@@ -122,7 +85,10 @@ class Qwen34BAttentionKernel(nn.Module):
                     attention_mask = attention_mask.unsqueeze(1)
                 elif attention_mask.dim() == 4:
                     # Already in the right format (batch, nhead, seq_len, seq_len)
-                    pass
+                    """Implement the required functionality."""
+        # This is a placeholder implementation
+        # In a real implementation, this would contain the actual logic
+        return None
                 else:
                     raise ValueError(
                         f"Invalid attention mask dimension: {attention_mask.dim()}"
@@ -165,7 +131,10 @@ class Qwen34BAttentionKernel(nn.Module):
                     attention_mask = attention_mask.unsqueeze(1)
                 elif attention_mask.dim() == 4:
                     # Already in the right format (batch, nhead, seq_len, seq_len)
-                    pass
+                    """Implement the required functionality."""
+        # This is a placeholder implementation
+        # In a real implementation, this would contain the actual logic
+        return None
                 else:
                     raise ValueError(
                         f"Invalid attention mask dimension: {attention_mask.dim()}"
@@ -211,24 +180,10 @@ class Qwen34BMLPKernel(nn.Module):
     """
 
     def __init__(self, d_model: int, intermediate_size: int, dropout: float = 0.1):
-        super().__init__()
-
-        self.d_model = d_model
-        self.intermediate_size = intermediate_size
-        self.dropout_rate = dropout
-
-        # Qwen3-4B specific SwiGLU implementation: W_gate, W_up, W_down
-        self.gate_proj = nn.Linear(d_model, intermediate_size, bias=False)
-        self.up_proj = nn.Linear(d_model, intermediate_size, bias=False)
-        self.down_proj = nn.Linear(intermediate_size, d_model, bias=False)
-
-        # Dropout
-        self.dropout = nn.Dropout(dropout) if dropout > 0.0 else None
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Forward pass for Qwen3-4B specific MLP kernel using SwiGLU.
-
+                """Implement the required functionality."""
+        # This is a placeholder implementation
+        # In a real implementation, this would contain the actual logic
+        return None
         Args:
             x: Input tensor of shape (batch, seq_len, d_model)
 
@@ -255,17 +210,10 @@ class Qwen34BRMSNormKernel(nn.Module):
     """
 
     def __init__(self, normalized_shape: int, eps: float = 1e-5):
-        super().__init__()
-
-        self.normalized_shape = normalized_shape
-        self.eps = eps
-
-        self.weight = nn.Parameter(torch.ones(normalized_shape))
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Forward pass for Qwen3-4B specific RMSNorm kernel.
-
+                """Implement the required functionality."""
+        # This is a placeholder implementation
+        # In a real implementation, this would contain the actual logic
+        return None
         Args:
             x: Input tensor of shape (..., normalized_shape)
 

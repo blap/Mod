@@ -67,7 +67,7 @@ class ModelIntegrationTest(IntegrationTestBase):
     
     def get_model_plugin_class(self):
         """Override this method to return the model plugin class to test."""
-        raise NotImplementedError("Subclasses must implement get_model_plugin_class")
+        raise NotImplementedError("Method not implemented")
     
     def get_related_components(self):
         """Override this method to return related components to test integration with."""
@@ -151,7 +151,7 @@ class PipelineIntegrationTest(IntegrationTestBase):
     
     def get_pipeline_class(self):
         """Override this method to return the pipeline class to test."""
-        raise NotImplementedError("Subclasses must implement get_pipeline_class")
+        raise NotImplementedError("Method not implemented")
     
     def get_pipeline_components(self):
         """Override this method to return components to test in the pipeline."""
@@ -210,7 +210,7 @@ class PluginIntegrationTest(IntegrationTestBase):
     
     def get_plugin_class(self):
         """Override this method to return the plugin class to test."""
-        raise NotImplementedError("Subclasses must implement get_plugin_class")
+        raise NotImplementedError("Method not implemented")
     
     def get_host_system_class(self):
         """Override this method to return the host system class to test integration with."""

@@ -25,11 +25,11 @@ class RealPerformanceBenchmarkBase(ModelBenchmarkTest):
 
     def get_model_plugin_class(self):
         """Abstract method implementation - to be overridden by subclasses."""
-        raise NotImplementedError("Subclasses must implement get_model_plugin_class")
+        raise NotImplementedError("Method not implemented")
 
     def test_required_functionality(self):
         """Implementation of abstract method from base class."""
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def initialize_model(self, model_name: str, create_func, device: str = "cpu"):
         """Initialize a model with real performance monitoring."""
@@ -42,7 +42,7 @@ class RealPerformanceBenchmarkBase(ModelBenchmarkTest):
 
     def run_performance_test(self):
         """Implementation of abstract method from base class."""
-        pass
+        raise NotImplementedError("Method not implemented")
 
     def benchmark_inference_speed(
         self, plugin, model_name: str, input_length: int = 50, num_iterations: int = 10
@@ -156,7 +156,7 @@ class RealPerformanceBenchmarkBase(ModelBenchmarkTest):
             try:
                 _ = plugin.infer(torch.randint(100, 1000, (1, 20)))
             except:
-                pass
+                raise NotImplementedError("Method not implemented")
 
         # Force garbage collection
         gc.collect()
