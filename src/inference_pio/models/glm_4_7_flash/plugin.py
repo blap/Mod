@@ -56,10 +56,9 @@ class GLM_4_7_Flash_Plugin(TextModelPluginInterface):
             author="Zhipu AI",
             description="GLM-4.7-Flash specialized model with advanced optimizations",
             plugin_type=PluginType.MODEL_COMPONENT,
-            dependencies=["torch", "transformers", "accelerate"],
+            dependencies=["torch"],
             compatibility={
                 "torch_version": ">=2.0.0",
-                "transformers_version": ">=4.30.0",
                 "python_version": ">=3.8",
                 "min_memory_gb": 8.0,  # Estimated for GLM-4.7 model
             },
@@ -156,22 +155,22 @@ class GLM_4_7_Flash_Plugin(TextModelPluginInterface):
 
             logger.info(f"Loading GLM-4.7-Flash model from {self._config.model_path}")
 
-            from transformers import AutoModelForCausalLM, AutoTokenizer
+            from src.inference_pio.common.custom_components.model_loader import CustomModelLoader
+            from src.inference_pio.common.custom_components.tokenizer import CustomBPETokenizer
+            from .architecture import GLMForCausalLM
 
             # Load tokenizer
-            self._tokenizer = AutoTokenizer.from_pretrained(
-                self._config.model_path, trust_remote_code=True
-            )
+            self._tokenizer = CustomBPETokenizer()
+            # self._tokenizer.load(...)
 
             # Load model
-            self._model = AutoModelForCausalLM.from_pretrained(
+            loader = CustomModelLoader()
+            self._model = GLMForCausalLM(self._config)
+            loader.load_weights(
+                self._model,
                 self._config.model_path,
-                trust_remote_code=True,
-                torch_dtype=(
-                    torch.float16 if torch.cuda.is_available() else torch.float32
-                ),
-                device_map="auto" if not self._virtual_execution_enabled else None,
-                # If virtual execution is enabled, we might want to load differently or partition manually
+                device="cuda" if torch.cuda.is_available() else "cpu",
+                strict=False
             )
 
             # Apply cross-alignment optimization if enabled

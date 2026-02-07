@@ -131,10 +131,9 @@ class Qwen3_4B_Instruct_2507_Plugin(TextModelPluginInterface):
             author="Alibaba Cloud",
             description="Qwen3-4B-Instruct-2507 specialized model with advanced optimizations",
             plugin_type=PluginType.MODEL_COMPONENT,
-            dependencies=["torch", "transformers", "accelerate"],
+            dependencies=["torch"],
             compatibility={
                 "torch_version": ">=2.0.0",
-                "transformers_version": ">=4.30.0",
                 "python_version": ">=3.8",
                 "min_memory_gb": 8.0,  # Estimated for Qwen3-4B model
             },

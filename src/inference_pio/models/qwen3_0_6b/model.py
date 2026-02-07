@@ -298,7 +298,7 @@ class Qwen3_0_6B_Model(nn.Module):
         )
 
         # Check and install required packages
-        required_packages = ["torch", "huggingface_hub", "accelerate", "safetensors"]
+        required_packages = ["torch", "huggingface_hub", "safetensors"]
 
         for package in required_packages:
             try:
