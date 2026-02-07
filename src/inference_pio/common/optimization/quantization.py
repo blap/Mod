@@ -12,8 +12,10 @@ from typing import Any, Dict, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
-from transformers import AutoConfig
-from transformers.utils.quantization_config import QuantizationConfigMixin
+
+# Removed unused imports from transformers to reduce dependencies
+# from transformers import AutoConfig
+# from transformers.utils.quantization_config import QuantizationConfigMixin
 
 logger = logging.getLogger(__name__)
 

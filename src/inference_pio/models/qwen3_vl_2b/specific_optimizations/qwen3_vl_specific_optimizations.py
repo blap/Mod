@@ -15,7 +15,6 @@ import torch.nn as nn
 
 logger = logging.getLogger(__name__)
 
-
 class Qwen3VLLayerNorm(nn.Module):
     def __init__(self, hidden_size, eps=1e-6):
         super().__init__()
@@ -29,13 +28,12 @@ class Qwen3VLLayerNorm(nn.Module):
         x = x * torch.rsqrt(variance + self.eps)
         return self.weight * x.to(input_dtype)
 
-
 class Qwen3VLGELU(nn.Module):
     def __init__(self):
         super().__init__()
 
     def forward(self, x):
-        return torch.nn.functional.gelu(x, approximate="tanh")
+         return torch.nn.functional.gelu(x, approximate='tanh')
 
 
 @dataclass
@@ -157,42 +155,42 @@ def apply_qwen3_vl_specific_optimizations(
     logger.info("Qwen3-VL-2B specific optimizations applied successfully")
     return model
 
-
 def _apply_custom_kernels(model: nn.Module):
     logger.info("Applying Qwen3-VL custom kernels...")
     replacements = {"norm": 0, "act": 0}
+    modifications = []
+
     for name, module in model.named_modules():
         if isinstance(module, (nn.LayerNorm, nn.RMSNorm)):
-            if (
-                hasattr(module, "normalized_shape")
-                and len(module.normalized_shape) == 1
-            ):
-                dim = module.normalized_shape[0]
-                eps = module.eps
-
-                parent_name, child_name = (
-                    name.rsplit(".", 1) if "." in name else (None, name)
-                )
-
-                if parent_name:
-                    parent_module = _get_parent_module(model, parent_name)
-                    opt_norm = Qwen3VLLayerNorm(dim, eps)
-                    if hasattr(module, "weight") and module.weight is not None:
-                        opt_norm.weight.data.copy_(module.weight.data)
-
-                    setattr(parent_module, child_name, opt_norm)
-                    replacements["norm"] += 1
+             if hasattr(module, 'normalized_shape') and len(module.normalized_shape) == 1:
+                modifications.append((name, module, "norm"))
 
         if isinstance(module, nn.GELU):
-            parent_name, child_name = (
-                name.rsplit(".", 1) if "." in name else (None, name)
-            )
-            if parent_name:
-                parent_module = _get_parent_module(model, parent_name)
-                setattr(parent_module, child_name, Qwen3VLGELU())
-                replacements["act"] += 1
-    logger.info(f"Qwen3-VL custom kernels applied: {replacements}")
+             modifications.append((name, module, "act"))
 
+    for name, module, type_tag in modifications:
+        parent_name, child_name = name.rsplit(".", 1) if "." in name else (None, name)
+
+        if parent_name:
+            parent_module = _get_parent_module(model, parent_name)
+        else:
+            parent_module = model
+
+        if type_tag == "norm":
+            dim = module.normalized_shape[0]
+            eps = module.eps
+            opt_norm = Qwen3VLLayerNorm(dim, eps)
+            if hasattr(module, 'weight') and module.weight is not None:
+                opt_norm.weight.data.copy_(module.weight.data)
+
+            setattr(parent_module, child_name, opt_norm)
+            replacements["norm"] += 1
+
+        elif type_tag == "act":
+            setattr(parent_module, child_name, Qwen3VLGELU())
+            replacements["act"] += 1
+
+    logger.info(f"Qwen3-VL custom kernels applied: {replacements}")
 
 def _get_parent_module(model: nn.Module, parent_name: str) -> nn.Module:
     parent_module = model

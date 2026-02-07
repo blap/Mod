@@ -16,6 +16,7 @@ from .intelligent_cache.intelligent_cache_manager import (
     apply_intelligent_caching_to_model,
     create_intelligent_cache_for_qwen3_coder_next
 )
+from .specific_optimizations.kernels import apply_qwen3_coder_next_optimizations
 
 # Import the specialized Sliding Window Attention for Qwen3-Coder-Next
 from ...common.attention.sliding_window_attention import SlidingWindowAttention, create_sliding_window_attention
@@ -55,6 +56,9 @@ class Qwen3CoderNextModel(nn.Module):
         # Initialize weights
         self.apply(self._init_weights)
         
+        # Apply specific optimizations (replace standard layers with custom kernels)
+        apply_qwen3_coder_next_optimizations(self)
+
         # Intelligent cache manager
         if config.intelligent_cache_enabled:
             self.intelligent_cache_manager = create_intelligent_cache_for_qwen3_coder_next(config)

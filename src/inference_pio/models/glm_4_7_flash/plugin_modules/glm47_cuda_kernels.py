@@ -255,20 +255,31 @@ def apply_glm47_optimizations_to_model(
     logger.info("Applying GLM-4.7 enhanced CUDA kernel optimizations...")
 
     replacements = {"gelu": 0, "layernorm": 0, "mlp": 0, "attention": 0}
+    modifications = []
 
     # Apply optimizations based on configuration
     for name, module in model.named_modules():
         # Replace GELU activations if enabled
         if config.cuda_kernel_gelu_enabled and isinstance(module, nn.GELU):
-            parent_name, child_name = name.rsplit(".", 1)
-            parent_module = _get_parent_module(model, parent_name)
-            setattr(parent_module, child_name, GLM47GELUKernel())
-            replacements["gelu"] += 1
+            modifications.append((name, module, "gelu"))
 
         # Replace LayerNorm if enabled
         if config.cuda_kernel_layernorm_enabled and isinstance(module, nn.LayerNorm):
-            parent_name, child_name = name.rsplit(".", 1)
+            modifications.append((name, module, "layernorm"))
+
+    for name, module, type_tag in modifications:
+        parent_name, child_name = name.rsplit(".", 1) if "." in name else (None, name)
+
+        if parent_name:
             parent_module = _get_parent_module(model, parent_name)
+        else:
+            parent_module = model
+
+        if type_tag == "gelu":
+            setattr(parent_module, child_name, GLM47GELUKernel())
+            replacements["gelu"] += 1
+
+        elif type_tag == "layernorm":
             new_layernorm = GLM47LayerNormKernel(
                 normalized_shape=module.normalized_shape[0], eps=module.eps
             )
@@ -277,21 +288,6 @@ def apply_glm47_optimizations_to_model(
             new_layernorm.bias.data.copy_(module.bias.data)
             setattr(parent_module, child_name, new_layernorm)
             replacements["layernorm"] += 1
-
-        # Replace MLP if enabled and structure matches (this is heuristic based on standard HF models)
-        # Note: Proper replacement requires matching the exact structure of the model's MLP block
-        # For GLM-4, we typically look for blocks with gate/up/down projections.
-        if (
-            config.cuda_kernel_mlp_enabled
-            and hasattr(module, "gate_proj")
-            and hasattr(module, "up_proj")
-            and hasattr(module, "down_proj")
-        ):
-            # Basic check to ensure it's likely an MLP block we can replace
-            # This part requires careful handling to not break custom implementations
-            # For now, we focus on leaf modules replacement (GELU/LayerNorm) as safer defaults
-            # unless explicitly requested for block replacement.
-            pass
 
     logger.info(f"GLM-4.7 Optimizations applied: {replacements}")
     return model
