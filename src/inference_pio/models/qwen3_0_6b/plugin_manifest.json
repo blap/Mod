@@ -6,7 +6,8 @@
   "plugin_type": "MODEL_COMPONENT",
   "dependencies": [
     "torch",
-    "transformers"
+    "numpy",
+    "pillow"
   ],
   "compatibility": {
     "torch_version": ">=2.0.0",

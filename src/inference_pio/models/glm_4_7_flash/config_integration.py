@@ -10,25 +10,15 @@ from typing import Any, Dict, Optional
 import torch
 import torch.nn as nn
 
-from ...common.config_integration import ConfigurableModelPlugin
-try:
-    from inference_pio.common.config.config_integration import ConfigurableModelPlugin
-    from inference_pio.common.config.config_validator import get_config_validator
-    from inference_pio.common.interfaces.improved_base_plugin_interface import (
-        PluginMetadata as ModelPluginMetadata,
-        PluginType,
-    )
-    # from inference_pio.common.managers.optimization_manager import get_optimization_manager
-    get_optimization_manager = None
-except ImportError:
-    from ...common.config_integration import ConfigurableModelPlugin
-    from ...common.config_validator import get_config_validator
-    from ...common.improved_base_plugin_interface import (
-        PluginMetadata as ModelPluginMetadata,
-        PluginType,
-    )
-    # from ...common.managers.optimization_manager import get_optimization_manager
-    get_optimization_manager = None
+from src.inference_pio.common.config.config_integration import ConfigurableModelPlugin
+from src.inference_pio.common.config.config_validator import get_config_validator
+from src.inference_pio.common.interfaces.improved_base_plugin_interface import (
+    PluginMetadata as ModelPluginMetadata,
+    PluginType,
+)
+# from src.inference_pio.common.managers.optimization_manager import get_optimization_manager
+get_optimization_manager = None
+from .config import GLM47DynamicConfig
 
 logger = logging.getLogger(__name__)
 
@@ -106,19 +96,14 @@ class GLM47ConfigurablePlugin(ConfigurableModelPlugin):
             if not is_valid:
                 logger.warning(f"Configuration has validation errors: {errors}")
 
-            # Here we would normally load the actual model
-            # For now, we'll create a mock model to demonstrate the concept
-            from transformers import AutoModelForCausalLM
+            # Use CustomModelLoader instead of transformers
+            from src.inference_pio.common.custom_components.model_loader import CustomModelLoader
 
-            self._model = AutoModelForCausalLM.from_pretrained(
-                config.model_path,
-                torch_dtype=(
-                    getattr(torch, config.torch_dtype)
-                    if hasattr(torch, config.torch_dtype)
-                    else torch.float16
-                ),
-                device_map=config.device_map,
-                low_cpu_mem_usage=config.low_cpu_mem_usage,
+            loader = CustomModelLoader()
+            self._model = loader.load_model(
+                model_path=config.model_path,
+                dtype=getattr(torch, config.torch_dtype) if hasattr(torch, config.torch_dtype) else torch.float16,
+                device=config.device if hasattr(config, "device") else "cpu"
             )
 
             # Apply optimizations based on configuration

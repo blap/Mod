@@ -124,32 +124,24 @@ class Qwen3_0_6B_Model(nn.Module):
             self._model = SelfContainedQwen3(self.config)
 
             # Load weights if available (implementing basic safetensors/bin loading)
-            self._load_weights(model_path)
+            # Using CustomModelLoader logic
+            from ...common.custom_components.model_loader import CustomModelLoader
 
-            # Move to device
+            device = "cuda" if torch.cuda.is_available() and self.config.device_map != "cpu" else "cpu"
+            CustomModelLoader.load_weights(self._model, model_path, device=device)
             self._model.to(dtype=dtype)
-            if torch.cuda.is_available() and self.config.device_map != "cpu":
-                self._model = self._model.cuda()
-                logger.info("Moved model to CUDA.")
 
         except Exception as e:
             logger.error(f"CRITICAL: Failed to load self-contained model: {e}")
             raise RuntimeError(f"Could not load Qwen3-0.6B model: {e}")
 
-        # 4. Load Tokenizer
-        # We still rely on transformers for tokenization complexity unless a full custom tokenizer is implemented
-        # However, for 'replacing all dependencies', one would typically wrap this or use a simpler tokenizer.
-        # Assuming we keep transformers for tokenizer ONLY as it's not the inference bottleneck.
+        # 4. Load Custom Tokenizer
         try:
-            from transformers import AutoTokenizer
-            self._tokenizer = AutoTokenizer.from_pretrained(
-                model_path, trust_remote_code=True
-            )
-        except ImportError:
-            logger.warning("Transformers not found for tokenizer. Tokenization capabilities will be limited.")
-            self._tokenizer = None
+            from ...common.custom_components.tokenizer import load_custom_tokenizer
+            self._tokenizer = load_custom_tokenizer(model_path)
         except Exception as e:
-            logger.warning(f"Could not load tokenizer: {e}")
+            logger.warning(f"Could not load custom tokenizer: {e}")
+            self._tokenizer = None
 
         # 5. Apply Optimization Floor
         self._apply_optimization_floor()
@@ -158,40 +150,6 @@ class Qwen3_0_6B_Model(nn.Module):
         if self.config.enable_thinking:
             self._apply_thinking_optimizations()
 
-    def _load_weights(self, model_path: str):
-        """
-        Load weights from safetensors or bin files into the self-contained model.
-        """
-        # This is a simplified loader. A full implementation would handle sharding and mapping.
-        # For now, we assume if we are running in this mode, we might just be initializing structure
-        # or relying on a specific format.
-
-        # Check for safetensors
-        safetensors_path = os.path.join(model_path, "model.safetensors")
-        bin_path = os.path.join(model_path, "pytorch_model.bin")
-
-        state_dict = None
-
-        if os.path.exists(safetensors_path):
-            try:
-                from safetensors.torch import load_file
-                state_dict = load_file(safetensors_path)
-            except ImportError:
-                logger.warning("safetensors library not found.")
-
-        if state_dict is None and os.path.exists(bin_path):
-            state_dict = torch.load(bin_path, map_location="cpu")
-
-        if state_dict:
-            # Basic key mapping if necessary (e.g. removing 'model.' prefix if architecture differs slightly)
-            # For this custom implementation, we aligned keys with standard Qwen/LLaMA
-            try:
-                self._model.load_state_dict(state_dict, strict=False)
-                logger.info("Weights loaded successfully.")
-            except Exception as e:
-                logger.warning(f"Weight loading strict match failed: {e}. Attempting non-strict.")
-        else:
-            logger.warning("No weight files found or loaded. Model initialized with random weights.")
 
     def _resolve_model_path(self) -> str:
         """

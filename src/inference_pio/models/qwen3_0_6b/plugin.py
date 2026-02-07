@@ -13,69 +13,28 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import torch
 
-try:
-    from inference_pio.common.interfaces.improved_base_plugin_interface import (
-        PluginMetadata,
-        PluginType,
-        TextModelPluginInterface,
-    )
-    from inference_pio.common.interfaces.memory_interface import MemoryManagerInterface
-    from inference_pio.common.interfaces.distributed_execution_interface import DistributedExecutionManagerInterface
-    from inference_pio.common.interfaces.tensor_compression_interface import TensorCompressionManagerInterface
-    from inference_pio.common.interfaces.security_interface import SecurityManagerInterface
-    from inference_pio.common.interfaces.kernel_fusion_interface import KernelFusionManagerInterface
-    from inference_pio.common.interfaces.adaptive_batching_interface import AdaptiveBatchingManagerInterface
-    from inference_pio.common.interfaces.model_surgery_interface import ModelSurgeryManagerInterface
-    from inference_pio.common.interfaces.pipeline_interface import PipelineManagerInterface
-    from inference_pio.common.interfaces.sharding_interface import ShardingManagerInterface
-    from inference_pio.common.managers.memory_manager import MemoryManager
-    from inference_pio.common.managers.distributed_execution_manager import DistributedExecutionManager
-    from inference_pio.common.managers.tensor_compression_manager import TensorCompressionManager
-except ImportError:
-    try:
-        from ...common.improved_base_plugin_interface import (
-            PluginMetadata,
-            PluginType,
-            TextModelPluginInterface,
-        )
-        from ...common.interfaces.memory_interface import MemoryManagerInterface
-        from ...common.interfaces.distributed_execution_interface import DistributedExecutionManagerInterface
-        from ...common.interfaces.tensor_compression_interface import TensorCompressionManagerInterface
-        from ...common.interfaces.security_interface import SecurityManagerInterface
-        from ...common.interfaces.kernel_fusion_interface import KernelFusionManagerInterface
-        from ...common.interfaces.adaptive_batching_interface import AdaptiveBatchingManagerInterface
-        from ...common.interfaces.model_surgery_interface import ModelSurgeryManagerInterface
-        from ...common.interfaces.pipeline_interface import PipelineManagerInterface
-        from ...common.interfaces.sharding_interface import ShardingManagerInterface
-        from ...common.managers.memory_manager import MemoryManager
-        from ...common.managers.distributed_execution_manager import DistributedExecutionManager
-        from ...common.managers.tensor_compression_manager import TensorCompressionManager
-    except ImportError:
-        # Fallback to absolute imports with path injection
-        import sys
-        import os
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-        from src.inference_pio.common.interfaces.improved_base_plugin_interface import (
-            PluginMetadata,
-            PluginType,
-            TextModelPluginInterface,
-        )
-        from src.inference_pio.common.interfaces.memory_interface import MemoryManagerInterface
-        from src.inference_pio.common.interfaces.distributed_execution_interface import DistributedExecutionManagerInterface
-        from src.inference_pio.common.interfaces.tensor_compression_interface import TensorCompressionManagerInterface
-        from src.inference_pio.common.interfaces.security_interface import SecurityManagerInterface
-        from src.inference_pio.common.interfaces.kernel_fusion_interface import KernelFusionManagerInterface
-        from src.inference_pio.common.interfaces.adaptive_batching_interface import AdaptiveBatchingManagerInterface
-        from src.inference_pio.common.interfaces.model_surgery_interface import ModelSurgeryManagerInterface
-        from src.inference_pio.common.interfaces.pipeline_interface import PipelineManagerInterface
-        from src.inference_pio.common.interfaces.sharding_interface import ShardingManagerInterface
-        from src.inference_pio.common.managers.memory_manager import MemoryManager
-        from src.inference_pio.common.managers.distributed_execution_manager import DistributedExecutionManager
-        from src.inference_pio.common.managers.tensor_compression_manager import TensorCompressionManager
-from ...common.optimization.predictive_memory_optimization import (
+from src.inference_pio.common.interfaces.improved_base_plugin_interface import (
+    PluginMetadata,
+    PluginType,
+    TextModelPluginInterface,
+)
+from src.inference_pio.common.interfaces.memory_interface import MemoryManagerInterface
+from src.inference_pio.common.interfaces.distributed_execution_interface import DistributedExecutionManagerInterface
+from src.inference_pio.common.interfaces.tensor_compression_interface import TensorCompressionManagerInterface
+from src.inference_pio.common.interfaces.security_interface import SecurityManagerInterface
+from src.inference_pio.common.interfaces.kernel_fusion_interface import KernelFusionManagerInterface
+from src.inference_pio.common.interfaces.adaptive_batching_interface import AdaptiveBatchingManagerInterface
+from src.inference_pio.common.interfaces.model_surgery_interface import ModelSurgeryManagerInterface
+from src.inference_pio.common.interfaces.pipeline_interface import PipelineManagerInterface
+from src.inference_pio.common.interfaces.sharding_interface import ShardingManagerInterface
+from src.inference_pio.common.managers.memory_manager import MemoryManager
+from src.inference_pio.common.managers.distributed_execution_manager import DistributedExecutionManager
+from src.inference_pio.common.managers.tensor_compression_manager import TensorCompressionManager
+
+from src.inference_pio.common.optimization.predictive_memory_optimization import (
     PredictiveMemoryOptimization
 )
-from ...common.optimization.resource_prediction_system import (
+from src.inference_pio.common.optimization.resource_prediction_system import (
     ResourcePredictionSystem
 )
 from .config import Qwen3_0_6B_Config
@@ -111,10 +70,9 @@ class Qwen3_0_6B_Plugin(
             author="Alibaba Cloud",
             description="Qwen3-0.6B specialized model with Thinking Mode support, optimized for efficient inference",
             plugin_type=PluginType.MODEL_COMPONENT,
-            dependencies=["torch", "transformers", "accelerate"],
+            dependencies=["torch"],
             compatibility={
                 "torch_version": ">=2.0.0",
-                "transformers_version": ">=4.30.0",
                 "python_version": ">=3.8",
                 "min_memory_gb": 2.0,  # Estimated for Qwen3-0.6B model
             },

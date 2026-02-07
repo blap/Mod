@@ -10,16 +10,14 @@ from typing import Any, Dict, Optional
 import torch
 import torch.nn as nn
 
-from ...common.config_integration import ConfigurableModelPlugin
-from ...common.config_manager import Qwen3CoderDynamicConfig
-from ...common.config_validator import get_config_validator
-from ...common.improved_base_plugin_interface import (
+from src.inference_pio.common.config.config_integration import ConfigurableModelPlugin
+from src.inference_pio.common.config.config_manager import Qwen3CoderDynamicConfig
+from src.inference_pio.common.config.config_validator import get_config_validator
+from src.inference_pio.common.interfaces.improved_base_plugin_interface import (
     PluginMetadata as ModelPluginMetadata,
-)
-from ...common.improved_base_plugin_interface import (
     PluginType,
 )
-from ...common.optimization_manager import get_optimization_manager
+from src.inference_pio.common.optimization.optimization_manager import get_optimization_manager
 
 logger = logging.getLogger(__name__)
 

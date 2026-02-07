@@ -7,7 +7,8 @@ import json
 import logging
 import os
 import re
-from typing import Dict, List, Optional, Tuple, Union
+import importlib
+from typing import Dict, List, Optional, Tuple, Union, Any
 
 import torch
 import torch.nn as nn
@@ -18,8 +19,95 @@ logger = logging.getLogger(__name__)
 class CustomModelLoader:
     """
     Efficiently loads model weights from disk (safetensors or bin) directly into PyTorch models.
-    Supports sharded checkpoints.
+    Supports sharded checkpoints and automatic architecture selection.
     """
+
+    def load_model(self, model_path: str, device: str = "cpu", dtype: torch.dtype = torch.float16, **kwargs) -> nn.Module:
+        """
+        Load a full model from a path (config + weights).
+
+        Args:
+            model_path: Path to the model directory.
+            device: Device to load model onto.
+            dtype: Data type for the model.
+
+        Returns:
+            Instantiated and loaded PyTorch model.
+        """
+        logger.info(f"Loading model from {model_path}...")
+
+        # 1. Load Config
+        config_path = os.path.join(model_path, "config.json")
+        if not os.path.exists(config_path):
+            raise FileNotFoundError(f"Config file not found at {config_path}")
+
+        with open(config_path, "r") as f:
+            config_dict = json.load(f)
+
+        # 2. Determine Architecture
+        architectures = config_dict.get("architectures", [])
+        model_type = config_dict.get("model_type", "")
+
+        model_class = self._get_model_class(architectures, model_type)
+        if not model_class:
+            logger.warning(f"Could not determine model class for architectures: {architectures}, type: {model_type}. Using generic fallback if available.")
+            # Fallback logic or raise error
+            raise ValueError("Unsupported model architecture")
+
+        # 3. Create Configuration Object
+        # Assuming the model class takes a config object or dict
+        # We try to find a matching config class or use a generic one
+        # For this refactor, we pass the dict or try to convert to the specific config object
+
+        # Instantiate model
+        # Note: This assumes the model class accepts a config dict or object
+        # We might need to wrap config_dict in a namespace object
+        from argparse import Namespace
+        config_obj = Namespace(**config_dict)
+
+        # Some custom models might expect specific Config objects
+        # Ideally we'd map this too, but for now passing Namespace might work if attributes align
+
+        try:
+            model = model_class(config_obj)
+        except Exception as e:
+            # Try initializing with dict directly
+            try:
+                model = model_class(**config_dict)
+            except Exception as e2:
+                logger.error(f"Failed to instantiate model: {e}, {e2}")
+                raise e
+
+        # 4. Load Weights
+        self.load_weights(model, model_path, device=device)
+
+        # 5. Move to device/dtype
+        model.to(device=device, dtype=dtype)
+
+        return model
+
+    def _get_model_class(self, architectures: List[str], model_type: str) -> Optional[Any]:
+        """Resolve model class based on architecture name."""
+        arch = architectures[0] if architectures else ""
+
+        # Qwen mapping
+        if "Qwen2" in arch or "Qwen2" in model_type or "qwen" in model_type:
+            try:
+                # Try importing Qwen3 architecture (assuming compatibility)
+                module = importlib.import_module("src.inference_pio.models.qwen3_0_6b.architecture")
+                return getattr(module, "Qwen3ForCausalLM")
+            except ImportError:
+                pass
+
+        # GLM mapping
+        if "GLM" in arch or "ChatGLM" in arch or "glm" in model_type:
+            try:
+                module = importlib.import_module("src.inference_pio.models.glm_4_7_flash.architecture")
+                return getattr(module, "GLMForCausalLM")
+            except ImportError:
+                pass
+
+        return None
 
     @staticmethod
     def load_weights(model: nn.Module, model_path: str, device: str = "cpu", strict: bool = False):

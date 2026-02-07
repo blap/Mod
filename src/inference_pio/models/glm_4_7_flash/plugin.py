@@ -12,16 +12,16 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import torch
 import torch.nn as nn
 
-from ...common.config_manager import GLM47DynamicConfig
-from ...common.improved_base_plugin_interface import (
+from ...common.config.config_manager import GLM47DynamicConfig
+from ...common.interfaces.improved_base_plugin_interface import (
     PluginMetadata as ModelPluginMetadata,
 )
-from ...common.improved_base_plugin_interface import (
+from ...common.interfaces.improved_base_plugin_interface import (
     PluginType,
     TextModelPluginInterface,
 )
-from ...common.virtual_device import VirtualExecutionSimulator
-from ...common.virtual_execution import (
+from ...common.hardware.virtual_device import VirtualExecutionSimulator
+from ...common.hardware.virtual_execution import (
     PartitionConfig,
     PartitionStrategy,
     VirtualExecutionManager,

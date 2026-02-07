@@ -10,54 +10,14 @@ from typing import Any, Dict, Optional
 import torch
 import torch.nn as nn
 
-try:
-    from ..common.config_integration import ConfigurableModelPlugin
-except ImportError:
-    # Fallback import
-    import sys
-    import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-    from src.inference_pio.common.config_integration import ConfigurableModelPlugin
-try:
-    from ..common.config_manager import Qwen34BDynamicConfig
-except ImportError:
-    # Fallback import
-    import sys
-    import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-    from src.inference_pio.common.config_manager import Qwen34BDynamicConfig
-try:
-    from ..common.config_validator import get_config_validator
-except ImportError:
-    # Fallback import
-    import sys
-    import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-    from src.inference_pio.common.config_validator import get_config_validator
-
-try:
-    from ..common.improved_base_plugin_interface import (
-        PluginMetadata as ModelPluginMetadata,
-        PluginType,
-    )
-except ImportError:
-    # Fallback import
-    import sys
-    import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-    from src.inference_pio.common.improved_base_plugin_interface import (
-        PluginMetadata as ModelPluginMetadata,
-        PluginType,
-    )
-
-try:
-    from ..common.optimization_manager import get_optimization_manager
-except ImportError:
-    # Fallback import
-    import sys
-    import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-    from src.inference_pio.common.optimization_manager import get_optimization_manager
+from src.inference_pio.common.config.config_integration import ConfigurableModelPlugin
+from src.inference_pio.common.config.config_manager import Qwen34BDynamicConfig
+from src.inference_pio.common.config.config_validator import get_config_validator
+from src.inference_pio.common.interfaces.improved_base_plugin_interface import (
+    PluginMetadata as ModelPluginMetadata,
+    PluginType,
+)
+from src.inference_pio.common.optimization.optimization_manager import get_optimization_manager
 
 logger = logging.getLogger(__name__)
 

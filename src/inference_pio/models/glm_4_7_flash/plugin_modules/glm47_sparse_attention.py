@@ -10,7 +10,7 @@ from typing import Optional, Tuple
 import torch
 import torch.nn as nn
 
-from ....common.base_attention import BaseAttention
+from src.inference_pio.common.attention.base_attention import BaseAttention
 from ..config import GLM47FlashConfig
 
 

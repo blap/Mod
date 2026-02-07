@@ -20,7 +20,7 @@ try:
 except ImportError:
     # Fallback
     try:
-        from ...common.model_config_base import (
+        from ...common.config.model_config_base import (
             BaseConfig,
             ModelConfigError,
             get_default_model_path,
@@ -29,7 +29,7 @@ except ImportError:
         import sys
         import os
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-        from src.inference_pio.common.config.model_config_base import (
+        from ...common.config.model_config_base import (
             BaseConfig,
             ModelConfigError,
             get_default_model_path,
