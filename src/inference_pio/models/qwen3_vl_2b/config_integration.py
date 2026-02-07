@@ -100,19 +100,15 @@ class Qwen3VL2BConfigurablePlugin(ConfigurableModelPlugin):
                 logger.warning(f"Configuration has validation errors: {errors}")
 
             # Here we would normally load the actual model
-            # For now, we'll create a mock model to demonstrate the concept
-            from transformers import AutoModelForCausalLM
+            from .core.modeling import Qwen3VL2BArchitecture
+            from ...common.custom_components.model_loader import CustomModelLoader
 
-            self._model = AutoModelForCausalLM.from_pretrained(
-                config.model_path,
-                torch_dtype=(
-                    getattr(torch, config.torch_dtype)
-                    if hasattr(torch, config.torch_dtype)
-                    else torch.float16
-                ),
-                device_map=config.device_map,
-                low_cpu_mem_usage=config.low_cpu_mem_usage,
-            )
+            # Initialize architecture
+            self._model = Qwen3VL2BArchitecture(config)
+
+            # Load weights
+            device = config.device if hasattr(config, "device") else "cpu"
+            CustomModelLoader.load_weights(self._model, config.model_path, device=device)
 
             # Apply optimizations based on configuration
             self._apply_config_optimizations(config)

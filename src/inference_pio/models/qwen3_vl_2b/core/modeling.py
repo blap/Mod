@@ -9,12 +9,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# Dynamic imports
-try:
-    from transformers import AutoTokenizer, AutoImageProcessor
-except ImportError:
-    AutoTokenizer = None
-    AutoImageProcessor = None
+# Custom component imports
+from ....common.custom_components.tokenizer import load_custom_tokenizer
+from ....common.processing.image_tokenization import get_optimized_image_processor
+from ....common.custom_components.model_loader import CustomModelLoader
 
 logger = logging.getLogger(__name__)
 
@@ -175,20 +173,19 @@ class Qwen3VL2BModeling(nn.Module):
             self._model = Qwen3VL2BArchitecture(self.config)
             logger.info("Initialized self-contained Qwen3-VL architecture.")
 
-            # 2. Load Weights (Placeholder for manual loading logic)
-            # self._load_weights()
+            # 2. Load Weights using Custom Loader
+            try:
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+                CustomModelLoader.load_weights(self._model, self._model_name, device=device)
+            except Exception as e:
+                logger.warning(f"Failed to load weights using CustomModelLoader: {e}")
 
-            # 3. Load Processors (Transformers dependency kept for preprocessing only)
-            if AutoTokenizer and AutoImageProcessor:
-                try:
-                    self._tokenizer = AutoTokenizer.from_pretrained(
-                        "Qwen/Qwen2-VL-2B-Instruct", trust_remote_code=True
-                    )
-                    self._image_processor = AutoImageProcessor.from_pretrained(
-                        "Qwen/Qwen2-VL-2B-Instruct", trust_remote_code=True
-                    )
-                except Exception as e:
-                    logger.warning(f"Failed to load processors: {e}")
+            # 3. Load Custom Processors
+            try:
+                self._tokenizer = load_custom_tokenizer(self._model_name)
+                self._image_processor = get_optimized_image_processor(self._model_name)
+            except Exception as e:
+                logger.warning(f"Failed to load custom processors: {e}")
 
             # Apply optimizations
             from ..specific_optimizations.qwen3_vl_specific_optimizations import apply_qwen3_vl_specific_optimizations, Qwen3VLOptimizationConfig

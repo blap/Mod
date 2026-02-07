@@ -63,6 +63,10 @@ from .vision_transformer_kernels import (
     create_qwen3_vl_2b_vision_encoder_kernel,
 )
 
+# Custom Components
+from ...common.custom_components.tokenizer import load_custom_tokenizer
+from ...common.processing.image_tokenization import get_optimized_image_processor
+
 logger = logging.getLogger(__name__)
 
 
@@ -83,10 +87,9 @@ class Qwen3_VL_2B_Instruct_Plugin(TextModelPluginInterface):
             author="Alibaba Cloud",
             description="Qwen3-VL-2B-Instruct specialized multimodal model with advanced vision-language capabilities, optimized for image understanding, text generation, and multimodal tasks",
             plugin_type=PluginType.MODEL_COMPONENT,
-            dependencies=["torch", "transformers", "pillow", "accelerate"],
+            dependencies=["torch", "pillow", "numpy"],
             compatibility={
                 "torch_version": ">=2.0.0",
-                "transformers_version": ">=4.30.0",
                 "python_version": ">=3.8",
                 "min_memory_gb": 6.0,  # Estimated for Qwen3-VL-2B-Instruct model
             },
@@ -223,19 +226,13 @@ class Qwen3_VL_2B_Instruct_Plugin(TextModelPluginInterface):
             # Apply Qwen3-VL-2B specific optimizations
             self._apply_qwen3_vl_optimizations()
 
-            # Load tokenizer and image processor
-            from transformers import AutoImageProcessor, AutoTokenizer
-
-            self._tokenizer = AutoTokenizer.from_pretrained(
-                self._config.model_path, trust_remote_code=True
-            )
-            self._image_processor = AutoImageProcessor.from_pretrained(
-                self._config.model_path, trust_remote_code=True
-            )
-
-            # Set pad token if not present
-            if self._tokenizer.pad_token is None:
-                self._tokenizer.pad_token = self._tokenizer.eos_token
+            # Load tokenizer and image processor using custom components
+            try:
+                self._tokenizer = load_custom_tokenizer(self._config.model_path)
+                self._image_processor = get_optimized_image_processor(self._config.model_path)
+            except Exception as e:
+                logger.error(f"Failed to load custom processors: {e}")
+                raise e
 
             self.is_loaded = True
             logger.info("Qwen3-VL-2B model loaded successfully")
@@ -899,82 +896,71 @@ class Qwen3_VL_2B_Instruct_Plugin(TextModelPluginInterface):
 
     def execute_with_virtual_execution(self, data: Any) -> Any:
         """
-        Execute inference using virtual execution.
-
-        Args:
-            data: Input data for inference
-
-        Returns:
-            Inference results
+        Execute inference using virtual execution (partitioned layers).
+        This implements the "Real Virtual Execution" logic by partitioning the LLM backbone.
         """
         if not self._virtual_execution_enabled:
-            logger.warning(
-                "Virtual execution not enabled, falling back to regular inference"
-            )
             return self.infer(data)
 
+        # Ensure partitioning
         if not self._partitions or len(self._partitions) == 0:
-            logger.warning("Model not partitioned, partitioning now...")
-            if not self.partition_model_for_distributed():
-                logger.error(
-                    "Failed to partition model, falling back to regular inference"
+            # We partition the inner Qwen3Model.
+            # Qwen3VL2BModel -> Qwen3VL2BArchitecture -> Qwen3Model
+            # Note: Qwen3VL2BModel wraps Qwen3VL2BModeling which wraps Qwen3VL2BArchitecture
+            # The structure is complex due to wrappers.
+            # self._model is Qwen3VL2BModel.
+            # self._model._model is Qwen3VL2BArchitecture (if initialized via self-contained path)
+
+            target_model = None
+            if hasattr(self._model, "_model") and hasattr(self._model._model, "model"):
+                 target_model = self._model._model.model # Qwen3Model
+            elif hasattr(self._model, "model"):
+                 # Maybe direct access
+                 if hasattr(self._model.model, "layers"):
+                     target_model = self._model.model
+
+            if target_model:
+                 logger.info("Partitioning Qwen3Model backbone for virtual execution...")
+                 self._partitions = self._virtual_execution_manager.partition_model(target_model)
+            else:
+                 logger.warning("Could not find suitable model backbone for partitioning. Fallback to infer.")
+                 return self.infer(data)
+
+        # Handle text only for now to demonstrate logic
+        if isinstance(data, str):
+            inputs = self._tokenizer(data, return_tensors="pt")
+
+            # 1. Embeddings (Non-partitioned)
+            device = next(self._model.parameters()).device
+            input_ids = inputs["input_ids"].to(device)
+            inputs_embeds = self._model._model.model.embed_tokens(input_ids)
+
+            # 2. Virtual Execution of Layers
+            # Create attention mask
+            seq_len = input_ids.shape[1]
+            attention_mask = torch.tril(torch.ones(seq_len, seq_len)).unsqueeze(0).unsqueeze(0).to(device)
+
+            try:
+                hidden_states = self._virtual_execution_manager.simulate_distributed_execution(
+                    inputs_embeds,
+                    attention_mask=attention_mask
                 )
+
+                # 3. Final Norm and Head (Non-partitioned)
+                hidden_states = self._model._model.model.norm(hidden_states)
+                logits = self._model._model.lm_head(hidden_states)
+
+                # Decode last token
+                next_token_logits = logits[:, -1, :]
+                next_token = torch.argmax(next_token_logits, dim=-1)
+
+                return self._tokenizer.decode(next_token.tolist())
+
+            except Exception as e:
+                logger.error(f"Virtual execution failed: {e}")
                 return self.infer(data)
 
-        # For multimodal inputs, this is complex. We simplify by only supporting text-only virtual execution for now
-        # or relying on the model structure partition which should include vision encoder
-
-        # If it's a dict (multimodal), we extract text if possible or fail gracefully
-        if isinstance(data, dict):
-            # Simplified handling
-            logger.warning(
-                "Virtual execution for multimodal input is experimental. Falling back to regular infer."
-            )
-            return self.infer(data)
-
-        if not isinstance(data, str):
-            raise ValueError(
-                "Qwen3-VL-2B virtual execution currently expects string input"
-            )
-
-        try:
-            # Tokenize input
-            inputs = self._tokenizer(
-                data,
-                return_tensors="pt",
-                padding=True,
-                truncation=True,
-                max_length=self._config.max_position_embeddings,
-            )
-
-            # Move inputs to the same device as the first partition
-            device = (
-                next(self._partitions[0].parameters()).device
-                if self._partitions and len(self._partitions) > 0
-                else torch.device("cpu")
-            )
-            inputs = {k: v.to(device) for k, v in inputs.items()}
-
-            # Process through partitions using virtual execution
-            current_output = inputs[
-                "input_ids"
-            ]  # This assumes text-only flow logic which is incorrect for Qwen-VL model structure
-            # Qwen-VL has vision encoder -> connector -> LLM. Partitioning would likely be on LLM layers.
-            # We would need to run vision encoder first (non-partitioned or separate partition) then pass to partitioned LLM.
-
-            # Since this is a complex refactor, we will wrap the infer logic but use the partitions for the LLM part
-            # This is non-trivial without deep model surgery.
-
-            # Placeholder implementation:
-            logger.warning(
-                "Deep virtual execution for Qwen-VL requires complex graph partitioning. Falling back to regular infer."
-            )
-            return self.infer(data)
-
-        except Exception as e:
-            logger.error(f"Error during virtual execution: {e}")
-            # Fall back to regular inference
-            return self.infer(data)
+        return self.infer(data)
 
     def get_virtual_execution_stats(self) -> Dict[str, Any]:
         """

@@ -114,15 +114,12 @@ class Qwen3VL2BAsyncMultimodalManager:
                 logger.warning(
                     "Tokenizer or image processor not found in model, using defaults"
                 )
-                from transformers import AutoImageProcessor, AutoTokenizer
+                from ...common.custom_components.tokenizer import load_custom_tokenizer
+                from ...common.processing.image_tokenization import get_optimized_image_processor
 
                 # Use a default tokenizer and image processor
-                tokenizer = AutoTokenizer.from_pretrained(
-                    "H:/Qwen3-VL-2B-Instruct", trust_remote_code=True
-                )
-                image_processor = AutoImageProcessor.from_pretrained(
-                    "H:/Qwen3-VL-2B-Instruct", trust_remote_code=True
-                )
+                tokenizer = load_custom_tokenizer("H:/Qwen3-VL-2B-Instruct")
+                image_processor = get_optimized_image_processor("H:/Qwen3-VL-2B-Instruct")
 
             # Initialize multimodal preprocessor
             from .multimodal_preprocessing import MultimodalPreprocessor
