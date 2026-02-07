@@ -12,6 +12,7 @@ from typing import List, Optional, Tuple, Union
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.utils.checkpoint
 
 # Import custom generation config
 try:
@@ -247,6 +248,7 @@ class Qwen3Model(nn.Module):
         self.config = config
         self.padding_idx = 151643  # Default Qwen pad token
         self.vocab_size = config.vocab_size
+        self.gradient_checkpointing = False
 
         self.embed_tokens = nn.Embedding(
             config.vocab_size, config.hidden_size, self.padding_idx
@@ -266,17 +268,26 @@ class Qwen3Model(nn.Module):
         position_ids=None,
         past_key_values=None,
         use_cache=None,
+        inputs_embeds=None,
         **kwargs,
     ):
-        hidden_states = self.embed_tokens(input_ids)
+        if inputs_embeds is None:
+            hidden_states = self.embed_tokens(input_ids)
+        else:
+            hidden_states = inputs_embeds
 
         # Simple causal mask generation if not provided
         if attention_mask is None:
-            attention_mask = torch.ones_like(input_ids).unsqueeze(1).unsqueeze(2)  # [bs, 1, 1, seq_len]
-            attention_mask = attention_mask.to(dtype=torch.bool)
+            if input_ids is not None:
+                batch_size, seq_len = input_ids.shape
+                device = input_ids.device
+            else:
+                batch_size, seq_len, _ = inputs_embeds.shape
+                device = inputs_embeds.device
+
+            attention_mask = torch.ones((batch_size, 1, 1, seq_len), device=device, dtype=torch.bool)
             # Create causal mask
-            seq_len = input_ids.size(1)
-            causal_mask = torch.tril(torch.ones(seq_len, seq_len)).expand(1, 1, seq_len, seq_len)
+            causal_mask = torch.tril(torch.ones(seq_len, seq_len, device=device)).expand(1, 1, seq_len, seq_len)
             attention_mask = attention_mask & causal_mask.bool()
             attention_mask = attention_mask.to(dtype=hidden_states.dtype)
 
@@ -303,15 +314,31 @@ class Qwen3Model(nn.Module):
             else:
                 layer_past = None
 
-            hidden_states, layer_pkv = layer(
-                hidden_states,
-                attention_mask=attention_mask,
-                position_ids=position_ids,
-                past_key_value=layer_past,
-                use_cache=use_cache,
-            )
-            if use_cache:
-                pkv = pkv + (layer_pkv,)
+            if self.gradient_checkpointing and self.training:
+                def create_custom_forward(module):
+                    def custom_forward(*inputs):
+                        # None for past_key_value
+                        return module(*inputs, past_key_value=None, use_cache=False)
+                    return custom_forward
+
+                hidden_states = torch.utils.checkpoint.checkpoint(
+                    create_custom_forward(layer),
+                    hidden_states,
+                    attention_mask,
+                    position_ids,
+                )
+                if isinstance(hidden_states, tuple):
+                    hidden_states = hidden_states[0] # handle return
+            else:
+                hidden_states, layer_pkv = layer(
+                    hidden_states,
+                    attention_mask=attention_mask,
+                    position_ids=position_ids,
+                    past_key_value=layer_past,
+                    use_cache=use_cache,
+                )
+                if use_cache:
+                    pkv = pkv + (layer_pkv,)
 
         hidden_states = self.norm(hidden_states)
         return hidden_states, pkv
@@ -331,6 +358,7 @@ class Qwen3ForCausalLM(nn.Module):
         position_ids=None,
         past_key_values=None,
         use_cache=None,
+        inputs_embeds=None,
         **kwargs,
     ):
         hidden_states, pkv = self.model(
@@ -339,6 +367,7 @@ class Qwen3ForCausalLM(nn.Module):
             position_ids=position_ids,
             past_key_values=past_key_values,
             use_cache=use_cache,
+            inputs_embeds=inputs_embeds,
         )
         logits = self.lm_head(hidden_states)
         return logits, pkv
@@ -436,11 +465,8 @@ class Qwen3ForCausalLM(nn.Module):
         return generated_ids
 
     def gradient_checkpointing_enable(self):
-        # Placeholder for compatibility
-        """Implement the required functionality."""
-        # This is a placeholder implementation
-        # In a real implementation, this would contain the actual logic
-        return None
+        """Enable gradient checkpointing for memory efficiency."""
+        self.model.gradient_checkpointing = True
 
     @property
     def device(self):
