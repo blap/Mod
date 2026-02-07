@@ -7,12 +7,20 @@ Based on Qwen2/LLaMA architecture standards.
 """
 
 import math
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.utils.checkpoint
 
+# Import custom generation config
+try:
+    from ...common.config.generation_config import CustomGenerationConfig
+except ImportError:
+    class CustomGenerationConfig:
+        def __init__(self, **kwargs):
+            pass
 
 class Qwen3RMSNorm(nn.Module):
     def __init__(self, hidden_size, eps=1e-6):
@@ -240,6 +248,7 @@ class Qwen3Model(nn.Module):
         self.config = config
         self.padding_idx = 151643  # Default Qwen pad token
         self.vocab_size = config.vocab_size
+        self.gradient_checkpointing = False
 
         self.embed_tokens = nn.Embedding(
             config.vocab_size, config.hidden_size, self.padding_idx
@@ -259,17 +268,26 @@ class Qwen3Model(nn.Module):
         position_ids=None,
         past_key_values=None,
         use_cache=None,
+        inputs_embeds=None,
         **kwargs,
     ):
-        hidden_states = self.embed_tokens(input_ids)
+        if inputs_embeds is None:
+            hidden_states = self.embed_tokens(input_ids)
+        else:
+            hidden_states = inputs_embeds
 
         # Simple causal mask generation if not provided
         if attention_mask is None:
-            attention_mask = torch.ones_like(input_ids).unsqueeze(1).unsqueeze(2)  # [bs, 1, 1, seq_len]
-            attention_mask = attention_mask.to(dtype=torch.bool)
+            if input_ids is not None:
+                batch_size, seq_len = input_ids.shape
+                device = input_ids.device
+            else:
+                batch_size, seq_len, _ = inputs_embeds.shape
+                device = inputs_embeds.device
+
+            attention_mask = torch.ones((batch_size, 1, 1, seq_len), device=device, dtype=torch.bool)
             # Create causal mask
-            seq_len = input_ids.size(1)
-            causal_mask = torch.tril(torch.ones(seq_len, seq_len)).expand(1, 1, seq_len, seq_len)
+            causal_mask = torch.tril(torch.ones(seq_len, seq_len, device=device)).expand(1, 1, seq_len, seq_len)
             attention_mask = attention_mask & causal_mask.bool()
             attention_mask = attention_mask.to(dtype=hidden_states.dtype)
 
@@ -296,15 +314,31 @@ class Qwen3Model(nn.Module):
             else:
                 layer_past = None
 
-            hidden_states, layer_pkv = layer(
-                hidden_states,
-                attention_mask=attention_mask,
-                position_ids=position_ids,
-                past_key_value=layer_past,
-                use_cache=use_cache,
-            )
-            if use_cache:
-                pkv = pkv + (layer_pkv,)
+            if self.gradient_checkpointing and self.training:
+                def create_custom_forward(module):
+                    def custom_forward(*inputs):
+                        # None for past_key_value
+                        return module(*inputs, past_key_value=None, use_cache=False)
+                    return custom_forward
+
+                hidden_states = torch.utils.checkpoint.checkpoint(
+                    create_custom_forward(layer),
+                    hidden_states,
+                    attention_mask,
+                    position_ids,
+                )
+                if isinstance(hidden_states, tuple):
+                    hidden_states = hidden_states[0] # handle return
+            else:
+                hidden_states, layer_pkv = layer(
+                    hidden_states,
+                    attention_mask=attention_mask,
+                    position_ids=position_ids,
+                    past_key_value=layer_past,
+                    use_cache=use_cache,
+                )
+                if use_cache:
+                    pkv = pkv + (layer_pkv,)
 
         hidden_states = self.norm(hidden_states)
         return hidden_states, pkv
@@ -324,6 +358,7 @@ class Qwen3ForCausalLM(nn.Module):
         position_ids=None,
         past_key_values=None,
         use_cache=None,
+        inputs_embeds=None,
         **kwargs,
     ):
         hidden_states, pkv = self.model(
@@ -332,16 +367,106 @@ class Qwen3ForCausalLM(nn.Module):
             position_ids=position_ids,
             past_key_values=past_key_values,
             use_cache=use_cache,
+            inputs_embeds=inputs_embeds,
         )
         logits = self.lm_head(hidden_states)
         return logits, pkv
 
+    def generate(
+        self,
+        input_ids: torch.Tensor,
+        max_new_tokens: int = 50,
+        temperature: float = 1.0,
+        top_k: int = 50,
+        top_p: float = 1.0,
+        do_sample: bool = False,
+        repetition_penalty: float = 1.0,
+        **kwargs,
+    ) -> torch.Tensor:
+        """
+        Custom generation loop to remove dependency on transformers.generation.
+        """
+        # Ensure input_ids is on the correct device
+        input_ids = input_ids.to(self.device)
+
+        # Keep track of generated tokens
+        generated_ids = input_ids.clone()
+
+        # Initialize past_key_values
+        past_key_values = None
+
+        for _ in range(max_new_tokens):
+            # If we have past_key_values, we only need to pass the last token
+            if past_key_values:
+                model_inputs = generated_ids[:, -1:]
+                position_ids = torch.arange(
+                    generated_ids.shape[1] - 1, generated_ids.shape[1],
+                    device=self.device
+                ).unsqueeze(0)
+            else:
+                model_inputs = generated_ids
+                position_ids = None
+
+            # Forward pass
+            outputs, past_key_values = self.forward(
+                input_ids=model_inputs,
+                past_key_values=past_key_values,
+                use_cache=True,
+                position_ids=position_ids
+            )
+
+            # Get logits for the last token
+            next_token_logits = outputs[:, -1, :]
+
+            # Apply repetition penalty if needed
+            if repetition_penalty != 1.0:
+                score = torch.gather(next_token_logits, 1, generated_ids)
+                score = torch.where(score < 0, score * repetition_penalty, score / repetition_penalty)
+                next_token_logits.scatter_(1, generated_ids, score)
+
+            # Sampling logic
+            if do_sample:
+                # Temperature scaling
+                if temperature > 0 and temperature != 1.0:
+                    next_token_logits = next_token_logits / temperature
+
+                # Top-K
+                if top_k > 0:
+                    v, _ = torch.topk(next_token_logits, min(top_k, next_token_logits.size(-1)))
+                    next_token_logits[next_token_logits < v[:, [-1]]] = -float('inf')
+
+                # Top-P (Nucleus)
+                if top_p < 1.0:
+                    sorted_logits, sorted_indices = torch.sort(next_token_logits, descending=True)
+                    cumulative_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
+
+                    # Remove tokens with cumulative probability above the threshold
+                    sorted_indices_to_remove = cumulative_probs > top_p
+                    # Shift the indices to the right to keep also the first token above the threshold
+                    sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
+                    sorted_indices_to_remove[..., 0] = 0
+
+                    indices_to_remove = sorted_indices_to_remove.scatter(1, sorted_indices, sorted_indices_to_remove)
+                    next_token_logits[indices_to_remove] = -float('inf')
+
+                probs = F.softmax(next_token_logits, dim=-1)
+                next_token = torch.multinomial(probs, num_samples=1)
+            else:
+                # Greedy decoding
+                next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True)
+
+            # Append next token
+            generated_ids = torch.cat([generated_ids, next_token], dim=-1)
+
+            # Check for EOS (assuming standard EOS token ID for Qwen, can be configurable)
+            # 151643 is pad/eos often, or 151645. We'll rely on calling code or config if strict stopping is needed.
+            # Here we just generate max_new_tokens.
+
+        return generated_ids
+
     def gradient_checkpointing_enable(self):
-        # Placeholder for compatibility
-        """Implement the required functionality."""
-        # This is a placeholder implementation
-        # In a real implementation, this would contain the actual logic
-        return None
+        """Enable gradient checkpointing for memory efficiency."""
+        self.model.gradient_checkpointing = True
 
     @property
     def device(self):

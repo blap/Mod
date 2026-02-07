@@ -15,6 +15,26 @@ import torch.nn as nn
 
 logger = logging.getLogger(__name__)
 
+class Qwen3VLLayerNorm(nn.Module):
+    def __init__(self, hidden_size, eps=1e-6):
+        super().__init__()
+        self.weight = nn.Parameter(torch.ones(hidden_size))
+        self.eps = eps
+
+    def forward(self, x):
+        input_dtype = x.dtype
+        x = x.to(torch.float32)
+        variance = x.pow(2).mean(-1, keepdim=True)
+        x = x * torch.rsqrt(variance + self.eps)
+        return self.weight * x.to(input_dtype)
+
+class Qwen3VLGELU(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+         return torch.nn.functional.gelu(x, approximate='tanh')
+
 
 @dataclass
 class Qwen3VLOptimizationConfig:
@@ -52,6 +72,9 @@ class Qwen3VLOptimizationConfig:
     use_multimodal_layer_norm_fusion: bool = True
     use_multimodal_residual_connection_optimization: bool = True
 
+    # Custom kernel settings
+    use_custom_kernels: bool = True
+
     # Cross-modal alignment optimization settings
     use_cross_modal_alignment_optimization: bool = True
     cross_modal_alignment_method: str = (
@@ -84,6 +107,10 @@ def apply_qwen3_vl_specific_optimizations(
         Optimized model
     """
     logger.info("Applying Qwen3-VL-2B specific optimizations...")
+
+    # Apply custom kernels first if enabled
+    if getattr(config, "use_custom_kernels", True):
+        _apply_custom_kernels(model)
 
     # Apply cross-modal attention optimizations
     if config.use_cross_modal_attention_optimization:
@@ -127,6 +154,50 @@ def apply_qwen3_vl_specific_optimizations(
 
     logger.info("Qwen3-VL-2B specific optimizations applied successfully")
     return model
+
+def _apply_custom_kernels(model: nn.Module):
+    logger.info("Applying Qwen3-VL custom kernels...")
+    replacements = {"norm": 0, "act": 0}
+    modifications = []
+
+    for name, module in model.named_modules():
+        if isinstance(module, (nn.LayerNorm, nn.RMSNorm)):
+             if hasattr(module, 'normalized_shape') and len(module.normalized_shape) == 1:
+                modifications.append((name, module, "norm"))
+
+        if isinstance(module, nn.GELU):
+             modifications.append((name, module, "act"))
+
+    for name, module, type_tag in modifications:
+        parent_name, child_name = name.rsplit(".", 1) if "." in name else (None, name)
+
+        if parent_name:
+            parent_module = _get_parent_module(model, parent_name)
+        else:
+            parent_module = model
+
+        if type_tag == "norm":
+            dim = module.normalized_shape[0]
+            eps = module.eps
+            opt_norm = Qwen3VLLayerNorm(dim, eps)
+            if hasattr(module, 'weight') and module.weight is not None:
+                opt_norm.weight.data.copy_(module.weight.data)
+
+            setattr(parent_module, child_name, opt_norm)
+            replacements["norm"] += 1
+
+        elif type_tag == "act":
+            setattr(parent_module, child_name, Qwen3VLGELU())
+            replacements["act"] += 1
+
+    logger.info(f"Qwen3-VL custom kernels applied: {replacements}")
+
+def _get_parent_module(model: nn.Module, parent_name: str) -> nn.Module:
+    parent_module = model
+    for n in parent_name.split("."):
+        if n:
+            parent_module = getattr(parent_module, n)
+    return parent_module
 
 
 def _apply_cross_modal_attention_optimizations(
@@ -257,6 +328,7 @@ def get_qwen3_vl_optimization_report(
     report = {
         "model_type": "Qwen3-VL-2B",
         "optimizations_applied": {
+            "custom_kernels": getattr(config, "use_custom_kernels", True),
             "cross_modal_attention_optimization": config.use_cross_modal_attention_optimization,
             "vision_language_fusion_optimization": config.use_vision_language_fusion_optimization,
             "vision_encoder_optimization": config.use_vision_encoder_optimization,

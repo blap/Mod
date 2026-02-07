@@ -8,8 +8,11 @@ from typing import Dict, Optional, Tuple
 
 import torch
 import torch.nn as nn
+import logging
 
 from ..config import Qwen3Coder30BConfig
+
+logger = logging.getLogger(__name__)
 
 
 class Qwen3CoderGELUKernel(nn.Module):
@@ -241,19 +244,34 @@ def apply_qwen3_coder_optimizations_to_model(
     """
     # Create kernel manager
     kernel_manager = create_qwen3_coder_kernel_manager(config)
+    logger.info("Applying Qwen3-Coder-30B specific CUDA optimizations...")
+
+    replacements = {"gelu": 0, "layernorm": 0}
+    modifications = []
 
     # Apply optimizations based on configuration
     for name, module in model.named_modules():
         # Replace GELU activations if enabled
         if config.cuda_kernel_gelu_enabled and isinstance(module, nn.GELU):
-            parent_name, child_name = name.rsplit(".", 1)
-            parent_module = _get_parent_module(model, parent_name)
-            setattr(parent_module, child_name, Qwen3CoderGELUKernel())
+            modifications.append((name, module, "gelu"))
 
         # Replace LayerNorm if enabled
         if config.cuda_kernel_layernorm_enabled and isinstance(module, nn.LayerNorm):
-            parent_name, child_name = name.rsplit(".", 1)
+            modifications.append((name, module, "layernorm"))
+
+    for name, module, type_tag in modifications:
+        parent_name, child_name = name.rsplit(".", 1) if "." in name else (None, name)
+
+        if parent_name:
             parent_module = _get_parent_module(model, parent_name)
+        else:
+            parent_module = model
+
+        if type_tag == "gelu":
+            setattr(parent_module, child_name, Qwen3CoderGELUKernel())
+            replacements["gelu"] += 1
+
+        elif type_tag == "layernorm":
             new_layernorm = Qwen3CoderLayerNormKernel(
                 normalized_shape=module.normalized_shape[0], eps=module.eps
             )
@@ -261,7 +279,9 @@ def apply_qwen3_coder_optimizations_to_model(
             new_layernorm.weight.data.copy_(module.weight.data)
             new_layernorm.bias.data.copy_(module.bias.data)
             setattr(parent_module, child_name, new_layernorm)
+            replacements["layernorm"] += 1
 
+    logger.info(f"Qwen3-Coder-30B optimizations applied: {replacements}")
     return model
 
 

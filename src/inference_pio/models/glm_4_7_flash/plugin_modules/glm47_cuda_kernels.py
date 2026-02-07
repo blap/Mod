@@ -8,8 +8,11 @@ from typing import Dict, Optional, Tuple
 
 import torch
 import torch.nn as nn
+import logging
 
 from ..config import GLM47FlashConfig
+
+logger = logging.getLogger(__name__)
 
 
 class GLM47GELUKernel(nn.Module):
@@ -249,19 +252,34 @@ def apply_glm47_optimizations_to_model(
     """
     # Create kernel manager
     kernel_manager = create_glm47_kernel_manager(config)
+    logger.info("Applying GLM-4.7 enhanced CUDA kernel optimizations...")
+
+    replacements = {"gelu": 0, "layernorm": 0, "mlp": 0, "attention": 0}
+    modifications = []
 
     # Apply optimizations based on configuration
     for name, module in model.named_modules():
         # Replace GELU activations if enabled
         if config.cuda_kernel_gelu_enabled and isinstance(module, nn.GELU):
-            parent_name, child_name = name.rsplit(".", 1)
-            parent_module = _get_parent_module(model, parent_name)
-            setattr(parent_module, child_name, GLM47GELUKernel())
+            modifications.append((name, module, "gelu"))
 
         # Replace LayerNorm if enabled
         if config.cuda_kernel_layernorm_enabled and isinstance(module, nn.LayerNorm):
-            parent_name, child_name = name.rsplit(".", 1)
+            modifications.append((name, module, "layernorm"))
+
+    for name, module, type_tag in modifications:
+        parent_name, child_name = name.rsplit(".", 1) if "." in name else (None, name)
+
+        if parent_name:
             parent_module = _get_parent_module(model, parent_name)
+        else:
+            parent_module = model
+
+        if type_tag == "gelu":
+            setattr(parent_module, child_name, GLM47GELUKernel())
+            replacements["gelu"] += 1
+
+        elif type_tag == "layernorm":
             new_layernorm = GLM47LayerNormKernel(
                 normalized_shape=module.normalized_shape[0], eps=module.eps
             )
@@ -269,7 +287,9 @@ def apply_glm47_optimizations_to_model(
             new_layernorm.weight.data.copy_(module.weight.data)
             new_layernorm.bias.data.copy_(module.bias.data)
             setattr(parent_module, child_name, new_layernorm)
+            replacements["layernorm"] += 1
 
+    logger.info(f"GLM-4.7 Optimizations applied: {replacements}")
     return model
 
 
