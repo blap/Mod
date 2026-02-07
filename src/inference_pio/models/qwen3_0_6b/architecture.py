@@ -7,12 +7,19 @@ Based on Qwen2/LLaMA architecture standards.
 """
 
 import math
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+# Import custom generation config
+try:
+    from ...common.config.generation_config import CustomGenerationConfig
+except ImportError:
+    class CustomGenerationConfig:
+        def __init__(self, **kwargs):
+            pass
 
 class Qwen3RMSNorm(nn.Module):
     def __init__(self, hidden_size, eps=1e-6):
@@ -335,6 +342,98 @@ class Qwen3ForCausalLM(nn.Module):
         )
         logits = self.lm_head(hidden_states)
         return logits, pkv
+
+    def generate(
+        self,
+        input_ids: torch.Tensor,
+        max_new_tokens: int = 50,
+        temperature: float = 1.0,
+        top_k: int = 50,
+        top_p: float = 1.0,
+        do_sample: bool = False,
+        repetition_penalty: float = 1.0,
+        **kwargs,
+    ) -> torch.Tensor:
+        """
+        Custom generation loop to remove dependency on transformers.generation.
+        """
+        # Ensure input_ids is on the correct device
+        input_ids = input_ids.to(self.device)
+
+        # Keep track of generated tokens
+        generated_ids = input_ids.clone()
+
+        # Initialize past_key_values
+        past_key_values = None
+
+        for _ in range(max_new_tokens):
+            # If we have past_key_values, we only need to pass the last token
+            if past_key_values:
+                model_inputs = generated_ids[:, -1:]
+                position_ids = torch.arange(
+                    generated_ids.shape[1] - 1, generated_ids.shape[1],
+                    device=self.device
+                ).unsqueeze(0)
+            else:
+                model_inputs = generated_ids
+                position_ids = None
+
+            # Forward pass
+            outputs, past_key_values = self.forward(
+                input_ids=model_inputs,
+                past_key_values=past_key_values,
+                use_cache=True,
+                position_ids=position_ids
+            )
+
+            # Get logits for the last token
+            next_token_logits = outputs[:, -1, :]
+
+            # Apply repetition penalty if needed
+            if repetition_penalty != 1.0:
+                score = torch.gather(next_token_logits, 1, generated_ids)
+                score = torch.where(score < 0, score * repetition_penalty, score / repetition_penalty)
+                next_token_logits.scatter_(1, generated_ids, score)
+
+            # Sampling logic
+            if do_sample:
+                # Temperature scaling
+                if temperature > 0 and temperature != 1.0:
+                    next_token_logits = next_token_logits / temperature
+
+                # Top-K
+                if top_k > 0:
+                    v, _ = torch.topk(next_token_logits, min(top_k, next_token_logits.size(-1)))
+                    next_token_logits[next_token_logits < v[:, [-1]]] = -float('inf')
+
+                # Top-P (Nucleus)
+                if top_p < 1.0:
+                    sorted_logits, sorted_indices = torch.sort(next_token_logits, descending=True)
+                    cumulative_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
+
+                    # Remove tokens with cumulative probability above the threshold
+                    sorted_indices_to_remove = cumulative_probs > top_p
+                    # Shift the indices to the right to keep also the first token above the threshold
+                    sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
+                    sorted_indices_to_remove[..., 0] = 0
+
+                    indices_to_remove = sorted_indices_to_remove.scatter(1, sorted_indices, sorted_indices_to_remove)
+                    next_token_logits[indices_to_remove] = -float('inf')
+
+                probs = F.softmax(next_token_logits, dim=-1)
+                next_token = torch.multinomial(probs, num_samples=1)
+            else:
+                # Greedy decoding
+                next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True)
+
+            # Append next token
+            generated_ids = torch.cat([generated_ids, next_token], dim=-1)
+
+            # Check for EOS (assuming standard EOS token ID for Qwen, can be configurable)
+            # 151643 is pad/eos often, or 151645. We'll rely on calling code or config if strict stopping is needed.
+            # Here we just generate max_new_tokens.
+
+        return generated_ids
 
     def gradient_checkpointing_enable(self):
         # Placeholder for compatibility
