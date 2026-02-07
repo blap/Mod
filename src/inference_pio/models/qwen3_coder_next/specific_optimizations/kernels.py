@@ -5,19 +5,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class OptimizedRMSNorm(nn.Module):
-    """
-    Optimized RMSNorm implementation using torch.compile-friendly operations
-    or custom Triton kernels if available in the future.
-    """
-
+class Qwen3CoderNextRMSNorm(nn.Module):
     def __init__(self, hidden_size, eps=1e-6):
         super().__init__()
         self.weight = nn.Parameter(torch.ones(hidden_size))
         self.eps = eps
 
     def forward(self, x):
-        # Prefer float32 for stability in norm
         input_dtype = x.dtype
         x = x.to(torch.float32)
         variance = x.pow(2).mean(-1, keepdim=True)
@@ -25,11 +19,7 @@ class OptimizedRMSNorm(nn.Module):
         return self.weight * x.to(input_dtype)
 
 
-class OptimizedGELU(nn.Module):
-    """
-    Optimized GELU activation.
-    """
-
+class Qwen3CoderNextGELU(nn.Module):
     def __init__(self):
         super().__init__()
 
@@ -37,18 +27,13 @@ class OptimizedGELU(nn.Module):
         return torch.nn.functional.gelu(x, approximate="tanh")
 
 
-def apply_qwen_kernels(model: nn.Module) -> nn.Module:
-    """
-    Replaces standard modules with optimized versions specific to Qwen3.
-    """
-    logger.info("Applying Qwen3-specific optimized kernels...")
+def apply_qwen3_coder_next_optimizations(model: nn.Module) -> nn.Module:
+    logger.info("Applying Qwen3-Coder-Next specific optimizations...")
 
     replacements = {"norm": 0, "act": 0}
 
     for name, module in model.named_modules():
-        # Replace LayerNorm/RMSNorm
         if isinstance(module, (nn.LayerNorm, nn.RMSNorm)):
-            # Check if we can replace
             if (
                 hasattr(module, "normalized_shape")
                 and len(module.normalized_shape) == 1
@@ -62,35 +47,29 @@ def apply_qwen_kernels(model: nn.Module) -> nn.Module:
 
                 if parent_name:
                     parent_module = _get_parent_module(model, parent_name)
-                    opt_norm = OptimizedRMSNorm(dim, eps)
-                    # Copy weights
+                    opt_norm = Qwen3CoderNextRMSNorm(dim, eps)
                     if hasattr(module, "weight") and module.weight is not None:
                         opt_norm.weight.data.copy_(module.weight.data)
 
                     setattr(parent_module, child_name, opt_norm)
                     replacements["norm"] += 1
 
-        # Replace GELU/SiLU (Swish) if specific config allows or as general optimization
-        # Qwen models typically use SiLU. If found, we can optimize.
-        if isinstance(module, nn.SiLU):
-            # For now, torch.nn.SiLU is quite optimized, but we could swap if we had a fused kernel
-            pass
-        elif isinstance(module, nn.GELU):
+        if isinstance(module, nn.GELU):
             parent_name, child_name = (
                 name.rsplit(".", 1) if "." in name else (None, name)
             )
             if parent_name:
                 parent_module = _get_parent_module(model, parent_name)
-                setattr(parent_module, child_name, OptimizedGELU())
+                setattr(parent_module, child_name, Qwen3CoderNextGELU())
                 replacements["act"] += 1
 
-    logger.info(f"Replaced {replacements} layers with optimized versions")
+    logger.info(f"Qwen3-Coder-Next optimizations applied: {replacements}")
     return model
 
 
-def _get_parent_module(model: nn.Module, parent_name: str) -> nn.Module:
-    parent_module = model
+def _get_parent_module(model, parent_name):
+    parent = model
     for n in parent_name.split("."):
         if n:
-            parent_module = getattr(parent_module, n)
-    return parent_module
+            parent = getattr(parent, n)
+    return parent

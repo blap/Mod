@@ -15,6 +15,28 @@ from transformers import GenerationConfig
 logger = logging.getLogger(__name__)
 
 
+class Qwen3InstructRMSNorm(nn.Module):
+    def __init__(self, hidden_size, eps=1e-6):
+        super().__init__()
+        self.weight = nn.Parameter(torch.ones(hidden_size))
+        self.eps = eps
+
+    def forward(self, x):
+        input_dtype = x.dtype
+        x = x.to(torch.float32)
+        variance = x.pow(2).mean(-1, keepdim=True)
+        x = x * torch.rsqrt(variance + self.eps)
+        return self.weight * x.to(input_dtype)
+
+
+class Qwen3InstructGELU(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        return torch.nn.functional.gelu(x, approximate="tanh")
+
+
 def apply_qwen3_instruction_tuning_optimizations(
     model: nn.Module, config: Any
 ) -> nn.Module:
@@ -30,12 +52,59 @@ def apply_qwen3_instruction_tuning_optimizations(
     """
     logger.info("Applying Qwen3-specific instruction tuning optimizations...")
 
+    # Apply custom kernels
+    _apply_custom_kernels(model)
+
     # Apply optimizations for instruction-following tasks
     model = _apply_qwen3_instruction_prompt_optimizations(model, config)
     model = _apply_qwen3_response_generation_optimizations(model, config)
 
     logger.info("Qwen3-specific instruction tuning optimizations applied successfully")
     return model
+
+
+def _apply_custom_kernels(model: nn.Module):
+    logger.info("Applying Qwen3-4B-Instruct custom kernels...")
+    replacements = {"norm": 0, "act": 0}
+    for name, module in model.named_modules():
+        if isinstance(module, (nn.LayerNorm, nn.RMSNorm)):
+            if (
+                hasattr(module, "normalized_shape")
+                and len(module.normalized_shape) == 1
+            ):
+                dim = module.normalized_shape[0]
+                eps = module.eps
+
+                parent_name, child_name = (
+                    name.rsplit(".", 1) if "." in name else (None, name)
+                )
+
+                if parent_name:
+                    parent_module = _get_parent_module(model, parent_name)
+                    opt_norm = Qwen3InstructRMSNorm(dim, eps)
+                    if hasattr(module, "weight") and module.weight is not None:
+                        opt_norm.weight.data.copy_(module.weight.data)
+
+                    setattr(parent_module, child_name, opt_norm)
+                    replacements["norm"] += 1
+
+        if isinstance(module, nn.GELU):
+            parent_name, child_name = (
+                name.rsplit(".", 1) if "." in name else (None, name)
+            )
+            if parent_name:
+                parent_module = _get_parent_module(model, parent_name)
+                setattr(parent_module, child_name, Qwen3InstructGELU())
+                replacements["act"] += 1
+    logger.info(f"Qwen3-4B-Instruct custom kernels applied: {replacements}")
+
+
+def _get_parent_module(model: nn.Module, parent_name: str) -> nn.Module:
+    parent_module = model
+    for n in parent_name.split("."):
+        if n:
+            parent_module = getattr(parent_module, n)
+    return parent_module
 
 
 def _apply_qwen3_instruction_prompt_optimizations(

@@ -8,8 +8,11 @@ from typing import Dict, Optional, Tuple
 
 import torch
 import torch.nn as nn
+import logging
 
 from ..config import Qwen3Coder30BConfig
+
+logger = logging.getLogger(__name__)
 
 
 class Qwen3CoderGELUKernel(nn.Module):
@@ -241,6 +244,9 @@ def apply_qwen3_coder_optimizations_to_model(
     """
     # Create kernel manager
     kernel_manager = create_qwen3_coder_kernel_manager(config)
+    logger.info("Applying Qwen3-Coder-30B specific CUDA optimizations...")
+
+    replacements = {"gelu": 0, "layernorm": 0}
 
     # Apply optimizations based on configuration
     for name, module in model.named_modules():
@@ -249,6 +255,7 @@ def apply_qwen3_coder_optimizations_to_model(
             parent_name, child_name = name.rsplit(".", 1)
             parent_module = _get_parent_module(model, parent_name)
             setattr(parent_module, child_name, Qwen3CoderGELUKernel())
+            replacements["gelu"] += 1
 
         # Replace LayerNorm if enabled
         if config.cuda_kernel_layernorm_enabled and isinstance(module, nn.LayerNorm):
@@ -261,7 +268,9 @@ def apply_qwen3_coder_optimizations_to_model(
             new_layernorm.weight.data.copy_(module.weight.data)
             new_layernorm.bias.data.copy_(module.bias.data)
             setattr(parent_module, child_name, new_layernorm)
+            replacements["layernorm"] += 1
 
+    logger.info(f"Qwen3-Coder-30B optimizations applied: {replacements}")
     return model
 
 
