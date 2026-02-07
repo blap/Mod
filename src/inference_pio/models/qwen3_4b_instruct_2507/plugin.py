@@ -822,7 +822,9 @@ class Qwen3_4B_Instruct_2507_Plugin(TextModelPluginInterface):
         Setup activation compression for model inference.
         """
         if getattr(self._config, "enable_activation_compression", False):
-            logger.info("Activation compression enabled - will compress during inference")
+            logger.info(
+                "Activation compression enabled - will compress during inference"
+            )
             return True
         return False
 
