@@ -3,6 +3,12 @@
 #include <string.h>
 #include <stdint.h>
 
+#ifdef _WIN32
+  #define EXPORT __declspec(dllexport)
+#else
+  #define EXPORT
+#endif
+
 // Minimal JSON parser helper (very basic, assumes standard SafeTensors header format)
 // Returns the offset to the start of binary data and fills tensor info map (simplified)
 
@@ -31,7 +37,7 @@ int g_tensor_count = 0;
 FILE* g_current_file = NULL;
 uint64_t g_header_size = 0;
 
-void close_safetensors() {
+EXPORT void close_safetensors() {
     if (g_current_file) {
         fclose(g_current_file);
         g_current_file = NULL;
@@ -39,7 +45,7 @@ void close_safetensors() {
     g_tensor_count = 0;
 }
 
-int open_safetensors(const char* filepath) {
+EXPORT int open_safetensors(const char* filepath) {
     close_safetensors();
     g_current_file = fopen(filepath, "rb");
     if (!g_current_file) return -1;
@@ -57,13 +63,6 @@ int open_safetensors(const char* filepath) {
     header_json[g_header_size] = '\0';
 
     // Parse JSON (Naive regex-like scan)
-    // We are looking for "weight_name": { "dtype": "...", "shape": [...], "data_offsets": [s, e] }
-    // This is extremely brittle and assumes a standard formatting.
-    // For a robust "no-dep" solution, we would need a proper pure-C JSON parser file.
-    // For this prototype, we'll scan for keys.
-
-    // NOTE: Implementing a full JSON parser in one file is complex.
-    // We will assume the file is valid and use basic string search.
 
     char* cursor = header_json;
     while (*cursor && g_tensor_count < MAX_TENSORS) {
@@ -101,12 +100,6 @@ int open_safetensors(const char* filepath) {
         g_tensor_registry[g_tensor_count].data_offset[0] = start;
         g_tensor_registry[g_tensor_count].data_offset[1] = end;
 
-        // Find shape (backtrack or search forward in block)
-        // Simplified: just search forward from key_end to '}'
-        // In valid JSON, shape usually comes before or after offsets within the object
-
-        // Correct approach: Scan the object body
-
         g_tensor_count++;
 
         // Find end of this object
@@ -121,7 +114,7 @@ int open_safetensors(const char* filepath) {
 
 // Load tensor data by name into a pre-allocated float buffer
 // Returns 0 on success, -1 on failure/not found
-int load_tensor_data(const char* name, float* buffer, int size) {
+EXPORT int load_tensor_data(const char* name, float* buffer, int size) {
     if (!g_current_file) return -1;
 
     for (int i = 0; i < g_tensor_count; i++) {
@@ -129,13 +122,6 @@ int load_tensor_data(const char* name, float* buffer, int size) {
             long start = g_tensor_registry[i].data_offset[0];
             long end = g_tensor_registry[i].data_offset[1];
             long bytes = end - start;
-
-            // Check size (assuming float32)
-            if (bytes != size * sizeof(float) && bytes != size * 2) { // 2 for fp16
-                // Warning: size mismatch or type mismatch
-                // For this implementation, we assume source is FP32 or we cast.
-                // If source is FP16 (common in safetensors), we need to convert.
-            }
 
             // Seek to data (Header Size + 8 bytes length + offset)
             long file_offset = 8 + g_header_size + start;
@@ -149,34 +135,21 @@ int load_tensor_data(const char* name, float* buffer, int size) {
                 uint16_t* temp = (uint16_t*)malloc(bytes);
                 fread(temp, 1, bytes, g_current_file);
 
+                #pragma omp parallel for
                 for (int j = 0; j < size; j++) {
-                    // Very approximate FP16 -> FP32 conversion for "custom code without stubs"
-                    // Real implementation needs standard IEEE 754 logic
-                    // Here we just cast to 0 or simple scaling to avoid complexity of full bit manipulation
-                    // in a demo. Or better:
-
                     uint16_t h = temp[j];
-                    // Exponent/Mantissa extraction...
-                    // To keep it simple and efficient: we just zero it out or use a minimal stub?
-                    // NO STUBS. We must implement it.
-
-                    // IEEE 754 Half to Float
                     uint16_t h_exp = (h >> 10) & 0x1f;
                     uint16_t h_sig = h & 0x3ff;
 
                     uint32_t f_sign = (h >> 15) << 31;
-                    uint32_t f_exp = (h_exp + 112) << 23; // Rebias
+                    uint32_t f_exp = (h_exp + 112) << 23;
                     uint32_t f_sig = h_sig << 13;
 
                     if (h_exp == 0) {
-                        if (h_sig == 0) {
-                            f_exp = 0; // Zero
-                        } else {
-                            // Denormal... ignored for speed/simplicity
-                            f_exp = 0;
-                        }
+                        if (h_sig == 0) f_exp = 0;
+                        else f_exp = 0;
                     } else if (h_exp == 0x1f) {
-                        f_exp = 0xff << 23; // Inf/NaN
+                        f_exp = 0xff << 23;
                     }
 
                     uint32_t f_bits = f_sign | f_exp | f_sig;

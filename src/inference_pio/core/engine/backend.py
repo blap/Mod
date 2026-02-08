@@ -1,13 +1,29 @@
 """
-Python Wrapper for C Tensor Engine (ctypes) - Updated with Loader
+Python Wrapper for C Tensor Engine (ctypes) - Dynamic Loading for Plugins
 """
 
 import ctypes
 import os
+import sys
 from typing import Tuple, List, Optional, Dict
 
-# Load Library
-_lib_path = os.path.join(os.path.dirname(__file__), "c_src", "libtensor_ops.so")
+# Determine Library Path
+# Look in plugins directory first
+_plugin_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "plugins", "cpu_ops", "c_src")
+if os.name == 'nt':
+    _lib_name = "libtensor_ops.dll"
+else:
+    _lib_name = "libtensor_ops.so"
+
+_lib_path = os.path.join(_plugin_dir, _lib_name)
+
+if not os.path.exists(_lib_path):
+    # Fallback to local if plugin structure failed
+    _lib_path = os.path.join(os.path.dirname(__file__), "c_src", _lib_name)
+
+if not os.path.exists(_lib_path):
+    raise RuntimeError(f"Could not find C Tensor Engine library at {_lib_path}")
+
 _lib = ctypes.CDLL(_lib_path)
 
 # Define Types
@@ -55,7 +71,18 @@ class Tensor:
             else:
                 _lib.tensor_fill(self._handle, 0.0)
 
-    # ... (Previous methods remain the same) ...
+    @property
+    def shape(self) -> Tuple[int]:
+        if not self._handle: return ()
+        s = self._handle.contents.shape
+        n = self._handle.contents.ndim
+        return tuple(s[i] for i in range(n))
+
+    @property
+    def size(self) -> int:
+        if not self._handle: return 0
+        return self._handle.contents.size
+
     def load(self, data: List[float]):
         if len(data) != self.size:
             raise ValueError(f"Data size {len(data)} mismatch tensor size {self.size}")
@@ -134,9 +161,6 @@ def arange(end: int) -> Tensor:
 
 # Loader Interface
 def load_safetensors(filepath: str, model_layers: Dict[str, Tensor]):
-    """
-    Load weights from a SafeTensors file into existing C Tensors.
-    """
     if not os.path.exists(filepath):
         return False
 
@@ -145,8 +169,6 @@ def load_safetensors(filepath: str, model_layers: Dict[str, Tensor]):
         return False
 
     for name, tensor in model_layers.items():
-        # Pass the tensor's data pointer to C loader
-        # C loader finds 'name' in file and copies bytes
         _lib.load_tensor_data(name.encode('utf-8'), tensor._handle.contents.data, tensor.size)
 
     _lib.close_safetensors()
