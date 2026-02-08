@@ -1,4 +1,4 @@
-# ... (Previous imports and init) ...
+# ... (Previous parts of backend.py) ...
 
 """
 Unified Backend for C Tensor Engine (CPU/CUDA)
@@ -9,10 +9,6 @@ import ctypes
 import os
 import sys
 from typing import Tuple, List, Optional, Dict, Union, Any
-
-# -----------------------------------------------------------------------------
-# Library Loading Logic
-# -----------------------------------------------------------------------------
 
 def _load_library(name: str) -> Optional[ctypes.CDLL]:
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -39,10 +35,6 @@ else:
 HAS_CPU = _lib_cpu is not None
 HAS_CUDA = _lib_cuda is not None
 
-# -----------------------------------------------------------------------------
-# C Types Definitions
-# -----------------------------------------------------------------------------
-
 class CTensor(ctypes.Structure):
     _fields_ = [
         ("data", ctypes.POINTER(ctypes.c_float)),
@@ -54,7 +46,6 @@ class CTensor(ctypes.Structure):
 
 def _setup_sigs(lib):
     if not lib: return
-    # Basic Ops
     lib.create_tensor.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_int]
     lib.create_tensor.restype = ctypes.POINTER(CTensor)
     lib.free_tensor.argtypes = [ctypes.POINTER(CTensor)]
@@ -62,35 +53,28 @@ def _setup_sigs(lib):
     lib.tensor_add.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
     lib.tensor_mul.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
 
-    # Math
-    if hasattr(lib, 'tensor_matmul'):
-        lib.tensor_matmul.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    if hasattr(lib, 'tensor_matmul_transposed'):
-        lib.tensor_matmul_transposed.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    if hasattr(lib, 'tensor_linear'):
-        lib.tensor_linear.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    if hasattr(lib, 'tensor_softmax'):
-        lib.tensor_softmax.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    if hasattr(lib, 'tensor_silu'):
-        lib.tensor_silu.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    if hasattr(lib, 'tensor_gelu'):
-        lib.tensor_gelu.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    if hasattr(lib, 'tensor_rms_norm'):
-        lib.tensor_rms_norm.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_float]
-    if hasattr(lib, 'tensor_rope'):
-        lib.tensor_rope.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    if hasattr(lib, 'tensor_matmul'): lib.tensor_matmul.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    if hasattr(lib, 'tensor_matmul_transposed'): lib.tensor_matmul_transposed.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    if hasattr(lib, 'tensor_linear'): lib.tensor_linear.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    if hasattr(lib, 'tensor_softmax'): lib.tensor_softmax.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    if hasattr(lib, 'tensor_silu'): lib.tensor_silu.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    if hasattr(lib, 'tensor_gelu'): lib.tensor_gelu.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    if hasattr(lib, 'tensor_rms_norm'): lib.tensor_rms_norm.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_float]
+    if hasattr(lib, 'tensor_rope'): lib.tensor_rope.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
 
-    # Data
     lib.tensor_load_data.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.c_float), ctypes.c_int]
     lib.tensor_get_data.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.c_float), ctypes.c_int]
 
-    # Optional / Extended Ops
-    if hasattr(lib, 'tensor_argmax'):
-        lib.tensor_argmax.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    if hasattr(lib, 'tensor_embed'):
-        lib.tensor_embed.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    if hasattr(lib, 'tensor_cat'):
-        lib.tensor_cat.argtypes = [ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_int, ctypes.POINTER(CTensor)]
+    if hasattr(lib, 'tensor_argmax'): lib.tensor_argmax.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    if hasattr(lib, 'tensor_embed'): lib.tensor_embed.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    if hasattr(lib, 'tensor_cat'): lib.tensor_cat.argtypes = [ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_int, ctypes.POINTER(CTensor)]
+
+    # New Ops
+    if hasattr(lib, 'tensor_slice'):
+        lib.tensor_slice.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int)]
+    if hasattr(lib, 'tensor_precompute_freqs_cis'):
+        lib.tensor_precompute_freqs_cis.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_float, ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+
     if hasattr(lib, 'open_safetensors'):
         lib.open_safetensors.argtypes = [ctypes.c_char_p]
         lib.open_safetensors.restype = ctypes.c_int
@@ -103,9 +87,7 @@ def _setup_sigs(lib):
 _setup_sigs(_lib_cpu)
 _setup_sigs(_lib_cuda)
 
-# -----------------------------------------------------------------------------
-# Python Tensor Class
-# -----------------------------------------------------------------------------
+# ... (Tensor Class) ...
 
 class Tensor:
     def __init__(self, shape: List[int], data: List[float] = None, device: str = "cpu", _handle=None):
@@ -170,9 +152,7 @@ class Tensor:
         k = self.shape[-1]
 
         if transpose_b:
-            # Other is [..., N, K]
             n = other.shape[-2]
-            # Check K
             if other.shape[-1] != k: raise ValueError(f"Matmul Transpose shape mismatch {self.shape} vs {other.shape}")
         else:
             n = other.shape[-1]
@@ -191,25 +171,18 @@ class Tensor:
         out = Tensor(list(self.shape), device=self.device)
         self._lib.tensor_add(self._handle, other._handle, out._handle)
         return out
-
     def __add__(self, other): return self.add(other)
 
     def mul(self, other: 'Tensor') -> 'Tensor':
         out = Tensor(list(self.shape), device=self.device)
         self._lib.tensor_mul(self._handle, other._handle, out._handle)
         return out
-
     def __mul__(self, other): return self.mul(other)
 
     def linear(self, weight: 'Tensor', bias: Optional['Tensor'] = None) -> 'Tensor':
-        # Input: [..., In], Weight: [Out, In]
         in_features = weight.shape[1] if weight.ndim >= 2 else weight.shape[0]
-        out_features = weight.shape[0] if weight.ndim >= 2 else 1 # Simple fallback
-
-        if self.shape[-1] != in_features:
-             # Try to be lenient or strict? Strict for correctness.
-             raise ValueError(f"Linear shape mismatch: Input {self.shape} vs Weight {weight.shape}")
-
+        out_features = weight.shape[0] if weight.ndim >= 2 else 1
+        if self.shape[-1] != in_features: raise ValueError(f"Linear shape mismatch: Input {self.shape} vs Weight {weight.shape}")
         out_shape = list(self.shape[:-1]) + [out_features]
         out = Tensor(out_shape, device=self.device)
         b_handle = bias._handle if bias else None
@@ -225,7 +198,6 @@ class Tensor:
         out = Tensor(list(self.shape), device=self.device)
         self._lib.tensor_silu(self._handle, out._handle)
         return out
-
     def gelu(self) -> 'Tensor':
         out = Tensor(list(self.shape), device=self.device)
         if hasattr(self._lib, 'tensor_gelu'): self._lib.tensor_gelu(self._handle, out._handle)
@@ -255,6 +227,19 @@ class Tensor:
         if hasattr(self._lib, 'tensor_embed'): self._lib.tensor_embed(self._handle, indices._handle, out._handle)
         return out
 
+    def slice(self, start_indices: List[int], slice_shapes: List[int]) -> 'Tensor':
+        # out = input[start:start+slice]
+        if len(start_indices) != self.ndim or len(slice_shapes) != self.ndim:
+            raise ValueError("Slice args dim mismatch")
+
+        out = Tensor(slice_shapes, device=self.device)
+        if hasattr(self._lib, 'tensor_slice'):
+            c_start = (ctypes.c_int * self.ndim)(*start_indices)
+            c_shape = (ctypes.c_int * self.ndim)(*slice_shapes)
+            self._lib.tensor_slice(self._handle, out._handle, c_start, c_shape)
+        return out
+
+    # Image Ops
     def resize_image(self, target_h: int, target_w: int) -> 'Tensor':
         if self.ndim != 3: raise ValueError("Image resize expects 3D tensor")
         if self.device != "cpu": raise ValueError("Image ops only on CPU currently")
@@ -264,8 +249,7 @@ class Tensor:
             self._lib.image_resize_bilinear(self._handle.contents.data, c, h, w, out._handle.contents.data, target_h, target_w)
         return out
 
-# ... (Module classes same as before) ...
-
+# ... (Module, Linear, Embedding, etc classes same as before) ...
 class Module:
     def __init__(self):
         self._parameters = {}
@@ -338,6 +322,17 @@ def zeros(shape: List[int], device="cpu") -> Tensor:
     t = Tensor(shape, device=device)
     t.fill(0.0)
     return t
+
+def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0, device="cpu") -> Tuple[Tensor, Tensor]:
+    # Returns [end, dim/2] tensors for cos/sin
+    half_dim = dim // 2
+    cos = Tensor([end, half_dim], device=device)
+    sin = Tensor([end, half_dim], device=device)
+
+    lib = _lib_cuda if "cuda" in device and HAS_CUDA else _lib_cpu
+    if hasattr(lib, 'tensor_precompute_freqs_cis'):
+        lib.tensor_precompute_freqs_cis(dim, end, ctypes.c_float(theta), cos._handle, sin._handle)
+    return cos, sin
 
 def load_safetensors(filepath: str, model_layers: Dict[str, Tensor]):
     if not _lib_cpu or not os.path.exists(filepath): return False

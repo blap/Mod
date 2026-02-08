@@ -8,7 +8,7 @@ import math
 
 from ...common.config import CustomGenerationConfig
 from ...core.engine import backend
-from ...core.engine.backend import Tensor, Module, Linear, Embedding, RMSNorm
+from ...core.engine.backend import Tensor, Module, Linear, Embedding, RMSNorm, precompute_freqs_cis
 
 logger = logging.getLogger(__name__)
 
@@ -19,16 +19,41 @@ class Qwen3CoderNextModel(Module):
         self.embed_dim = config.hidden_size
         self.num_heads = config.num_attention_heads
         self.num_layers = config.num_hidden_layers
+
         self.embed_tokens = Embedding(config.vocab_size, config.hidden_size)
+
+        # Precompute RoPE Cache (Global for model)
+        head_dim = config.hidden_size // config.num_attention_heads
+        self.rotary_emb_dim = config.attention_rope_dim if hasattr(config, 'attention_rope_dim') else head_dim
+        self.max_position_embeddings = config.max_position_embeddings
+        self.rope_base = config.rope_theta
+
+        # Create cache on device (default cpu, moved in .to())
+        self.cos_cache, self.sin_cache = precompute_freqs_cis(self.rotary_emb_dim, self.max_position_embeddings, self.rope_base)
+        self.register_buffer("cos_cache", self.cos_cache)
+        self.register_buffer("sin_cache", self.sin_cache)
+
         self.layers = []
         for i in range(config.num_hidden_layers):
-            layer = Qwen3CoderNextDecoderLayer(config)
+            layer = Qwen3CoderNextDecoderLayer(config, self.cos_cache, self.sin_cache)
             self.layers.append(layer)
             self._modules[f"layer_{i}"] = layer
+
         self.norm = RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
 
     def forward(self, input_ids: Optional[Tensor] = None):
         if input_ids is None: raise ValueError("input_ids required")
+
+        # Update device of cache if needed (naive check)
+        if self.cos_cache.device != input_ids.device:
+             self.cos_cache = self.cos_cache.to(input_ids.device)
+             self.sin_cache = self.sin_cache.to(input_ids.device)
+             # Propagate to layers? Layers hold reference to these tensors or self?
+             # For simplicity, passed in init. But if init was CPU, they need update.
+             for layer in self.layers:
+                 layer.self_attn.cos_cache = self.cos_cache
+                 layer.self_attn.sin_cache = self.sin_cache
+
         hidden_states = self.embed_tokens(input_ids)
         for i, layer in enumerate(self.layers):
             hidden_states = layer(hidden_states)
@@ -36,10 +61,10 @@ class Qwen3CoderNextModel(Module):
         return hidden_states
 
 class Qwen3CoderNextDecoderLayer(Module):
-    def __init__(self, config):
+    def __init__(self, config, cos_cache, sin_cache):
         super().__init__()
         self.hidden_size = config.hidden_size
-        self.self_attn = Qwen3CoderNextAttention(config)
+        self.self_attn = Qwen3CoderNextAttention(config, cos_cache, sin_cache)
         self.input_layernorm = RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.mlp = Qwen3CoderNextMLP(config)
         self.post_attention_layernorm = RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
@@ -56,7 +81,7 @@ class Qwen3CoderNextDecoderLayer(Module):
         return hidden_states
 
 class Qwen3CoderNextAttention(Module):
-    def __init__(self, config):
+    def __init__(self, config, cos_cache, sin_cache):
         super().__init__()
         self.hidden_size = config.hidden_size
         self.num_heads = config.num_attention_heads
@@ -67,23 +92,36 @@ class Qwen3CoderNextAttention(Module):
         self.o_proj = Linear(self.hidden_size, self.hidden_size, bias=False)
         self.scale = 1.0 / math.sqrt(self.head_dim)
 
+        # Cache references
+        self.cos_cache = cos_cache
+        self.sin_cache = sin_cache
+
     def forward(self, hidden_states: Tensor) -> Tensor:
         q = self.q_proj(hidden_states)
         k = self.k_proj(hidden_states)
         v = self.v_proj(hidden_states)
 
-        # Stub for RoPE inputs (functional flow)
-        cos = Tensor(list(q.shape))
-        sin = Tensor(list(q.shape))
-        cos.fill(1.0)
-        sin.fill(0.0)
+        # Apply RoPE
+        # Slice cache for current sequence length
+        seq_len = q.shape[1]
+        # cos_cache is [MaxSeq, HalfDim]
+        # We need [seq_len, HalfDim]
+        # Use slice op
+        # start: [0, 0], shape: [seq_len, half_dim]
+        # Assuming cache is 2D
+
+        # We need generic way to slice first dim.
+        start_indices = [0, 0]
+        slice_shapes = [seq_len, self.cos_cache.shape[1]]
+
+        cos = self.cos_cache.slice(start_indices, slice_shapes)
+        sin = self.sin_cache.slice(start_indices, slice_shapes)
+
         q, k = q.rope(k, cos, sin)
 
         # Attention Score: Q * K^T
-        # Use matmul with transpose_b=True
         scores = q.matmul(k, transpose_b=True)
 
-        # Scale
         scale_tensor = Tensor(list(scores.shape), device=scores.device)
         scale_tensor.fill(self.scale)
         scores = scores * scale_tensor
