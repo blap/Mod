@@ -5,7 +5,6 @@
   "description": "Qwen3-0.6B Causal LM with Thinking Mode support.",
   "plugin_type": "MODEL_COMPONENT",
   "dependencies": [
-    "numpy",
     "safetensors"
   ],
   "compatibility": {
