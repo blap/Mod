@@ -32,13 +32,13 @@ except ImportError:
 from concurrent.futures import Future
 from typing import Callable
 
-from ...common.adaptive_batch_manager import get_adaptive_batch_manager
-from ...common.adaptive_sparse_attention import create_adaptive_sparse_attention
-from ...common.async_unimodal_processing import (
+from ...common.processing.adaptive_batch_manager import get_adaptive_batch_manager
+from ...common.attention.adaptive_sparse_attention import create_adaptive_sparse_attention
+from ...common.processing.async_unimodal_processing import (
     AsyncUnimodalManager,
     apply_async_unimodal_processing_to_model,
 )
-from ...common.disk_offloading import (
+from ...common.optimization.disk_offloading import (
     DiskOffloader,
     ModelComponentType,
     MultimodalOffloadingManager,
@@ -47,22 +47,22 @@ from ...common.disk_offloading import (
     TensorOffloadingManager,
     create_disk_offloader,
 )
-from ...common.dynamic_text_batching import (
+from ...common.processing.dynamic_text_batching import (
     DynamicTextBatchManager,
     get_dynamic_text_batch_manager,
 )
-from ...common.input_complexity_analyzer import get_complexity_analyzer
-from ...common.intelligent_unimodal_caching import (
+from ...common.processing.input_complexity_analyzer import get_complexity_analyzer
+from ...common.caching.intelligent_unimodal_caching import (
     apply_intelligent_unimodal_caching_to_model,
     create_unimodal_caching_manager,
 )
-from ...common.model_adapter import get_model_adapter
-from ...common.nas_controller import (
+from ...common.interfaces.model_adapter import get_model_adapter
+from ...common.optimization.nas_controller import (
     ArchitectureAdaptationStrategy,
     NASConfig,
     get_nas_controller,
 )
-from ...common.optimization_integration import (
+from ...common.optimization.optimization_integration import (
     apply_glm_optimizations,
     legacy_apply_activation_offloading,
     legacy_apply_disk_offloading,
@@ -72,36 +72,36 @@ from ...common.optimization_integration import (
     legacy_apply_structured_pruning,
     legacy_apply_tensor_compression,
 )
-from ...common.pipeline_parallel import (
+from ...common.parallel.pipeline_parallel import (
     PipelineConfig,
     PipelineParallel,
     create_pipeline_parallel_config,
 )
-from ...common.quantization import (
+from ...common.optimization.quantization import (
     QuantizationConfig,
     QuantizationScheme,
     get_quantization_manager,
 )
-from ...common.sequence_parallel import (
+from ...common.parallel.sequence_parallel import (
     SequenceParallel,
     SequenceParallelConfig,
     create_sequence_parallel_config,
 )
-from ...common.snn import apply_snn_optimizations, convert_dense_to_snn
-from ...common.streaming_computation import (
+from ...common.layers.snn import apply_snn_optimizations, convert_dense_to_snn
+from ...common.processing.streaming_computation import (
     StreamingComputationEngine,
     StreamRequest,
     StreamResult,
     create_streaming_engine,
 )
-from ...common.structured_pruning import PruningMethod, apply_structured_pruning
-from ...common.tensor_decomposition import (
+from ...common.optimization.structured_pruning import PruningMethod, apply_structured_pruning
+from ...common.optimization.tensor_decomposition import (
     decompose_model_weights,
     get_tensor_decomposer,
     recompose_model_weights,
 )
-from ...common.unified_ml_optimization import ModelType, get_ml_optimization_system
-from ...common.unimodal_tensor_pagination import (
+from ...common.optimization.unified_ml_optimization import ModelType, get_ml_optimization_system
+from ...common.optimization.unimodal_tensor_pagination import (
     PaginationPriority,
     TextDataType,
     UnimodalTensorPager,
@@ -135,7 +135,8 @@ from .plugin_modules.glm47_tensor_parallel import (
 )
 
 # Import the specialized Flash Attention for GLM-4.7-Flash
-from ..attention import FlashAttention, FlashAttentionConfig, create_flash_attention_layer
+# from ..attention import FlashAttention, FlashAttentionConfig, create_flash_attention_layer # Wrong path
+from ...common.attention.flash_attention_2 import FlashAttention2 as FlashAttention, create_flash_attention_2 as create_flash_attention_layer
 
 # Reuse Qwen3 architecture as a compatible base for self-contained execution if needed
 from .architecture import GLMForCausalLM

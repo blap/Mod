@@ -3,11 +3,11 @@ Qwen3-VL-2B Optimization Logic
 """
 import logging
 import torch
-from ....common.optimization.unified_ml_optimization import (
+from .....common.optimization.unified_ml_optimization import (
     ModelType,
     get_ml_optimization_system,
 )
-from ....common.optimization.structured_pruning import PruningMethod
+from .....common.optimization.structured_pruning import PruningMethod
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,7 @@ class Qwen3VL2BOptimizer:
 
     def _apply_flash_attention_optimization(self):
         try:
-            from ...common.attention.flash_attention_2 import apply_flash_attention_2_to_model
+            from ....common.attention.flash_attention_2 import apply_flash_attention_2_to_model
             self._model = apply_flash_attention_2_to_model(self._model, self.config)
         except ImportError:
             logger.warning("FlashAttention 2.0 module not available")
@@ -100,7 +100,7 @@ class Qwen3VL2BOptimizer:
 
     def _apply_sparse_attention_optimization(self):
         try:
-            from ...common.attention.sparse_attention import apply_sparse_attention_to_model
+            from ....common.attention.sparse_attention import apply_sparse_attention_to_model
             self._model = apply_sparse_attention_to_model(self._model, self.config)
         except ImportError:
             logger.warning("Sparse attention module not available")
@@ -109,7 +109,7 @@ class Qwen3VL2BOptimizer:
 
     def _apply_sliding_window_attention_optimization(self):
         try:
-            from ...common.attention.sliding_window_attention import apply_sliding_window_attention_to_model
+            from ....common.attention.sliding_window_attention import apply_sliding_window_attention_to_model
             self._model = apply_sliding_window_attention_to_model(self._model, self.config)
         except ImportError:
             logger.warning("Sliding window attention module not available")
@@ -118,7 +118,7 @@ class Qwen3VL2BOptimizer:
 
     def _apply_mqa_gqa_optimization(self):
         try:
-            from ...common.attention.multi_query_attention import apply_mqa_gqa_to_model
+            from ....common.attention.multi_query_attention import apply_mqa_gqa_to_model
             self._model = apply_mqa_gqa_to_model(self._model, self.config)
         except ImportError:
             logger.warning("Multi-Query/Grouped-Query attention module not available")
@@ -127,7 +127,7 @@ class Qwen3VL2BOptimizer:
 
     def _apply_paged_attention_optimization(self):
         try:
-            from ...common.attention.paged_attention import apply_paged_attention_to_model
+            from ....common.attention.paged_attention import apply_paged_attention_to_model
             self._model = apply_paged_attention_to_model(self._model, self.config)
         except ImportError:
             logger.warning("Paged attention module not available")
@@ -136,7 +136,7 @@ class Qwen3VL2BOptimizer:
 
     def _apply_optimized_rotary_embedding(self):
         try:
-            from ...common.layers.rotary_embeddings import apply_rotary_embeddings_to_model
+            from ....common.layers.rotary_embeddings import apply_rotary_embeddings_to_model
             self._model = apply_rotary_embeddings_to_model(self._model, self.config)
         except ImportError:
             logger.warning("Rotary embeddings module not available")
@@ -181,7 +181,7 @@ class Qwen3VL2BOptimizer:
 
     def _apply_multimodal_attention_optimization(self):
         try:
-            from ...common.attention.multimodal_attention import apply_multimodal_attention_optimizations_to_model
+            from ....common.attention.multimodal_attention import apply_multimodal_attention_optimizations_to_model
             self._model = apply_multimodal_attention_optimizations_to_model(self._model, self.config)
         except ImportError:
             logger.warning("Multimodal attention optimization module not available")
@@ -207,7 +207,7 @@ class Qwen3VL2BOptimizer:
             self._apply_linear_bias_optimization()
 
         if getattr(self.config, "use_tensor_decomposition", False):
-            from ...common.optimization.tensor_decomposition import apply_tensor_decomposition_to_model
+            from ....common.optimization.tensor_decomposition import apply_tensor_decomposition_to_model
             decomposition_method = getattr(
                 self.config, "tensor_decomposition_method", "cp_decomposition"
             )
@@ -219,7 +219,7 @@ class Qwen3VL2BOptimizer:
             )
 
         if self.config.use_structured_pruning:
-            from ...common.optimization.structured_pruning import (
+            from ....common.optimization.structured_pruning import (
                 PruningMethod,
                 apply_structured_pruning_to_model,
             )
@@ -241,11 +241,11 @@ class Qwen3VL2BOptimizer:
             )
 
         if getattr(self.config, "use_multimodal_attention", False):
-            from ...common.attention.multimodal_attention import apply_multimodal_attention_to_model
+            from ....common.attention.multimodal_attention import apply_multimodal_attention_to_model
             self._model = apply_multimodal_attention_to_model(self._model, self.config)
 
         if getattr(self.config, "use_snn_conversion", False):
-            from ...common.layers.snn import apply_snn_conversion_to_model
+            from ....common.layers.snn import apply_snn_conversion_to_model
             self._model = apply_snn_conversion_to_model(self._model, self.config)
 
     def _apply_tensor_parallelism(self):
@@ -268,7 +268,7 @@ class Qwen3VL2BOptimizer:
 
     def _apply_flash_attention_2_optimization(self):
         try:
-            from ...common.attention.flash_attention_2 import apply_flash_attention_2_to_model
+            from ....common.attention.flash_attention_2 import apply_flash_attention_2_to_model
             self._model = apply_flash_attention_2_to_model(self._model, self.config)
         except ImportError:
             logger.warning("FlashAttention 2.0 module not available")
@@ -277,7 +277,7 @@ class Qwen3VL2BOptimizer:
 
     def _apply_bias_removal_optimization(self):
         try:
-            from ...common.optimization.optimization_integration import apply_bias_removal_to_model
+            from ....common.optimization.optimization_integration import apply_bias_removal_to_model
             self._model = apply_bias_removal_to_model(self._model, model_type="qwen3_vl")
         except ImportError:
             logger.warning("Bias removal module not available")
@@ -313,7 +313,7 @@ class Qwen3VL2BOptimizer:
 
     def _apply_cuda_kernels(self):
         try:
-            from ...common.layers.qwen3_vl_cuda_kernels import apply_cuda_optimizations_to_model as apply_qwen3_vl_cuda_optimizations_to_model
+            from ....common.layers.qwen3_vl_cuda_kernels import apply_cuda_optimizations_to_model as apply_qwen3_vl_cuda_optimizations_to_model
             self._model = apply_qwen3_vl_cuda_optimizations_to_model(self._model, self.config)
         except ImportError:
             logger.warning("CUDA kernels module not available")
@@ -322,7 +322,7 @@ class Qwen3VL2BOptimizer:
 
     def _apply_linear_bias_optimization(self):
         try:
-            from ...common.optimization.optimization_integration import apply_linear_bias_optimization_to_model
+            from ....common.optimization.optimization_integration import apply_linear_bias_optimization_to_model
             self._model = apply_linear_bias_optimization_to_model(self._model, self.config)
         except ImportError:
             logger.warning("Linear bias optimization module not available")

@@ -107,19 +107,24 @@ class Qwen3CoderNextConfigurablePlugin(ConfigurableModelPlugin):
             if not is_valid:
                 logger.warning(f"Configuration has validation errors: {errors}")
 
-            # Here we would normally load the actual model
-            # For now, we'll create a mock model to demonstrate the concept
-            from transformers import AutoModelForCausalLM
+            # Load the model using CustomModelLoader
+            from src.inference_pio.common.custom_components.model_loader import CustomModelLoader
 
-            self._model = AutoModelForCausalLM.from_pretrained(
+            loader = CustomModelLoader()
+            # self._model = loader.load_model(config.model_path) # Assuming load_model returns an nn.Module
+
+            # Since CustomModelLoader loads weights into an existing model or similar logic,
+            # and Qwen3CoderNextModel is defined in .model
+            from .model import Qwen3CoderNextModel
+
+            self._model = Qwen3CoderNextModel(config)
+
+            # Load weights
+            loader.load_weights(
+                self._model,
                 config.model_path,
-                torch_dtype=(
-                    getattr(torch, config.torch_dtype)
-                    if hasattr(torch, config.torch_dtype)
-                    else torch.float16
-                ),
-                device_map=config.device_map,
-                low_cpu_mem_usage=config.low_cpu_mem_usage,
+                device=config.device if hasattr(config, "device") else "cpu",
+                strict=False
             )
 
             # Apply optimizations based on configuration

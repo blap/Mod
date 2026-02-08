@@ -9,13 +9,13 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Union
 
 try:
-    from inference_pio.common.config.model_config_base import (
+    from src.inference_pio.common.config.model_config_base import (
         BaseConfig,
         ModelConfigError,
         get_default_model_path,
     )
 except ImportError:
-    from ...common.model_config_base import (
+    from ...common.config.model_config_base import (
         BaseConfig,
         ModelConfigError,
         get_default_model_path,
@@ -664,11 +664,10 @@ class GLM47DynamicConfig(GLM47FlashConfig):
 
 # Register this configuration with the factory
 try:
-    from inference_pio.common.config.config_factory import register_model_config
+    from ...common.config.config_factory import register_model_config
+    register_model_config("glm_4_7_flash", GLM47FlashConfig)
 except ImportError:
-    from ...common.config_factory import register_model_config
-
-register_model_config("glm_4_7_flash", GLM47FlashConfig)
+    pass
 
 
 __all__ = ["GLM47FlashConfig", "GLM47DynamicConfig"]

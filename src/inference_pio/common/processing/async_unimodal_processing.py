@@ -16,7 +16,8 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
 
 import torch
 import torch.nn as nn
-from transformers import AutoTokenizer
+# from transformers import AutoTokenizer # Removed dependency
+from src.inference_pio.common.custom_components.tokenizer import CustomBPETokenizer
 
 from .dynamic_text_batching import (
     DynamicTextBatchManager,
@@ -112,7 +113,7 @@ class AsyncUnimodalManager:
             if not tokenizer:
                 logger.warning("Tokenizer not found in model, using defaults")
                 # Use a generic tokenizer - model-specific tokenizers should be handled by the model itself
-                tokenizer = AutoTokenizer.from_pretrained("gpt2")  # Generic fallback
+                tokenizer = CustomBPETokenizer() # Generic fallback
 
             # Set padding token if not present
             if tokenizer.pad_token is None:
@@ -316,17 +317,15 @@ class AsyncUnimodalProcessor:
             self.preprocessor = UnimodalPreprocessor(tokenizer=tokenizer)
         else:
             # Create a basic tokenizer if none is provided
-            from transformers import AutoTokenizer
+            # from transformers import AutoTokenizer
 
             # Use a generic tokenizer as fallback
             try:
                 self.preprocessor = UnimodalPreprocessor(
-                    tokenizer=AutoTokenizer.from_pretrained(
-                        "gpt2", trust_remote_code=True
-                    )
+                    tokenizer=CustomBPETokenizer()
                 )
             except:
-                # If even gpt2 fails, create a minimal tokenizer
+                # If fails, create a minimal tokenizer
                 class MinimalTokenizer:
                     def encode(self, text, **kwargs):
                         return [

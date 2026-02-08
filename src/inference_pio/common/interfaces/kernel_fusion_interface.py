@@ -1,52 +1,45 @@
-"""
-Interface for kernel fusion functionality in the Mod project.
+from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
 
-This module defines a clear interface for kernel fusion operations
-that can be implemented by different fusion strategies.
-"""
+# Avoid hard torch dependency in interface definitions
+if TYPE_CHECKING:
+    import torch
+    Tensor = torch.Tensor
+else:
+    # Use Any or mock for runtime if torch missing
+    Tensor = Any
 
-from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
-import torch
-
-
-class KernelFusionManagerInterface(ABC):
+class KernelFusionManagerInterface:
     """
-    Interface for kernel fusion operations.
+    Interface for kernel fusion managers.
     """
 
-    @abstractmethod
-    def setup_kernel_fusion(self, **kwargs) -> bool:
+    def fuse_operations(self, model: Any) -> Any:
         """
-        Set up kernel fusion system for optimizing model operations.
+        Apply kernel fusion to the model.
 
         Args:
-            **kwargs: Kernel fusion configuration parameters
+            model: The model to optimize
 
         Returns:
-            True if setup was successful, False otherwise
+            Optimized model
         """
-        raise NotImplementedError("Method not implemented")
+        raise NotImplementedError
 
-    @abstractmethod
-    def apply_kernel_fusion(self, model: torch.nn.Module = None) -> bool:
+    def register_fusion_pattern(self, pattern: Any, handler: Any) -> None:
         """
-        Apply kernel fusion optimizations to the model.
+        Register a new fusion pattern.
 
         Args:
-            model: Model to optimize (if None, uses internal model if available)
+            pattern: Pattern to match
+            handler: Function to handle the fusion
+        """
+        raise NotImplementedError
+
+    def get_fusion_stats(self) -> Dict[str, Any]:
+        """
+        Get statistics about performed fusions.
 
         Returns:
-            True if optimization was successful, False otherwise
+            Dictionary containing fusion statistics
         """
-        raise NotImplementedError("Method not implemented")
-
-    @abstractmethod
-    def get_fusion_manager(self):
-        """
-        Get the kernel fusion manager instance.
-
-        Returns:
-            Kernel fusion manager instance
-        """
-        pass
+        raise NotImplementedError

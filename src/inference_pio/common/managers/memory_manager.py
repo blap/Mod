@@ -11,7 +11,6 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 import torch
 import psutil
-import GPUtil
 
 from ..interfaces.memory_interface import MemoryManagerInterface
 

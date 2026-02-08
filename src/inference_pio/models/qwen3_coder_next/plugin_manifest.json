@@ -5,13 +5,10 @@
   "description": "Qwen3-Coder-Next specialized language model with 80B parameters (3B activated), hybrid architecture (DeltaNet + Attention + MoE), and 262k context length.",
   "plugin_type": "MODEL_COMPONENT",
   "dependencies": [
-    "torch",
-    "transformers",
-    "accelerate"
+    "torch"
   ],
   "compatibility": {
     "torch_version": ">=2.2.0",
-    "transformers_version": ">=4.38.0",
     "python_version": ">=3.9",
     "min_memory_gb": 160.0
   },

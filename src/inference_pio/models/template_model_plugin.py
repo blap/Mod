@@ -7,7 +7,7 @@ independent with its own configuration, tests, and benchmarks.
 """
 
 import logging
-from ...core.model_loader import ModelLoader
+from src.inference_pio.common.custom_components.model_loader import CustomModelLoader # Updated path
 from datetime import datetime
 from typing import Any, Dict, Optional, List, Union
 
@@ -74,12 +74,7 @@ class TemplateModelPlugin(ModelPluginInterface):
         try:
             # Extract configuration parameters
             device = kwargs.get("device", "cpu")
-                    # Resolve model path with H drive priority
-        resolved_path = ModelLoader.resolve_model_path(
-            self._config.model_name,
-            getattr(self._config, "hf_repo_id", None)
-        )
-        model_path =resolved_path
+            model_path = kwargs.get("model_path", "./template_model")
             
             # Store configuration
             self.config = {

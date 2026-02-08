@@ -14,7 +14,8 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 import torch
 import torch.nn as nn
-from transformers import AutoTokenizer
+# from transformers import AutoTokenizer # Removed dependency
+from src.inference_pio.common.custom_components.tokenizer import CustomBPETokenizer
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ class TextPreprocessor:
     Handles tokenization, normalization, and text-specific optimizations.
     """
 
-    def __init__(self, tokenizer: AutoTokenizer, max_length: int = 32768):
+    def __init__(self, tokenizer: Any, max_length: int = 32768):
         self.tokenizer = tokenizer
         self.max_length = max_length
 
@@ -130,7 +131,7 @@ class UnimodalPreprocessor:
     Provides a generic interface that can be extended with model-specific optimizations.
     """
 
-    def __init__(self, tokenizer: AutoTokenizer, max_text_length: int = 32768):
+    def __init__(self, tokenizer: Any, max_text_length: int = 32768):
         self.text_preprocessor = TextPreprocessor(tokenizer, max_text_length)
 
         # Performance metrics
@@ -262,7 +263,8 @@ def create_unimodal_preprocessor(
 
     try:
         # Load tokenizer
-        tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
+        # tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
+        tokenizer = CustomBPETokenizer() # Using custom tokenizer
 
         # Create and return the preprocessor
         preprocessor = UnimodalPreprocessor(

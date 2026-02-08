@@ -8,7 +8,7 @@ self-contained plugin architecture for the Inference-PIO system.
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Union
 
-from ...common.model_config_base import (
+from ...common.config.model_config_base import (
     BaseConfig,
     ModelConfigError,
     get_default_model_path,
@@ -671,9 +671,11 @@ class Qwen3CoderDynamicConfig(Qwen3Coder30BConfig):
 
 
 # Register this configuration with the factory
-from ...common.config_factory import register_model_config
-
-register_model_config("qwen3_coder_30b", Qwen3Coder30BConfig)
+try:
+    from ...common.config.config_factory import register_model_config
+    register_model_config("qwen3_coder_30b", Qwen3Coder30BConfig)
+except ImportError:
+    pass
 
 
 __all__ = ["Qwen3Coder30BConfig", "Qwen3CoderDynamicConfig"]

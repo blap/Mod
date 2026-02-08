@@ -11,9 +11,9 @@ from typing import Any, Dict, Optional, Tuple
 
 import torch
 import torch.nn as nn
-from transformers.utils import logging as transformers_logging
+import logging
 
-logger = transformers_logging.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class Qwen3VL2BProjectionLayer(nn.Module):

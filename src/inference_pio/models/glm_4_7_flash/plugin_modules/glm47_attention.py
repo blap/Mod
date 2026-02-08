@@ -9,7 +9,7 @@ from typing import Optional, Tuple
 import torch
 import torch.nn as nn
 
-from ....common.flash_attention_2 import FlashAttention2, create_flash_attention_2
+from src.inference_pio.common.attention.flash_attention_2 import FlashAttention2, create_flash_attention_2
 from ..config import GLM47FlashConfig
 
 

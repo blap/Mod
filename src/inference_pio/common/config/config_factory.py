@@ -146,19 +146,19 @@ def create_model_config_direct(model_name: str, **kwargs) -> BaseConfig:
     import importlib
 
     if model_name.lower() == "qwen3_0_6b":
-        config_module = importlib.import_module('.models.qwen3_0_6b.config', package='src.inference_pio.common.config')
+        config_module = importlib.import_module('src.inference_pio.models.qwen3_0_6b.config')
         config_class = getattr(config_module, 'Qwen3_0_6B_Config')
     elif model_name.lower() == "qwen3_4b_instruct_2507":
-        config_module = importlib.import_module('.models.qwen3_4b_instruct_2507.config', package='src.inference_pio.common.config')
+        config_module = importlib.import_module('src.inference_pio.models.qwen3_4b_instruct_2507.config')
         config_class = getattr(config_module, 'Qwen34BInstruct2507Config')
     elif model_name.lower() == "glm_4_7_flash":
-        config_module = importlib.import_module('.models.glm_4_7_flash.config', package='src.inference_pio.common.config')
+        config_module = importlib.import_module('src.inference_pio.models.glm_4_7_flash.config')
         config_class = getattr(config_module, 'GLM47FlashConfig')
     elif model_name.lower() == "qwen3_vl_2b":
-        config_module = importlib.import_module('.models.qwen3_vl_2b.config', package='src.inference_pio.common.config')
+        config_module = importlib.import_module('src.inference_pio.models.qwen3_vl_2b.config')
         config_class = getattr(config_module, 'Qwen3VL2BConfig')
     elif model_name.lower() == "qwen3_coder_30b":
-        config_module = importlib.import_module('.models.qwen3_coder_30b.config', package='src.inference_pio.common.config')
+        config_module = importlib.import_module('src.inference_pio.models.qwen3_coder_30b.config')
         config_class = getattr(config_module, 'Qwen3Coder30BConfig')
     else:
         raise ValueError(f"No configuration class found for model: {model_name}")
@@ -248,7 +248,3 @@ def auto_detect_and_register_configs(models_dir: str = "src/inference_pio/models
             except ImportError as e:
                 print(f"Could not import config from {module_path}: {e}")
                 continue
-
-
-# Auto-register configurations from existing model directories
-auto_detect_and_register_configs()
