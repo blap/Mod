@@ -52,40 +52,31 @@ class CustomBPETokenizer:
     Compatible with GPT-2/RoBERTa/Qwen style vocabularies.
     """
 
-    def __init__(self, vocab_file: str = None, merges_file: str = None, errors: str = "replace", unk_token: str = "<|endoftext|>"):
-        self.encoder = {}
-        self.decoder = {}
-        self.bpe_ranks = {}
-        self.cache = {}
-        self.errors = errors
-        self.unk_token = unk_token
-        self.unk_token_id = 0
-
-        if vocab_file and merges_file:
-            self.load(vocab_file, merges_file)
-
-        self.byte_encoder = bytes_to_unicode()
-        self.byte_decoder = {v: k for k, v in self.byte_encoder.items()}
-
-        # Should match GPT-2 regex for tokenization (using standard re compatible patterns)
-        self.pat = re.compile(
-            r"""'s|'t|'re|'ve|'m|'ll|'d| ?[^\W\d_]+| ?\d+| ?[^\s\w]+|\s+(?!\S)|\s+""",
-            re.UNICODE
-        )
-
-    def load(self, vocab_file: str, merges_file: str):
-        """Load vocab and merges."""
+    def __init__(self, vocab_file: str, merges_file: str, errors: str = "replace", unk_token: str = "<|endoftext|>"):
         with open(vocab_file, encoding="utf-8") as f:
             self.encoder = json.load(f)
         self.decoder = {v: k for k, v in self.encoder.items()}
+        self.errors = errors  # how to handle errors in decoding
+        self.byte_encoder = bytes_to_unicode()
+        self.byte_decoder = {v: k for k, v in self.byte_encoder.items()}
 
         with open(merges_file, encoding="utf-8") as f:
             bpe_data = f.read().split("\n")[1:-1]
 
         bpe_merges = [tuple(merge.split()) for merge in bpe_data]
         self.bpe_ranks = dict(zip(bpe_merges, range(len(bpe_merges))))
+        self.cache = {}
 
-        self.unk_token_id = self.encoder.get(self.unk_token, 0)
+        # Should match GPT-2 regex for tokenization (using standard re compatible patterns)
+        # \p{L} -> [^\W\d_] (Unicode letters)
+        # \p{N} -> \d (Unicode numbers)
+        self.pat = re.compile(
+            r"""'s|'t|'re|'ve|'m|'ll|'d| ?[^\W\d_]+| ?\d+| ?[^\s\w]+|\s+(?!\S)|\s+""",
+            re.UNICODE
+        )
+
+        self.unk_token = unk_token
+        self.unk_token_id = self.encoder.get(unk_token, 0) # Fallback to 0 if not found
 
     def bpe(self, token):
         if token in self.cache:
@@ -133,18 +124,12 @@ class CustomBPETokenizer:
     def encode(self, text: str) -> List[int]:
         """Encode text to token IDs."""
         bpe_tokens = []
-        if not text:
-            return []
 
         for token in re.findall(self.pat, text):
             token = "".join(self.byte_encoder[b] for b in token.encode("utf-8"))
-            bpe_tokens.extend(self.encoder.get(bpe_token, self.unk_token_id) for bpe_token in self.bpe(token).split(" "))
+            bpe_tokens.extend(self.encoder[bpe_token] for bpe_token in self.bpe(token).split(" "))
 
         return bpe_tokens
-
-    def encode_batch(self, texts: List[str]) -> List[List[int]]:
-        """Encode a batch of texts."""
-        return [self.encode(text) for text in texts]
 
     def decode(self, tokens: List[int]) -> str:
         """Decode token IDs to text."""
@@ -152,29 +137,13 @@ class CustomBPETokenizer:
         text = bytearray([self.byte_decoder[c] for c in text]).decode("utf-8", errors=self.errors)
         return text
 
-    def __call__(self, text: Union[str, List[str]], return_tensors: Optional[str] = None, **kwargs):
+    def __call__(self, text, return_tensors=None, **kwargs):
         """Mimic transformers tokenizer call interface."""
-        if isinstance(text, str):
-            ids = self.encode(text)
-            if return_tensors == "pt":
-                import torch
-                return {"input_ids": torch.tensor([ids]), "attention_mask": torch.ones(1, len(ids))}
-            return {"input_ids": ids}
-        elif isinstance(text, list):
-            batch_ids = self.encode_batch(text)
-            if return_tensors == "pt":
-                import torch
-                # Pad to max length in batch
-                max_len = max(len(ids) for ids in batch_ids)
-                padded_ids = [ids + [self.pad_token_id] * (max_len - len(ids)) for ids in batch_ids]
-                mask = [[1] * len(ids) + [0] * (max_len - len(ids)) for ids in batch_ids]
-                return {
-                    "input_ids": torch.tensor(padded_ids),
-                    "attention_mask": torch.tensor(mask)
-                }
-            return {"input_ids": batch_ids}
-        else:
-            raise ValueError(f"Unsupported input type: {type(text)}")
+        ids = self.encode(text)
+        if return_tensors == "pt":
+            import torch
+            return {"input_ids": torch.tensor([ids]), "attention_mask": torch.ones(1, len(ids))}
+        return {"input_ids": ids}
 
     @property
     def pad_token_id(self):
@@ -186,13 +155,12 @@ class CustomBPETokenizer:
 
 def load_custom_tokenizer(model_path: str) -> CustomBPETokenizer:
     """Factory to load tokenizer from model directory."""
-    tokenizer = CustomBPETokenizer()
     vocab_file = os.path.join(model_path, "vocab.json")
     merges_file = os.path.join(model_path, "merges.txt")
 
-    if os.path.exists(vocab_file) and os.path.exists(merges_file):
-        tokenizer.load(vocab_file, merges_file)
-    else:
-        logger.warning(f"Tokenizer files not found in {model_path}. Initialized empty tokenizer.")
+    if not os.path.exists(vocab_file) or not os.path.exists(merges_file):
+        # Fallback to searching inside subdirectories or different filenames if needed
+        # For now, strict check
+        raise FileNotFoundError(f"Tokenizer files not found in {model_path}")
 
-    return tokenizer
+    return CustomBPETokenizer(vocab_file, merges_file)

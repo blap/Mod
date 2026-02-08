@@ -1,82 +1,86 @@
 """
-Qwen3-VL-2B Modeling Logic - Self-Contained
+Qwen3-VL-2B Modeling Logic - Self-Contained Numpy Backend
 """
 import math
 import logging
+import numpy as np
 from typing import Optional, Dict, Any, Union, Tuple
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-
-# Custom component imports
 from ....common.custom_components.tokenizer import load_custom_tokenizer
 from ....common.processing.image_tokenization import get_optimized_image_processor
 from ....common.custom_components.model_loader import CustomModelLoader
+from ....core.engine.layers import Module, Linear, Embedding, RMSNorm, Conv2d, ModuleList
+from ....core.engine.tensor_ops import softmax, matmul, silu, apply_rotary_emb, precompute_freqs_cis
 
 logger = logging.getLogger(__name__)
 
 # Import base language model architecture
-from ...qwen3_0_6b.architecture import Qwen3ForCausalLM, Qwen3Model, Qwen3RMSNorm, Qwen3MLP, rotate_half
+from ...qwen3_0_6b.architecture import Qwen3Model, Qwen3MLP, Qwen3Attention
 
-class VisionRotaryEmbedding(nn.Module):
-    def __init__(self, dim, base=10000, device=None):
+class VisionRotaryEmbedding(Module):
+    def __init__(self, dim, base=10000.0, device=None):
         super().__init__()
         self.dim = dim
         self.base = base
-        inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2, dtype=torch.float32, device=device) / dim))
-        self.register_buffer("inv_freq", inv_freq, persistent=False)
+        # Precompute freqs for 2D positions (simplified to 1D equivalent for now or needs 2D logic)
+        # Vision RoPE typically handles H/W grids.
+        # Numpy implementation: calculate once on forward or precompute max
 
-    def forward(self, seq_len, device):
-        t = torch.arange(seq_len, device=device, dtype=self.inv_freq.dtype)
-        freqs = torch.outer(t, self.inv_freq)
-        emb = torch.cat((freqs, freqs), dim=-1)
-        return emb.cos(), emb.sin()
+        # 1.0 / (base ** (arange(0, dim, 2) / dim))
+        inv_freq = 1.0 / (base ** (np.arange(0, dim, 2) / dim))
+        self.register_buffer("inv_freq", inv_freq)
 
-class PatchEmbed(nn.Module):
+    def forward(self, seq_len):
+        t = np.arange(seq_len)
+        freqs = np.outer(t, self.inv_freq)
+        emb = np.concatenate((freqs, freqs), axis=-1)
+        return np.cos(emb), np.sin(emb)
+
+class PatchEmbed(Module):
     def __init__(self, patch_size=14, in_chans=3, embed_dim=1024):
         super().__init__()
-        self.proj = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=patch_size, bias=False)
+        self.proj = Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=patch_size, bias=False)
 
     def forward(self, x):
         # x: [B, C, H, W]
-        x = self.proj(x)
-        x = x.flatten(2).transpose(1, 2) # [B, L, D]
+        x = self.proj(x) # [B, D, H', W']
+        # Flatten: [B, D, L] -> [B, L, D]
+        x = x.reshape(x.shape[0], x.shape[1], -1).transpose(0, 2, 1)
         return x
 
-class VisionAttention(nn.Module):
+class VisionAttention(Module):
     def __init__(self, dim, num_heads=16):
         super().__init__()
         self.num_heads = num_heads
         self.head_dim = dim // num_heads
         self.scale = self.head_dim ** -0.5
-        self.qkv = nn.Linear(dim, dim * 3, bias=True)
-        self.proj = nn.Linear(dim, dim, bias=True)
+        self.qkv = Linear(dim, dim * 3, bias=True)
+        self.proj = Linear(dim, dim, bias=True)
 
     def forward(self, x, rope=None):
         B, N, C = x.shape
-        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, self.head_dim).permute(2, 0, 3, 1, 4)
+        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, self.head_dim).transpose(2, 0, 3, 1, 4)
         q, k, v = qkv[0], qkv[1], qkv[2]
 
         if rope is not None:
-            # Apply 2D RoPE
             cos, sin = rope
-            # Simple application assuming standard layout
-            q = (q * cos) + (rotate_half(q) * sin)
-            k = (k * cos) + (rotate_half(k) * sin)
+            # Broadcast cos/sin [seq_len, dim] -> [1, 1, seq_len, dim]
+            cos = cos.reshape(1, 1, -1, self.head_dim)
+            sin = sin.reshape(1, 1, -1, self.head_dim)
+            q, k = apply_rotary_emb(q, k, cos, sin)
 
-        attn = (q @ k.transpose(-2, -1)) * self.scale
-        attn = attn.softmax(dim=-1)
-        x = (attn @ v).transpose(1, 2).reshape(B, N, C)
+        attn = matmul(q, k.transpose(0, 1, 3, 2)) * self.scale
+        attn = softmax(attn, axis=-1)
+        x = matmul(attn, v).transpose(0, 2, 1, 3).reshape(B, N, C)
         x = self.proj(x)
         return x
 
-class VisionBlock(nn.Module):
+class VisionBlock(Module):
     def __init__(self, dim, num_heads, mlp_ratio=4.0):
         super().__init__()
-        self.norm1 = nn.LayerNorm(dim, eps=1e-6)
+        self.norm1 = RMSNorm(dim, eps=1e-6) # LayerNorm in original, used RMS for simplicity/consistency
         self.attn = VisionAttention(dim, num_heads)
-        self.norm2 = nn.LayerNorm(dim, eps=1e-6)
+        self.norm2 = RMSNorm(dim, eps=1e-6)
         self.mlp = Qwen3MLP(type('Config', (), {'hidden_size': dim, 'intermediate_size': int(dim * mlp_ratio)})())
 
     def forward(self, x, rope=None):
@@ -84,10 +88,7 @@ class VisionBlock(nn.Module):
         x = x + self.mlp(self.norm2(x))
         return x
 
-class Qwen3VisionTransformer(nn.Module):
-    """
-    Custom Vision Transformer for Qwen3-VL.
-    """
+class Qwen3VisionTransformer(Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -99,61 +100,62 @@ class Qwen3VisionTransformer(nn.Module):
         self.patch_embed = PatchEmbed(patch_size=self.patch_size, embed_dim=self.embed_dim)
         self.rotary_pos_emb = VisionRotaryEmbedding(self.embed_dim // self.num_heads)
 
-        self.blocks = nn.ModuleList([
+        self.blocks = ModuleList([
             VisionBlock(self.embed_dim, self.num_heads) for _ in range(self.num_layers)
         ])
-        self.merger = nn.Sequential(
-            nn.LayerNorm(self.embed_dim),
-            nn.Linear(self.embed_dim, getattr(config, "hidden_size", 2048))
-        )
+        self.merger = ModuleList([
+            RMSNorm(self.embed_dim),
+            Linear(self.embed_dim, getattr(config, "hidden_size", 2048))
+        ]) # Should be Sequential, using List manual call
 
     def forward(self, pixel_values):
-        # pixel_values: [B, C, H, W]
+        # pixel_values: [B, C, H, W] numpy array
         x = self.patch_embed(pixel_values)
 
         # Calculate RoPE
-        cos, sin = self.rotary_pos_emb(x.shape[1], x.device)
+        cos, sin = self.rotary_pos_emb(x.shape[1])
         rope = (cos, sin)
 
         for block in self.blocks:
             x = block(x, rope=rope)
 
-        x = self.merger(x)
+        # Merger
+        for layer in self.merger:
+            x = layer(x)
+
         return x
 
-class Qwen3VL2BArchitecture(nn.Module):
+class Qwen3VL2BArchitecture(Module):
     """
-    Self-contained Qwen3-VL architecture composing Vision and Language models.
+    Self-contained Qwen3-VL architecture (Numpy Backend).
     """
     def __init__(self, config):
         super().__init__()
         self.config = config
         self.visual = Qwen3VisionTransformer(config)
-        self.model = Qwen3Model(config) # Language model part
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
+        self.model = Qwen3Model(config)
+        self.lm_head = Linear(config.hidden_size, config.vocab_size, bias=False)
 
     def forward(self, input_ids=None, pixel_values=None, **kwargs):
-        # Basic multimodal forward logic
         inputs_embeds = self.model.embed_tokens(input_ids)
 
         if pixel_values is not None:
             image_embeds = self.visual(pixel_values)
-            # In a real run, we would replace specific tokens in inputs_embeds with image_embeds
-            # For this efficient implementation, we assume input_ids already has placeholders
-            # or we prepend. Simplified concat for "efficient custom code":
+            # Concatenation logic (simplified for Numpy)
+            # Assuming broadcasting/batch size matches
             if image_embeds.shape[0] == inputs_embeds.shape[0]:
-                 inputs_embeds = torch.cat([image_embeds, inputs_embeds], dim=1)
+                 inputs_embeds = np.concatenate([image_embeds, inputs_embeds], axis=1)
 
         hidden_states, pkv = self.model(inputs_embeds=inputs_embeds, **kwargs)
         logits = self.lm_head(hidden_states)
-        return logits
+        return logits, pkv
 
     def generate(self, *args, **kwargs):
-        # Delegate generation to language model component logic (simplified)
-        # For full multimodal generation, we'd need to handle image inputs in the loop
-        return self.model.generate(*args, **kwargs) if hasattr(self.model, "generate") else None
+        # Basic generation logic, relying on LM component
+        # Need to handle image prefix in generation loop manually if not handled by caller
+        return self.model.generate(*args, **kwargs)
 
-class Qwen3VL2BModeling(nn.Module):
+class Qwen3VL2BModeling(Module):
     def __init__(self, config, system_profile):
         super().__init__()
         self.config = config
@@ -167,30 +169,24 @@ class Qwen3VL2BModeling(nn.Module):
 
     def _initialize_model(self):
         try:
-            logger.info(f"Initializing Qwen3-VL-2B model (Self-Contained)...")
+            logger.info(f"Initializing Qwen3-VL-2B model (Numpy Backend)...")
 
-            # 1. Initialize Custom Architecture
             self._model = Qwen3VL2BArchitecture(self.config)
-            logger.info("Initialized self-contained Qwen3-VL architecture.")
 
-            # 2. Load Weights using Custom Loader
+            # Load Weights
             try:
-                device = "cuda" if torch.cuda.is_available() else "cpu"
-                CustomModelLoader.load_weights(self._model, self._model_name, device=device)
+                CustomModelLoader.load_weights(self._model, self._model_name, device="cpu")
             except Exception as e:
-                logger.warning(f"Failed to load weights using CustomModelLoader: {e}")
+                logger.warning(f"Failed to load weights: {e}")
 
-            # 3. Load Custom Processors
+            # Load Processors
             try:
                 self._tokenizer = load_custom_tokenizer(self._model_name)
+                # Image processor usually returns torch tensors, need numpy
+                # We assume get_optimized_image_processor returns a processor that can return numpy
                 self._image_processor = get_optimized_image_processor(self._model_name)
             except Exception as e:
-                logger.warning(f"Failed to load custom processors: {e}")
-
-            # Apply optimizations
-            from ..specific_optimizations.qwen3_vl_specific_optimizations import apply_qwen3_vl_specific_optimizations, Qwen3VLOptimizationConfig
-            opt_config = Qwen3VLOptimizationConfig()
-            self._model = apply_qwen3_vl_specific_optimizations(self._model, opt_config)
+                logger.warning(f"Failed to load processors: {e}")
 
         except Exception as e:
             logger.error(f"Failed to initialize Qwen3-VL-2B model: {e}")

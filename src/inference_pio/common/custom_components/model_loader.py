@@ -1,38 +1,39 @@
 """
-Custom Model Loader - Dependency Free (except safetensors/torch)
-Replacing transformers.AutoModel.from_pretrained with efficient direct loading.
+Custom Model Loader - Dependency Free (except safetensors)
+Replacing transformers.AutoModel.from_pretrained with efficient direct loading using Numpy backend.
 """
 
 import json
 import logging
 import os
-import re
 import importlib
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import Dict, List, Optional, Any
 
-import torch
-import torch.nn as nn
-from safetensors.torch import load_file as safe_load_file
+import numpy as np
+
+# Try to import safetensors for numpy
+try:
+    from safetensors.numpy import load_file as safe_load_file
+except ImportError:
+    safe_load_file = None
+
+# Torch fallback (optional, for partial migration or if safetensors fails)
+try:
+    import torch
+except ImportError:
+    torch = None
 
 logger = logging.getLogger(__name__)
 
 class CustomModelLoader:
     """
-    Efficiently loads model weights from disk (safetensors or bin) directly into PyTorch models.
+    Efficiently loads model weights from disk (safetensors or bin) directly into Numpy models.
     Supports sharded checkpoints and automatic architecture selection.
     """
 
-    def load_model(self, model_path: str, device: str = "cpu", dtype: torch.dtype = torch.float16, **kwargs) -> nn.Module:
+    def load_model(self, model_path: str, device: str = "cpu", dtype: str = "float32", **kwargs):
         """
         Load a full model from a path (config + weights).
-
-        Args:
-            model_path: Path to the model directory.
-            device: Device to load model onto.
-            dtype: Data type for the model.
-
-        Returns:
-            Instantiated and loaded PyTorch model.
         """
         logger.info(f"Loading model from {model_path}...")
 
@@ -50,28 +51,16 @@ class CustomModelLoader:
 
         model_class = self._get_model_class(architectures, model_type)
         if not model_class:
-            logger.warning(f"Could not determine model class for architectures: {architectures}, type: {model_type}. Using generic fallback if available.")
-            # Fallback logic or raise error
+            logger.warning(f"Could not determine model class for architectures: {architectures}, type: {model_type}.")
             raise ValueError("Unsupported model architecture")
 
-        # 3. Create Configuration Object
-        # Assuming the model class takes a config object or dict
-        # We try to find a matching config class or use a generic one
-        # For this refactor, we pass the dict or try to convert to the specific config object
-
-        # Instantiate model
-        # Note: This assumes the model class accepts a config dict or object
-        # We might need to wrap config_dict in a namespace object
+        # 3. Instantiate Model
         from argparse import Namespace
         config_obj = Namespace(**config_dict)
-
-        # Some custom models might expect specific Config objects
-        # Ideally we'd map this too, but for now passing Namespace might work if attributes align
 
         try:
             model = model_class(config_obj)
         except Exception as e:
-            # Try initializing with dict directly
             try:
                 model = model_class(**config_dict)
             except Exception as e2:
@@ -80,9 +69,6 @@ class CustomModelLoader:
 
         # 4. Load Weights
         self.load_weights(model, model_path, device=device)
-
-        # 5. Move to device/dtype
-        model.to(device=device, dtype=dtype)
 
         return model
 
@@ -93,7 +79,6 @@ class CustomModelLoader:
         # Qwen mapping
         if "Qwen2" in arch or "Qwen2" in model_type or "qwen" in model_type:
             try:
-                # Try importing Qwen3 architecture (assuming compatibility)
                 module = importlib.import_module("src.inference_pio.models.qwen3_0_6b.architecture")
                 return getattr(module, "Qwen3ForCausalLM")
             except ImportError:
@@ -110,19 +95,12 @@ class CustomModelLoader:
         return None
 
     @staticmethod
-    def load_weights(model: nn.Module, model_path: str, device: str = "cpu", strict: bool = False):
+    def load_weights(model, model_path: str, device: str = "cpu", strict: bool = False):
         """
-        Load weights from model_path into model.
-
-        Args:
-            model: The PyTorch model instance.
-            model_path: Directory containing weight files.
-            device: Device to load weights onto.
-            strict: Whether to enforce strict state_dict matching.
+        Load weights from model_path into model (Numpy backend).
         """
         logger.info(f"Loading weights from {model_path}...")
 
-        # 1. Check for index file (sharded checkpoint)
         index_file = os.path.join(model_path, "model.safetensors.index.json")
         if not os.path.exists(index_file):
             index_file = os.path.join(model_path, "pytorch_model.bin.index.json")
@@ -130,7 +108,6 @@ class CustomModelLoader:
         if os.path.exists(index_file):
             CustomModelLoader._load_sharded_weights(model, model_path, index_file, device, strict)
         else:
-            # 2. Check for single file
             single_file = os.path.join(model_path, "model.safetensors")
             if not os.path.exists(single_file):
                 single_file = os.path.join(model_path, "pytorch_model.bin")
@@ -141,18 +118,34 @@ class CustomModelLoader:
                 logger.warning(f"No weights found in {model_path}. Model initialized with random weights.")
 
     @staticmethod
-    def _load_single_file(model: nn.Module, filepath: str, device: str, strict: bool):
+    def _load_single_file(model, filepath: str, device: str, strict: bool):
         logger.info(f"Loading single weight file: {filepath}")
-        if filepath.endswith(".safetensors"):
-            state_dict = safe_load_file(filepath, device=device)
-        else:
-            state_dict = torch.load(filepath, map_location=device)
+        state_dict = {}
 
-        missing, unexpected = model.load_state_dict(state_dict, strict=strict)
-        CustomModelLoader._log_load_results(missing, unexpected)
+        if filepath.endswith(".safetensors"):
+            if safe_load_file:
+                state_dict = safe_load_file(filepath)
+            else:
+                logger.error("safetensors.numpy not available. Cannot load safetensors.")
+                return
+        else:
+            # Fallback to torch.load if available, then convert to numpy
+            if torch:
+                torch_state_dict = torch.load(filepath, map_location="cpu")
+                for k, v in torch_state_dict.items():
+                    if isinstance(v, torch.Tensor):
+                        state_dict[k] = v.detach().cpu().numpy()
+                    else:
+                        state_dict[k] = v
+            else:
+                 logger.error("PyTorch not installed. Cannot load .bin files.")
+                 return
+
+        if hasattr(model, "load_state_dict"):
+             model.load_state_dict(state_dict, strict=strict)
 
     @staticmethod
-    def _load_sharded_weights(model: nn.Module, model_path: str, index_file: str, device: str, strict: bool):
+    def _load_sharded_weights(model, model_path: str, index_file: str, device: str, strict: bool):
         logger.info(f"Loading sharded weights using index: {index_file}")
         with open(index_file, "r") as f:
             index_data = json.load(f)
@@ -165,22 +158,16 @@ class CustomModelLoader:
         for filename in unique_files:
             filepath = os.path.join(model_path, filename)
             logger.info(f"Loading shard: {filename}")
+
             if filename.endswith(".safetensors"):
-                shard_state = safe_load_file(filepath, device=device)
+                if safe_load_file:
+                    shard_state = safe_load_file(filepath)
+                    full_state_dict.update(shard_state)
             else:
-                shard_state = torch.load(filepath, map_location=device)
-            full_state_dict.update(shard_state)
+                if torch:
+                    shard_state_torch = torch.load(filepath, map_location="cpu")
+                    for k, v in shard_state_torch.items():
+                         full_state_dict[k] = v.detach().cpu().numpy()
 
-        missing, unexpected = model.load_state_dict(full_state_dict, strict=strict)
-        CustomModelLoader._log_load_results(missing, unexpected)
-
-    @staticmethod
-    def _log_load_results(missing: List[str], unexpected: List[str]):
-        if missing:
-            logger.warning(f"Missing keys: {len(missing)}")
-            logger.debug(f"Missing: {missing}")
-        if unexpected:
-            logger.warning(f"Unexpected keys: {len(unexpected)}")
-            logger.debug(f"Unexpected: {unexpected}")
-        if not missing and not unexpected:
-            logger.info("All weights loaded successfully.")
+        if hasattr(model, "load_state_dict"):
+             model.load_state_dict(full_state_dict, strict=strict)
