@@ -72,19 +72,33 @@ EXPORT void tensor_mul(Tensor* a, Tensor* b, Tensor* out) {
 }
 
 EXPORT void tensor_matmul(Tensor* a, Tensor* b, Tensor* out) {
-    // 2D Matmul: A[M, K] @ B[K, N] -> Out[M, N]
-    int M = a->shape[a->ndim - 2];
-    int K = a->shape[a->ndim - 1];
-    int N = b->shape[b->ndim - 1];
+    // Naive 3D Matmul: [B, M, K] @ [B, K, N] -> Out [B, M, N]
+    int adim = a->ndim;
+    int bdim = b->ndim;
 
-    #pragma omp parallel for
-    for (int i = 0; i < M; i++) {
-        for (int j = 0; j < N; j++) {
-            float sum = 0.0f;
-            for (int k = 0; k < K; k++) {
-                sum += a->data[i * K + k] * b->data[k * N + j];
+    // Default 2D case
+    int Batch = 1;
+    int M = a->shape[adim-2];
+    int K = a->shape[adim-1];
+    int N = b->shape[bdim-1];
+
+    if (adim > 2) Batch = a->shape[0];
+
+    #pragma omp parallel for collapse(2)
+    for (int b_idx = 0; b_idx < Batch; b_idx++) {
+        for (int i = 0; i < M; i++) {
+            for (int j = 0; j < N; j++) {
+                float sum = 0.0f;
+                for (int k = 0; k < K; k++) {
+                    int a_idx = b_idx * M * K + i * K + k;
+                    int b_idx_offset = b_idx * K * N + k * N + j;
+
+                    // Simple boundary check/handling for 2D inputs being treated as batched?
+                    // If 2D, b_idx is 0, offset calculation holds (0*... = 0)
+                    sum += a->data[a_idx] * b->data[b_idx_offset];
+                }
+                out->data[b_idx * M * N + i * N + j] = sum;
             }
-            out->data[i * N + j] = sum;
         }
     }
 }
@@ -198,13 +212,30 @@ EXPORT void tensor_get_data(Tensor* t, float* buffer, int size) {
     memcpy(buffer, t->data, size * sizeof(float));
 }
 
-// --- SafeTensors Loader (Embedded) ---
-// ... (Includes previously implemented safetensors logic) ...
-// We include the headers and logic here to compile as one unit or link object files.
-// For simplicity in this step, we assume safetensors_loader.c functions are available or we include them.
-// To keep file clean, we will compile them together in Makefile.
+EXPORT void tensor_quantize_int8(Tensor* input, int8_t* out_data, float* scale) {
+    // Find abs max
+    float max_val = 0.0f;
+    for (int i = 0; i < input->size; i++) {
+        float val = fabsf(input->data[i]);
+        if (val > max_val) max_val = val;
+    }
 
-// Forward declarations for Loader
+    *scale = max_val / 127.0f;
+    float inv_scale = 1.0f / (*scale + 1e-9f);
+
+    #pragma omp parallel for
+    for (int i = 0; i < input->size; i++) {
+        float val = input->data[i] * inv_scale;
+        if (val > 127.0f) val = 127.0f;
+        if (val < -127.0f) val = -127.0f;
+        out_data[i] = (int8_t)roundf(val);
+    }
+}
+
+// Forward declarations for Loader and Image Ops (which are linked in Makefile)
 EXPORT int open_safetensors(const char* filepath);
 EXPORT int load_tensor_data(const char* name, float* buffer, int size);
 EXPORT void close_safetensors();
+EXPORT void image_resize_bilinear(float* input, int channels, int h, int w, float* output, int target_h, int target_w);
+EXPORT void image_normalize(float* image, int channels, int h, int w, float* mean, float* std);
+EXPORT void image_rescale(float* image, int size, float scale);

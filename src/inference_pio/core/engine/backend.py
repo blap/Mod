@@ -7,6 +7,7 @@ import os
 import sys
 from typing import Tuple, List, Optional, Dict
 
+# ... (Previous preamble remains same) ...
 # Determine Library Path
 # Pointing to src/inference_pio/plugins/cpu/c_src
 _plugin_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "plugins", "cpu", "c_src")
@@ -19,13 +20,7 @@ else:
 _lib_path = os.path.join(_plugin_dir, _lib_name)
 
 if not os.path.exists(_lib_path):
-    # Fallback to local if plugin structure failed
     _lib_path = os.path.join(os.path.dirname(__file__), "c_src", _lib_name)
-
-if not os.path.exists(_lib_path):
-    # Just a warning during build/test phase if not compiled yet
-    pass
-    # raise RuntimeError(f"Could not find C Tensor Engine library at {_lib_path}")
 
 try:
     _lib = ctypes.CDLL(_lib_path)
@@ -62,6 +57,11 @@ try:
     _lib.load_tensor_data.restype = ctypes.c_int
     _lib.close_safetensors.argtypes = []
 
+    # Image Ops Signatures
+    _lib.image_resize_bilinear.argtypes = [ctypes.POINTER(ctypes.c_float), ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_float), ctypes.c_int, ctypes.c_int]
+    _lib.image_normalize.argtypes = [ctypes.POINTER(ctypes.c_float), ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
+    _lib.image_rescale.argtypes = [ctypes.POINTER(ctypes.c_float), ctypes.c_int, ctypes.c_float]
+
 except OSError:
     _lib = None
 
@@ -87,6 +87,11 @@ class Tensor:
         s = self._handle.contents.shape
         n = self._handle.contents.ndim
         return tuple(s[i] for i in range(n))
+
+    @property
+    def ndim(self) -> int:
+        if not self._handle: return 0
+        return self._handle.contents.ndim
 
     @property
     def size(self) -> int:
@@ -153,6 +158,34 @@ class Tensor:
         out_k = Tensor(list(k.shape))
         _lib.tensor_rope(self._handle, k._handle, cos._handle, sin._handle, out_q._handle, out_k._handle)
         return out_q, out_k
+
+    # Image Ops
+    def resize_image(self, target_h: int, target_w: int) -> 'Tensor':
+        # self is [C, H, W]
+        if self.ndim != 3: raise ValueError("Image resize expects 3D tensor [C,H,W]")
+        c, h, w = self.shape
+        out = Tensor([c, target_h, target_w])
+        _lib.image_resize_bilinear(self._handle.contents.data, c, h, w, out._handle.contents.data, target_h, target_w)
+        return out
+
+    def normalize_image(self, mean: List[float], std: List[float]) -> 'Tensor':
+        # self is [C, H, W]
+        c, h, w = self.shape
+        out = Tensor(list(self.shape))
+        # Copy data first
+        _lib.tensor_add(self._handle, zeros(list(self.shape))._handle, out._handle) # Hacky copy
+
+        c_mean = (ctypes.c_float * len(mean))(*mean)
+        c_std = (ctypes.c_float * len(std))(*std)
+
+        _lib.image_normalize(out._handle.contents.data, c, h, w, c_mean, c_std)
+        return out
+
+    def rescale_image(self, factor: float) -> 'Tensor':
+        out = Tensor(list(self.shape))
+        _lib.tensor_add(self._handle, zeros(list(self.shape))._handle, out._handle) # Copy
+        _lib.image_rescale(out._handle.contents.data, out.size, factor)
+        return out
 
 # Factories
 def zeros(shape: List[int]) -> Tensor:

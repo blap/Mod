@@ -15,7 +15,7 @@ else
     RM = rm -f
 endif
 
-SRC = tensor_ops.c safetensors_loader.c
+SRC = tensor_ops.c safetensors_loader.c image_ops.c
 OBJ = $(SRC:.c=.o)
 
 all: $(TARGET_LIB)
