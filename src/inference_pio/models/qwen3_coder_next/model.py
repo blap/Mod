@@ -182,14 +182,14 @@ class Qwen3CoderNextModel(nn.Module):
             "attentions": all_self_attns,
         }
 
-    def generate(self, *args, **kwargs):
-        """
-        Generate method for the model.
-        """
-        # Apply intelligent caching if enabled
-        if hasattr(self, 'intelligent_cache_manager'):
-            # This is where we would integrate the intelligent cache with generation
-            # For now, we just call the parent generate method
-            pass
+    # def generate(self, *args, **kwargs):
+        # """
+        # Generate method for the model.
+        # """
+        # # Apply intelligent caching if enabled
+        # if hasattr(self, 'intelligent_cache_manager'):
+        #     # This is where we would integrate the intelligent cache with generation
+        #     # For now, we just call the parent generate method
+        #     pass
             
-        return super().generate(*args, **kwargs)
+        # return super().generate(*args, **kwargs)

@@ -5,13 +5,10 @@
   "description": "Qwen3-Coder-30B specialized language model with advanced coding capabilities, optimized for code generation, completion, and understanding",
   "plugin_type": "MODEL_COMPONENT",
   "dependencies": [
-    "torch",
-    "transformers",
-    "accelerate"
+    "torch"
   ],
   "compatibility": {
     "torch_version": ">=2.0.0",
-    "transformers_version": ">=4.30.0",
     "python_version": ">=3.8",
     "min_memory_gb": 16.0
   },

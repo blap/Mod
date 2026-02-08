@@ -4,7 +4,7 @@ Qwen3-4B-Instruct-2507 Specific Optimizations
 This module contains model-specific optimizations for the Qwen3-4B-Instruct-2507 model.
 """
 
-from ....common.model_adapter import Qwen34BInstruct2507ModelAdapter
+from src.inference_pio.common.interfaces.model_adapter import Qwen34BInstruct2507ModelAdapter
 from .qwen3_attention_optimizations import (
     apply_qwen3_attention_optimizations,
     apply_qwen3_gqa_optimizations,

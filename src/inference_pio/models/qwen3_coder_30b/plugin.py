@@ -15,40 +15,43 @@ from typing import Any, Dict, List, Optional, Tuple, Type, Union
 import torch
 import torch.nn as nn
 
-from ...common.adaptive_batch_manager import (
+from ...common.processing.adaptive_batch_manager import (
     AdaptiveBatchManager,
     get_adaptive_batch_manager,
 )
-from ...common.base_plugin_interface import (
-    ActivationAccessPattern,
+from ...common.optimization.activation_offloading import (
     ActivationOffloadingManager,
-    ActivationPriority,
 )
-from ...common.disk_offloading import (
+# from ...common.base_plugin_interface import (
+#     ActivationAccessPattern,
+#     ActivationPriority,
+# )
+from ...common.optimization.disk_offloading import (
     AccessPattern,
     DiskOffloader,
     OffloadPriority,
 )
-from ...common.disk_offloading import (
+from ...common.optimization.disk_offloading import (
     TensorOffloadingManager as DiskTensorOffloadingManager,
 )
-from ...common.improved_base_plugin_interface import (
+from ...common.interfaces.improved_base_plugin_interface import (
     ModelPluginInterface,
 )
-from ...common.improved_base_plugin_interface import (
+from ...common.interfaces.improved_base_plugin_interface import (
     PluginMetadata as ModelPluginMetadata,
 )
-from ...common.improved_base_plugin_interface import (
+from ...common.interfaces.improved_base_plugin_interface import (
     PluginType,
     TextModelPluginInterface,
 )
-from ...common.memory_manager import MemoryManager, MemoryPriority, TensorPagingManager
-from ...common.model_surgery import (
+from ...common.managers.memory_manager import MemoryManager
+from ...common.interfaces.memory_interface import MemoryManagerInterface as MemoryPriority # Approximate
+from ...common.optimization.model_surgery import (
     ModelSurgerySystem,
     apply_model_surgery,
     restore_model_from_surgery,
 )
-from ...common.optimization_integration import (
+from ...common.optimization.optimization_integration import (
     apply_qwen_optimizations,
     legacy_apply_activation_offloading,
     legacy_apply_disk_offloading,
@@ -58,22 +61,22 @@ from ...common.optimization_integration import (
     legacy_apply_structured_pruning,
     legacy_apply_tensor_compression,
 )
-from ...common.tensor_compression import AdaptiveTensorCompressor, get_tensor_compressor
-from ...common.unimodal_model_surgery import (
+from ...common.optimization.tensor_compression import AdaptiveTensorCompressor, get_tensor_compressor
+from ...common.optimization.unimodal_model_surgery import (
     UnimodalModelSurgerySystem,
     analyze_unimodal_model_for_surgery,
     apply_unimodal_model_surgery,
     get_unimodal_model_surgery_system,
 )
-from ...common.unimodal_preprocessing import (
+from ...common.processing.unimodal_preprocessing import (
     TextPreprocessor as UnimodalTextPreprocessor,
 )
-from ...common.unimodal_preprocessing import (
+from ...common.processing.unimodal_preprocessing import (
     UnimodalPreprocessor,
     create_unimodal_preprocessor,
 )
-from ...common.virtual_device import VirtualExecutionSimulator
-from ...common.virtual_execution import (
+from ...common.hardware.virtual_device import VirtualExecutionSimulator
+from ...common.hardware.virtual_execution import (
     PartitionConfig,
     PartitionStrategy,
     VirtualExecutionManager,
@@ -114,10 +117,9 @@ class Qwen3_Coder_30B_Plugin(TextModelPluginInterface):
             author="Alibaba Cloud",
             description="Qwen3-Coder-30B specialized model with advanced optimizations",
             plugin_type=PluginType.MODEL_COMPONENT,
-            dependencies=["torch", "transformers", "accelerate"],
+            dependencies=["torch"],
             compatibility={
                 "torch_version": ">=2.0.0",
-                "transformers_version": ">=4.30.0",
                 "python_version": ">=3.8",
                 "min_memory_gb": 64.0,  # Estimated for Qwen3-Coder-30B model
             },

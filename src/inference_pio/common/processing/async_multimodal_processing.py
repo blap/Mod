@@ -116,17 +116,15 @@ class GenericAsyncMultimodalManager:
                 )
                 # In a real implementation, we would load appropriate processors
                 # based on the model type, but for now we'll use placeholders
-                from transformers import AutoImageProcessor, AutoTokenizer
+                from src.inference_pio.common.custom_components.tokenizer import CustomBPETokenizer
+                from src.inference_pio.common.processing.image_tokenization import StandardImageProcessor
 
                 try:
-                    # Try to get model name from config
-                    model_name = getattr(
-                        self.config, "model_name", "microsoft/DialoGPT-medium"
-                    )
-                    tokenizer = AutoTokenizer.from_pretrained(model_name)
-                    image_processor = AutoImageProcessor.from_pretrained(model_name)
-                except:
-                    # Fallback to basic implementations
+                    tokenizer = CustomBPETokenizer()
+                    image_processor = StandardImageProcessor()
+                except Exception as e:
+                    logger.error(f"Fallback to custom processors failed: {e}")
+                    # Fallback to basic implementations or None
                     tokenizer = None
                     image_processor = None
 

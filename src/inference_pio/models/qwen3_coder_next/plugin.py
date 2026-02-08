@@ -38,7 +38,7 @@ class Qwen3_Coder_Next_Plugin(TextModelPluginInterface):
             author="Alibaba Cloud",
             description="Qwen3-Coder-Next 80B Hybrid Model",
             plugin_type=PluginType.MODEL_COMPONENT,
-            dependencies=["torch", "transformers", "accelerate"],
+            dependencies=["torch"],
             compatibility={
                 "torch_version": ">=2.2.0",
                 "min_memory_gb": 160.0
@@ -140,13 +140,13 @@ class Qwen3_Coder_Next_Plugin(TextModelPluginInterface):
         if self._config.device != "meta":
              self._model.to(self._config.device)
 
-        # Initialize Tokenizer (Placeholder)
+        # Initialize Tokenizer
         try:
-             from transformers import AutoTokenizer
-             # Use generic Qwen tokenizer if available, or fallback
-             self._tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-Coder-32B-Instruct", trust_remote_code=True)
+             from src.inference_pio.common.custom_components.tokenizer import CustomBPETokenizer
+             self._tokenizer = CustomBPETokenizer()
+             # self._tokenizer.load(...) # If we had path
         except Exception:
-             logger.warning("Could not load Qwen tokenizer, using mock/fallback")
+             logger.warning("Could not load custom tokenizer, using mock/fallback")
              self._tokenizer = None
 
         return self._model

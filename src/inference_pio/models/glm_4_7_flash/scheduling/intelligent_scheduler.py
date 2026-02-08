@@ -203,9 +203,11 @@ class IntelligentOperationScheduler:
                 duration_factor = max(50 - (pattern['avg_duration'] * 10), 0)
                 
                 # Consider recency - recently active operation types get priority
-                recent_ops = [o for o in self.operation_history.history 
-                             if o.operation_type == op.operation_type and 
-                                time.time() - o.completion_time < 30.0 if o.completion_time else True]
+                recent_ops = [
+                    o for o in self.operation_history.history
+                    if o.operation_type == op.operation_type and
+                    (time.time() - o.completion_time < 30.0 if o.completion_time else False)
+                ]
                 recency_factor = min(len(recent_ops) * 10, 30)
                 
                 base_priority = op.priority + int(freq_factor + duration_factor + recency_factor)
