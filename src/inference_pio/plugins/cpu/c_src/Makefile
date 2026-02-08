@@ -4,13 +4,13 @@
 ifeq ($(OS),Windows_NT)
     TARGET_LIB = libtensor_ops.dll
     CC = gcc
-    CFLAGS = -shared -O3 -Wall -Wextra -fopenmp -D_WIN32
+    CFLAGS = -shared -O3 -Wall -Wextra -fopenmp -D_WIN32 -I../../common
     LDFLAGS = -lm
     RM = del
 else
     TARGET_LIB = libtensor_ops.so
     CC = gcc
-    CFLAGS = -fPIC -shared -O3 -Wall -Wextra -fopenmp
+    CFLAGS = -fPIC -shared -O3 -Wall -Wextra -fopenmp -I../../common
     LDFLAGS = -lm
     RM = rm -f
 endif
