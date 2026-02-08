@@ -1,5 +1,5 @@
 """
-Custom Model Loader - Dependency Free (except safetensors)
+Custom Model Loader - Dependency Free (except C-Engine)
 Replacing transformers.AutoModel.from_pretrained with efficient direct loading using C Engine.
 """
 
@@ -9,11 +9,7 @@ import os
 import importlib
 from typing import Dict, List, Optional, Any
 
-# No numpy, no torch
-try:
-    from safetensors.numpy import load_file as safe_load_file
-except ImportError:
-    safe_load_file = None
+from ...core.engine.backend import load_safetensors
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +27,6 @@ class CustomModelLoader:
         # 1. Load Config
         config_path = os.path.join(model_path, "config.json")
         if not os.path.exists(config_path):
-            # Fallback for dummy tests
             config_dict = {}
         else:
             with open(config_path, "r") as f:
@@ -43,7 +38,6 @@ class CustomModelLoader:
 
         model_class = self._get_model_class(architectures, model_type)
         if not model_class:
-            # Fallback for verification scripts
             try:
                 module = importlib.import_module("src.inference_pio.models.qwen3_0_6b.architecture")
                 model_class = getattr(module, "Qwen3ForCausalLM")
@@ -63,8 +57,7 @@ class CustomModelLoader:
                 logger.error(f"Failed to instantiate model: {e}, {e2}")
                 raise e
 
-        # 4. Load Weights (Stubbed for C-Engine prototype to avoid heavy binary parsing)
-        # In a real impl, we would read bytes and call _lib.tensor_load_data
+        # 4. Load Weights using C Loader
         self.load_weights(model, model_path)
 
         return model
@@ -83,8 +76,48 @@ class CustomModelLoader:
     @staticmethod
     def load_weights(model, model_path: str, device: str = "cpu", strict: bool = False):
         """
-        Load weights stub.
+        Load weights from safetensors using C loader.
         """
-        logger.info(f"Loading weights from {model_path} (C-Engine stub)...")
-        # Real implementation would iterate safetensors, read bytes, pass to C
-        pass
+        logger.info(f"Loading weights from {model_path} (C-Engine)...")
+
+        # 1. Collect all model tensors into a map {name: Tensor}
+        state_dict_map = {}
+        # We need to traverse the model to find parameters
+        # Assuming model has state_dict-like method or we implement a traversal
+        # Since our Module implements state_dict(), we use it.
+
+        if hasattr(model, "state_dict"):
+            state_dict_map = model.state_dict()
+        else:
+            logger.warning("Model does not support state_dict(). Cannot load weights.")
+            return
+
+        # 2. Check for safetensors files
+        files_to_load = []
+
+        # Index file
+        index_file = os.path.join(model_path, "model.safetensors.index.json")
+        if os.path.exists(index_file):
+            with open(index_file, "r") as f:
+                index_data = json.load(f)
+            weight_map = index_data.get("weight_map", {})
+            unique_files = set(weight_map.values())
+            for fname in unique_files:
+                files_to_load.append(os.path.join(model_path, fname))
+        else:
+            # Single file
+            single_file = os.path.join(model_path, "model.safetensors")
+            if os.path.exists(single_file):
+                files_to_load.append(single_file)
+
+        if not files_to_load:
+            logger.warning("No .safetensors files found.")
+            return
+
+        # 3. Load each file
+        for filepath in files_to_load:
+            success = load_safetensors(filepath, state_dict_map)
+            if success:
+                logger.info(f"Loaded {filepath}")
+            else:
+                logger.warning(f"Failed to load {filepath}")

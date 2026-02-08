@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 class Qwen3_0_6B_Plugin(TextModelPluginInterface):
     """
-    Qwen3-0.6B Plugin - Backend Agnostic (Numpy/Torch)
+    Qwen3-0.6B Plugin - Backend Agnostic (C-Engine)
     """
 
     def __init__(self):
@@ -36,7 +36,7 @@ class Qwen3_0_6B_Plugin(TextModelPluginInterface):
             author="Alibaba Cloud",
             description="Qwen3-0.6B small language model",
             plugin_type=PluginType.MODEL_COMPONENT,
-            dependencies=["numpy"],
+            dependencies=["safetensors"],
             compatibility={
                 "python_version": ">=3.8",
                 "min_memory_gb": 2.0,
@@ -94,14 +94,21 @@ class Qwen3_0_6B_Plugin(TextModelPluginInterface):
 
         # Encode
         inputs = self._model._tokenizer.encode(prompt)
-        import numpy as np
-        input_ids = np.array([inputs])
+
+        # Pass to C Engine (requires simple list or pointer wrapper)
+        from ...core.engine.backend import Tensor
+        # Create tensor from list
+        # Assuming batch size 1
+        data = [float(x) for x in inputs]
+        input_ids = Tensor([1, len(inputs)], data)
 
         # Generate
-        output_ids = self._model.generate(input_ids, max_new_tokens=max_new_tokens, **kwargs)
+        output_ids_tensor = self._model.generate(input_ids, max_new_tokens=max_new_tokens, **kwargs)
 
-        # Decode
-        output_text = self._model._tokenizer.decode(output_ids[0].tolist())
+        # Decode (Tensor -> List)
+        output_ids_list = [int(x) for x in output_ids_tensor.to_list()]
+
+        output_text = self._model._tokenizer.decode(output_ids_list)
         return output_text
 
     def get_model_info(self) -> Dict[str, Any]:
@@ -115,6 +122,21 @@ class Qwen3_0_6B_Plugin(TextModelPluginInterface):
 
     def validate_model_compatibility(self, config: Any) -> bool:
         return isinstance(config, Qwen3_0_6B_Config)
+
+    # Implement required abstract methods
+    def tokenize(self, text: str, **kwargs) -> Any:
+        if self._model and self._model._tokenizer:
+            return self._model._tokenizer.encode(text)
+        return []
+
+    def detokenize(self, token_ids: Any, **kwargs) -> str:
+        if self._model and self._model._tokenizer:
+            return self._model._tokenizer.decode(token_ids)
+        return ""
+
+    def cleanup(self) -> bool:
+        self._model = None
+        return True
 
 def create_qwen3_0_6b_plugin():
     return Qwen3_0_6B_Plugin()
