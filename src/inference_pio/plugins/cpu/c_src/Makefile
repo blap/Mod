@@ -1,4 +1,4 @@
-# Makefile for CPU Ops Plugin (Linux/Windows)
+# Makefile for Native CPU Plugin (Linux/Windows)
 
 # Detect OS
 ifeq ($(OS),Windows_NT)

@@ -8,8 +8,9 @@ import sys
 from typing import Tuple, List, Optional, Dict
 
 # Determine Library Path
-# Look in plugins directory first
-_plugin_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "plugins", "cpu_ops", "c_src")
+# Pointing to src/inference_pio/plugins/cpu/c_src
+_plugin_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "plugins", "cpu", "c_src")
+
 if os.name == 'nt':
     _lib_name = "libtensor_ops.dll"
 else:
@@ -22,44 +23,53 @@ if not os.path.exists(_lib_path):
     _lib_path = os.path.join(os.path.dirname(__file__), "c_src", _lib_name)
 
 if not os.path.exists(_lib_path):
-    raise RuntimeError(f"Could not find C Tensor Engine library at {_lib_path}")
+    # Just a warning during build/test phase if not compiled yet
+    pass
+    # raise RuntimeError(f"Could not find C Tensor Engine library at {_lib_path}")
 
-_lib = ctypes.CDLL(_lib_path)
+try:
+    _lib = ctypes.CDLL(_lib_path)
 
-# Define Types
-class CTensor(ctypes.Structure):
-    _fields_ = [
-        ("data", ctypes.POINTER(ctypes.c_float)),
-        ("shape", ctypes.POINTER(ctypes.c_int)),
-        ("ndim", ctypes.c_int),
-        ("size", ctypes.c_int),
-    ]
+    # Define Types
+    class CTensor(ctypes.Structure):
+        _fields_ = [
+            ("data", ctypes.POINTER(ctypes.c_float)),
+            ("shape", ctypes.POINTER(ctypes.c_int)),
+            ("ndim", ctypes.c_int),
+            ("size", ctypes.c_int),
+        ]
 
-# Operations Signatures
-_lib.create_tensor.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int]
-_lib.create_tensor.restype = ctypes.POINTER(CTensor)
-_lib.free_tensor.argtypes = [ctypes.POINTER(CTensor)]
-_lib.tensor_fill.argtypes = [ctypes.POINTER(CTensor), ctypes.c_float]
-_lib.tensor_add.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-_lib.tensor_mul.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-_lib.tensor_matmul.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-_lib.tensor_linear.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-_lib.tensor_softmax.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-_lib.tensor_silu.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-_lib.tensor_rms_norm.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_float]
-_lib.tensor_rope.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-_lib.tensor_load_data.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.c_float), ctypes.c_int]
-_lib.tensor_get_data.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.c_float), ctypes.c_int]
+    # Operations Signatures
+    _lib.create_tensor.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int]
+    _lib.create_tensor.restype = ctypes.POINTER(CTensor)
+    _lib.free_tensor.argtypes = [ctypes.POINTER(CTensor)]
+    _lib.tensor_fill.argtypes = [ctypes.POINTER(CTensor), ctypes.c_float]
+    _lib.tensor_add.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    _lib.tensor_mul.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    _lib.tensor_matmul.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    _lib.tensor_linear.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    _lib.tensor_softmax.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    _lib.tensor_silu.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    _lib.tensor_rms_norm.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_float]
+    _lib.tensor_rope.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    _lib.tensor_load_data.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.c_float), ctypes.c_int]
+    _lib.tensor_get_data.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.c_float), ctypes.c_int]
 
-# Loader Signatures
-_lib.open_safetensors.argtypes = [ctypes.c_char_p]
-_lib.open_safetensors.restype = ctypes.c_int
-_lib.load_tensor_data.argtypes = [ctypes.c_char_p, ctypes.POINTER(ctypes.c_float), ctypes.c_int]
-_lib.load_tensor_data.restype = ctypes.c_int
-_lib.close_safetensors.argtypes = []
+    # Loader Signatures
+    _lib.open_safetensors.argtypes = [ctypes.c_char_p]
+    _lib.open_safetensors.restype = ctypes.c_int
+    _lib.load_tensor_data.argtypes = [ctypes.c_char_p, ctypes.POINTER(ctypes.c_float), ctypes.c_int]
+    _lib.load_tensor_data.restype = ctypes.c_int
+    _lib.close_safetensors.argtypes = []
+
+except OSError:
+    _lib = None
 
 class Tensor:
     def __init__(self, shape: List[int], data: List[float] = None, _handle=None):
+        if not _lib:
+            raise RuntimeError("C Engine library not loaded. Please compile the CPU plugin.")
+
         if _handle:
             self._handle = _handle
         else:
@@ -161,6 +171,8 @@ def arange(end: int) -> Tensor:
 
 # Loader Interface
 def load_safetensors(filepath: str, model_layers: Dict[str, Tensor]):
+    if not _lib: return False
+
     if not os.path.exists(filepath):
         return False
 
