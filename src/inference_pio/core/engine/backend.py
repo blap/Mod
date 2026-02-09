@@ -82,6 +82,21 @@ def _setup_sigs(lib):
     if hasattr(lib, 'tensor_conv2d'):
         lib.tensor_conv2d.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int, ctypes.c_int, ctypes.c_int]
 
+    if hasattr(lib, 'tensor_scale'):
+        lib.tensor_scale.argtypes = [ctypes.POINTER(CTensor), ctypes.c_float, ctypes.POINTER(CTensor)]
+    if hasattr(lib, 'tensor_permute'):
+        lib.tensor_permute.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.c_int)]
+    if hasattr(lib, 'tensor_swiglu'):
+        lib.tensor_swiglu.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    if hasattr(lib, 'tensor_scaled_dot_product_attention'):
+        lib.tensor_scaled_dot_product_attention.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_float]
+    if hasattr(lib, 'tensor_reshape'):
+        lib.tensor_reshape.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    if hasattr(lib, 'tensor_gather'):
+        lib.tensor_gather.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int]
+    if hasattr(lib, 'tensor_scatter_add'):
+        lib.tensor_scatter_add.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int]
+
     if hasattr(lib, 'open_safetensors'):
         lib.open_safetensors.argtypes = [ctypes.c_char_p]
         lib.open_safetensors.restype = ctypes.c_int
@@ -175,11 +190,66 @@ class Tensor:
         return out
     def __add__(self, other): return self.add(other)
 
-    def mul(self, other: 'Tensor') -> 'Tensor':
+    def mul(self, other: Union['Tensor', float]) -> 'Tensor':
         out = Tensor(list(self.shape), device=self.device)
-        self._lib.tensor_mul(self._handle, other._handle, out._handle)
+        if isinstance(other, (int, float)):
+            if hasattr(self._lib, 'tensor_scale'):
+                self._lib.tensor_scale(self._handle, ctypes.c_float(other), out._handle)
+            else:
+                # Fallback via fill (slower)
+                t = Tensor(list(self.shape), device=self.device)
+                t.fill(float(other))
+                self._lib.tensor_mul(self._handle, t._handle, out._handle)
+        else:
+            self._lib.tensor_mul(self._handle, other._handle, out._handle)
         return out
     def __mul__(self, other): return self.mul(other)
+
+    def swiglu(self, up_proj_out: 'Tensor') -> 'Tensor':
+        out = Tensor(list(self.shape), device=self.device)
+        if hasattr(self._lib, 'tensor_swiglu'):
+            self._lib.tensor_swiglu(self._handle, up_proj_out._handle, out._handle)
+        else:
+            # Fallback
+            silu = self.silu()
+            out = silu.mul(up_proj_out)
+        return out
+
+    def permute(self, dims: List[int]) -> 'Tensor':
+        if len(dims) != self.ndim: raise ValueError("Permute dims mismatch")
+        new_shape = [self.shape[d] for d in dims]
+        out = Tensor(new_shape, device=self.device)
+        if hasattr(self._lib, 'tensor_permute'):
+            c_dims = (ctypes.c_int * len(dims))(*dims)
+            self._lib.tensor_permute(self._handle, out._handle, c_dims)
+        else:
+            raise NotImplementedError("Permute not implemented in backend")
+        return out
+
+    def reshape(self, new_shape: List[int]) -> 'Tensor':
+        size = 1
+        for s in new_shape: size *= s
+        if size != self.size: raise ValueError("Reshape size mismatch")
+        out = Tensor(new_shape, device=self.device)
+        if hasattr(self._lib, 'tensor_reshape'):
+            self._lib.tensor_reshape(self._handle, out._handle)
+        else:
+            # Fallback: copy data
+            out.load(self.to_list())
+        return out
+
+    def gather(self, indices: 'Tensor', axis: int = 0) -> 'Tensor':
+        # Result shape: indices.shape + input.shape[axis+1:] (simplified)
+        # If indices is 1D: [indices.size, input.shape[1:]]
+        out_shape = [indices.size] + list(self.shape)[axis+1:]
+        out = Tensor(out_shape, device=self.device)
+        if hasattr(self._lib, 'tensor_gather'):
+            self._lib.tensor_gather(self._handle, indices._handle, out._handle, axis)
+        return out
+
+    def scatter_add(self, indices: 'Tensor', src: 'Tensor', axis: int = 0):
+        if hasattr(self._lib, 'tensor_scatter_add'):
+            self._lib.tensor_scatter_add(self._handle, indices._handle, src._handle, axis)
 
     def linear(self, weight: 'Tensor', bias: Optional['Tensor'] = None) -> 'Tensor':
         in_features = weight.shape[1] if weight.ndim >= 2 else weight.shape[0]
@@ -363,6 +433,27 @@ def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0, device="cpu
     if hasattr(lib, 'tensor_precompute_freqs_cis'):
         lib.tensor_precompute_freqs_cis(dim, end, ctypes.c_float(theta), cos._handle, sin._handle)
     return cos, sin
+
+def scaled_dot_product_attention(q: Tensor, k: Tensor, v: Tensor, scale: float = None) -> Tensor:
+    """
+    Fused Scaled Dot Product Attention: Softmax(Q * K^T / scale) * V
+    Assumes [Batch, Seq, Heads, HeadDim] layout or similar.
+    """
+    if scale is None:
+        scale = 1.0 / (q.shape[-1] ** 0.5)
+
+    out = Tensor(list(q.shape), device=q.device)
+
+    # Try Fused Kernel
+    if hasattr(q._lib, 'tensor_scaled_dot_product_attention'):
+        q._lib.tensor_scaled_dot_product_attention(q._handle, k._handle, v._handle, out._handle, ctypes.c_float(scale))
+        return out
+    else:
+        # Fallback (Slow Python)
+        scores = q.matmul(k, transpose_b=True)
+        scores = scores * scale # Uses tensor_scale if available
+        attn = scores.softmax()
+        return attn.matmul(v)
 
 def load_safetensors(filepath: str, model_layers: Dict[str, Tensor]):
     if not _lib_cpu or not os.path.exists(filepath): return False

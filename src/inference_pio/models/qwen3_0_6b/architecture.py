@@ -3,7 +3,7 @@ Qwen3-0.6B Architecture - C Backend (Real Generation)
 """
 
 from typing import Optional, Tuple, List
-from ...core.engine.backend import Module, Linear, Embedding, RMSNorm, Tensor, cat, precompute_freqs_cis
+from ...core.engine.backend import Module, Linear, Embedding, RMSNorm, Tensor, cat, precompute_freqs_cis, scaled_dot_product_attention
 
 class Qwen3RotaryEmbedding(Module):
     def __init__(self, dim, max_position_embeddings=32768, base=10000.0):
@@ -24,7 +24,9 @@ class Qwen3MLP(Module):
         self.up_proj = Linear(config.hidden_size, config.intermediate_size, bias=False)
         self.down_proj = Linear(config.intermediate_size, config.hidden_size, bias=False)
     def forward(self, x):
-        return self.down_proj(self.gate_proj(x).silu().mul(self.up_proj(x)))
+        gate = self.gate_proj(x)
+        up = self.up_proj(x)
+        return self.down_proj(gate.swiglu(up))
 
 class Qwen3Attention(Module):
     def __init__(self, config):
@@ -41,7 +43,17 @@ class Qwen3Attention(Module):
         k = self.k_proj(hidden_states)
         v = self.v_proj(hidden_states)
 
-        cos, sin = self.rotary_emb(v, k.shape[1])
+        # Reshape [B, S, Hidden] -> [B, S, Heads, HeadDim]
+        B = q.shape[0]
+        S = q.shape[1]
+        H = q.shape[2]
+        heads = H // self.head_dim
+        new_shape = [B, S, heads, self.head_dim]
+        q = q.reshape(new_shape)
+        k = k.reshape(new_shape)
+        v = v.reshape(new_shape)
+
+        cos, sin = self.rotary_emb(v, S)
         q, k = q.rope(k, cos, sin)
 
         if past_key_value is not None:
@@ -50,9 +62,10 @@ class Qwen3Attention(Module):
 
         current_cache = (k, v) if use_cache else None
 
-        attn = q.matmul(k, transpose_b=True)
-        attn = attn.softmax()
-        out = attn.matmul(v)
+        out = scaled_dot_product_attention(q, k, v)
+
+        # Flatten back
+        out = out.reshape([B, S, H])
 
         return self.o_proj(out), None, current_cache
 

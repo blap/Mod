@@ -52,6 +52,10 @@ def test_30b_model_structure():
     out = model(input_ids)
     assert out.shape == (1, 5, 32)
 
+    # Test Generation
+    gen = model.generate(input_ids, max_new_tokens=2)
+    assert gen.shape == (1, 7) # 5 + 2
+
 def test_next_model_structure():
     """Verify Next model can instantiate without torch."""
     config = Qwen3CoderNextConfig(

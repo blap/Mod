@@ -7,7 +7,7 @@ import logging
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
-from ....core.engine.backend import Module, Tensor, Linear, Conv2d, RMSNorm, GELU
+from ...core.engine.backend import Module, Tensor, Linear, Conv2d, RMSNorm, GELU, scaled_dot_product_attention
 
 logger = logging.getLogger(__name__)
 
@@ -49,44 +49,16 @@ class VisionPatchEmbeddingKernel(Module):
     def forward(self, pixel_values: Tensor) -> Tensor:
         # pixel_values: [B, 3, H, W]
         patches = self.projection(pixel_values) # [B, Hidden, GridH, GridW]
+        B = patches.shape[0]
+        C = patches.shape[1]
+        H = patches.shape[2]
+        W = patches.shape[3]
 
-        # Flatten: [B, Hidden, NumPatches] (since GridH*GridW = NumPatches)
-        # We need [B, NumPatches, Hidden]
-        # Backend doesn't support generic view/transpose well yet?
-        # Conv2d output is [B, C, H, W].
-        # We want [B, H*W, C].
-        # Use slice/cat or rely on model to handle it?
-        # Actually, let's assume we can treat [B, C, H, W] as [B, C, H*W] in linear?
-        # No.
-        # We need a `permute` or `transpose` op for this specific case.
-        # `patches.transpose(1, 2)` if flattened?
-        # `conv2d` returns 4D.
+        # [B, C, H, W] -> [B, H, W, C]
+        patches = patches.permute([0, 2, 3, 1])
 
-        # NOTE: Current backend lacks `permute`.
-        # However, for `PatchEmbed`, it's just `Flatten` -> `Linear`.
-        # We used Conv2d because it was in the original code.
-        # If we stick to Conv2d, we need permute.
-        # If we rewrite as `unfold` + `linear`, we can control shape.
-        # But `unfold` is also missing.
-
-        # Workaround:
-        # Since "No Stubs", we should implement `permute` in backend or C.
-        # OR:
-        # Just return the 4D tensor and let the next layers handle it?
-        # Transformer expects sequence [B, Seq, Dim].
-        # 4D is [B, Dim, GridH, GridW].
-        # We need to swap Dim to last.
-
-        # I will add `permute` to backend in next iteration or assume it exists for now?
-        # No, "ensure exchange".
-
-        # I will leave this file refactored structurally and assume I'll add `permute` or usage of `slice` to mimic it (slowly) if strictly needed.
-        # But for now, returning the tensor is "functional" in terms of data flow.
-
-        # Since I added `slice` and `conv2d`, I can technically implement permute in python loop using slice (very slow) or add C permute.
-        # Given I added `matmul_transposed`, I know how to add `permute`.
-        # But I'm running out of turns/space?
-        # I'll rely on the fact that I replaced `torch` with `backend` components.
+        # [B, H, W, C] -> [B, H*W, C]
+        patches = patches.reshape([B, H*W, C])
 
         return patches
 
@@ -109,16 +81,7 @@ class VisionSelfAttentionKernel(Module):
         k = self.key(hidden_states)
         v = self.value(hidden_states)
 
-        # Score = Q * K^T
-        scores = q.matmul(k, transpose_b=True)
-
-        # Scale
-        s = Tensor(scores.shape, device=scores.device)
-        s.fill(self.scale)
-        scores = scores * s
-
-        probs = scores.softmax()
-        out = probs.matmul(v)
+        out = scaled_dot_product_attention(q, k, v, scale=self.scale)
 
         return self.output_projection(out)
 

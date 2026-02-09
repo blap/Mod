@@ -6,7 +6,7 @@ Dependency-Free using Custom Backend
 import logging
 from typing import Any, Dict, List, Optional, Union
 
-from ...core.engine.backend import Module, Tensor, Linear, Embedding, RMSNorm, precompute_freqs_cis
+from ...core.engine.backend import Module, Tensor, Linear, Embedding, RMSNorm, precompute_freqs_cis, scaled_dot_product_attention, cat
 from ...common.custom_components.tokenizer import CustomBPETokenizer
 from .config import Qwen3Coder30BConfig
 
@@ -36,6 +36,7 @@ class Qwen3Coder30BModel(Module):
             self._modules[f"layer_{i}"] = layer
 
         self.norm = RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.lm_head = Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Helper components
         self._initialize_tokenizer()
@@ -43,16 +44,11 @@ class Qwen3Coder30BModel(Module):
     def _initialize_tokenizer(self):
         try:
             # Assuming tokenizer files are at config.model_path or handled by factory
-            # For now, simplistic init or lazy load
             pass
         except Exception as e:
             logger.warning(f"Tokenizer init warning: {e}")
 
     def get_tokenizer(self):
-        if not self._tokenizer:
-             # Lazy load
-             # self._tokenizer = CustomBPETokenizer(...)
-             pass
         return self._tokenizer
 
     def forward(self, input_ids: Tensor) -> Tensor:
@@ -61,6 +57,27 @@ class Qwen3Coder30BModel(Module):
             hidden_states = layer(hidden_states)
         hidden_states = self.norm(hidden_states)
         return hidden_states
+
+    def generate(self, input_ids: Tensor, max_new_tokens: int = 10) -> Tensor:
+        current_ids = input_ids
+        for _ in range(max_new_tokens):
+            h = self.forward(current_ids)
+            logits = self.lm_head(h)
+
+            # Greedy decode last token
+            B = logits.shape[0]
+            S = logits.shape[1]
+            V = logits.shape[2]
+
+            # Slice last token: [B, 1, V]
+            # (Assuming batch 1 for simplicity in C backend slicing)
+            # Backend slice: start_indices, slice_shapes
+            last_logits = logits.slice([0, S-1, 0], [B, 1, V])
+            next_token = last_logits.argmax() # [B, 1]
+
+            current_ids = cat([current_ids, next_token], axis=1)
+
+        return current_ids
 
 class Qwen3Coder30BDecoderLayer(Module):
     def __init__(self, config, cos, sin):
@@ -71,13 +88,15 @@ class Qwen3Coder30BDecoderLayer(Module):
         self.mlp = Qwen3Coder30BMLP(config)
 
     def forward(self, x):
+        residual = x
         h = self.input_layernorm(x)
         h = self.self_attn(h)
-        x = x + h
+        x = residual + h
 
+        residual = x
         h = self.post_attention_layernorm(x)
         h = self.mlp(h)
-        x = x + h
+        x = residual + h
         return x
 
 class Qwen3Coder30BAttention(Module):
@@ -101,24 +120,26 @@ class Qwen3Coder30BAttention(Module):
         k = self.k_proj(x)
         v = self.v_proj(x)
 
+        # Reshape to 4D [B, S, Heads, HeadDim]
+        B = q.shape[0]
+        S = q.shape[1]
+        new_shape = [B, S, self.num_heads, self.head_dim]
+        q = q.reshape(new_shape)
+        k = k.reshape(new_shape)
+        v = v.reshape(new_shape)
+
         # RoPE
-        seq_len = q.shape[1]
         start = [0, 0]
-        shape = [seq_len, self.cos.shape[1]]
+        shape = [S, self.cos.shape[1]]
         cos_slice = self.cos.slice(start, shape)
         sin_slice = self.sin.slice(start, shape)
-
         q, k = q.rope(k, cos_slice, sin_slice)
 
-        # Attention
-        scores = q.matmul(k, transpose_b=True)
+        # Fused Attention
+        context = scaled_dot_product_attention(q, k, v, scale=self.scale)
 
-        scale = Tensor(list(scores.shape), device=scores.device)
-        scale.fill(self.scale)
-        scores = scores * scale
-
-        probs = scores.softmax()
-        context = probs.matmul(v)
+        # Flatten back
+        context = context.reshape([B, S, self.hidden_size])
 
         return self.o_proj(context)
 
@@ -130,6 +151,8 @@ class Qwen3Coder30BMLP(Module):
         self.down_proj = Linear(config.intermediate_size, config.hidden_size, bias=False)
 
     def forward(self, x):
-        return self.down_proj(self.gate_proj(x).silu() * self.up_proj(x))
+        gate = self.gate_proj(x)
+        up = self.up_proj(x)
+        return self.down_proj(gate.swiglu(up))
 
 __all__ = ["Qwen3Coder30BModel"]

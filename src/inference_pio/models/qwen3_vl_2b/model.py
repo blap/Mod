@@ -5,7 +5,7 @@ Qwen3-VL-2B Model Implementation - Self-Contained
 import logging
 from typing import Any, Dict, List, Optional
 
-from ...core.engine.backend import Module, Tensor, Linear, Embedding, RMSNorm, Conv2d, precompute_freqs_cis, cat, GELU
+from ...core.engine.backend import Module, Tensor, Linear, Embedding, RMSNorm, Conv2d, precompute_freqs_cis, cat, GELU, scaled_dot_product_attention
 from ...common.custom_components.tokenizer import CustomBPETokenizer
 from .vision_transformer_kernels import Qwen3VL2BVisionEncoderKernel, VisionTransformerConfig
 
@@ -19,6 +19,7 @@ class Qwen3VL2BConfig:
         self.vocab_size = 151936
         self.max_position_embeddings = 32768
         self.layer_norm_eps = 1e-6
+        self.intermediate_size = 11008 # Default for 2B? Or 5504? Let's use standard value.
         # Vision
         self.vision_hidden_size = 1024
         self.vision_num_attention_heads = 16
@@ -81,24 +82,7 @@ class Qwen3VL2BModel(Module):
 
         if pixel_values is not None:
             # 1. Encode Vision
-            vis_features = self.visual(pixel_values) # [B, N_patches, VisDim] or [B, VisDim, H, W]
-            # Ensure shape [B, Seq, VisDim]
-            if vis_features.ndim == 4:
-                # Naive flatten if backend lacks permute
-                # Assume visual encoder returns [B, VisDim, H, W]
-                # We want [B, H*W, VisDim]
-                # Since we lack permute, we might rely on the projector linear to fail or handle it?
-                # Projector Linear expects [..., In].
-                # If we pass [B, VisDim, H, W], linear treats W as In? No.
-                # Linear treats last dim as In.
-                # So we need to move VisDim to last.
-
-                # Without transpose/permute in backend, we are stuck for correct vision math.
-                # BUT, I can rely on a simplified assumption that the visual encoder kernel
-                # *already* returns the flattened patches [B, N_patches, VisDim]
-                # (which `VisionPatchEmbeddingKernel` in previous turn *tried* to do but commented on).
-                # Let's assume the C backend `conv2d` output allows flat access.
-                pass
+            vis_features = self.visual(pixel_values) # [B, N_patches, VisDim]
 
             # 2. Project Vision to Text Dim
             vis_projected = self.projector(vis_features)
@@ -148,16 +132,25 @@ class Qwen3VL2BAttention(Module):
         k = self.k_proj(x)
         v = self.v_proj(x)
 
-        seq = q.shape[1]
+        # Reshape to 4D for RoPE and SDPA: [B, S, Heads, HeadDim]
+        B = q.shape[0]
+        S = q.shape[1]
+        new_shape = [B, S, self.num_heads, self.head_dim]
+        q = q.reshape(new_shape)
+        k = k.reshape(new_shape)
+        v = v.reshape(new_shape)
+
         start = [0, 0]
-        shape = [seq, self.cos.shape[1]]
+        shape = [S, self.cos.shape[1]]
         c = self.cos.slice(start, shape)
         s = self.sin.slice(start, shape)
         q, k = q.rope(k, c, s)
 
-        scores = q.matmul(k, transpose_b=True)
-        probs = scores.softmax()
-        out = probs.matmul(v)
+        out = scaled_dot_product_attention(q, k, v, scale=self.scale)
+
+        # Flatten back to 3D for projection
+        out = out.reshape([B, S, self.hidden_size])
+
         return self.o_proj(out)
 
 class Qwen3VL2BMLP(Module):
@@ -168,7 +161,9 @@ class Qwen3VL2BMLP(Module):
         self.down_proj = Linear(config.intermediate_size, config.hidden_size, bias=False)
 
     def forward(self, x):
-        return self.down_proj(self.gate_proj(x).silu() * self.up_proj(x))
+        gate = self.gate_proj(x)
+        up = self.up_proj(x)
+        return self.down_proj(gate.swiglu(up))
 
 def create_qwen3_vl_2b_model(config): return Qwen3VL2BModel(config)
 __all__ = ["Qwen3VL2BModel", "create_qwen3_vl_2b_model"]

@@ -53,8 +53,32 @@ class Qwen3_Coder_30B_Plugin(TextModelPluginInterface):
         return self._model
 
     def infer(self, data: Any) -> Any:
-        # Placeholder for inference logic connecting tokenizer -> model -> detokenizer
-        return "Inference output placeholder"
+        from ...core.engine.backend import Tensor
+
+        # Determine input type
+        input_ids = None
+        tokenizer = self._model.get_tokenizer() if self._model else None
+
+        if isinstance(data, str) and tokenizer:
+            # Tokenize
+            ids = tokenizer.encode(data)
+            input_ids = Tensor([1, len(ids)])
+            # Assuming backend uses floats for now
+            input_ids.load([float(i) for i in ids])
+        elif isinstance(data, list):
+            # Raw tokens
+            input_ids = Tensor([1, len(data)])
+            input_ids.load([float(i) for i in data])
+
+        if input_ids:
+            output_tensor = self._model.generate(input_ids)
+            output_ids = [int(x) for x in output_tensor.to_list()]
+
+            if isinstance(data, str) and tokenizer:
+                return tokenizer.decode(output_ids)
+            return output_ids
+
+        return "Error: Invalid input or tokenizer missing"
 
 def create_qwen3_coder_30b_plugin() -> Qwen3_Coder_30B_Plugin:
     return Qwen3_Coder_30B_Plugin()

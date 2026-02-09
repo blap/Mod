@@ -7,12 +7,6 @@ Each model plugin is completely independent with its own configuration, tests, a
 """
 
 from .config import GLM47DynamicConfig, GLM47FlashConfig
-from .config_integration import (
-    GLM47ConfigurablePlugin,
-)
-from .config_integration import (
-    create_glm_4_7_flash_plugin as create_glm_4_7_configurable_plugin,
-)
 from .model import GLM47FlashModel
 from .plugin import GLM_4_7_Flash_Plugin, create_glm_4_7_flash_plugin
 
@@ -22,6 +16,4 @@ __all__ = [
     "GLM47FlashModel",
     "GLM47FlashConfig",
     "GLM47DynamicConfig",
-    "GLM47ConfigurablePlugin",
-    "create_glm_4_7_configurable_plugin",
 ]

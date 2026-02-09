@@ -6,7 +6,7 @@ from typing import Optional, Tuple, Union, List, Dict, Any
 import logging
 import math
 
-from ...core.engine.backend import Tensor, Module, Linear, Embedding, RMSNorm, precompute_freqs_cis
+from ...core.engine.backend import Tensor, Module, Linear, Embedding, RMSNorm, precompute_freqs_cis, scaled_dot_product_attention
 from .config import Qwen3CoderNextConfig
 
 logger = logging.getLogger(__name__)
@@ -98,8 +98,17 @@ class Qwen3CoderNextAttention(Module):
         k = self.k_proj(hidden_states)
         v = self.v_proj(hidden_states)
 
+        # Reshape [B, S, Hidden] -> [B, S, Heads, HeadDim]
+        B = q.shape[0]
+        S = q.shape[1]
+        H = q.shape[2]
+        new_shape = [B, S, self.num_heads, self.head_dim]
+        q = q.reshape(new_shape)
+        k = k.reshape(new_shape)
+        v = v.reshape(new_shape)
+
         # Apply RoPE
-        seq_len = q.shape[1]
+        seq_len = S
         start_indices = [0, 0]
         slice_shapes = [seq_len, self.cos_cache.shape[1]]
 
@@ -108,15 +117,11 @@ class Qwen3CoderNextAttention(Module):
 
         q, k = q.rope(k, cos, sin)
 
-        # Attention Score: Q * K^T
-        scores = q.matmul(k, transpose_b=True)
+        # Fused Attention
+        context = scaled_dot_product_attention(q, k, v, scale=self.scale)
 
-        scale_tensor = Tensor(list(scores.shape), device=scores.device)
-        scale_tensor.fill(self.scale)
-        scores = scores * scale_tensor
-
-        attn_probs = scores.softmax()
-        context = attn_probs.matmul(v)
+        # Flatten
+        context = context.reshape([B, S, H])
         output = self.o_proj(context)
         return output
 
@@ -128,7 +133,8 @@ class Qwen3CoderNextMLP(Module):
         self.down_proj = Linear(config.intermediate_size, config.hidden_size, bias=False)
 
     def forward(self, x: Tensor) -> Tensor:
-        gate = self.gate_proj(x).silu()
+        gate = self.gate_proj(x)
         up = self.up_proj(x)
-        merged = gate * up
+        # Fused SwiGLU
+        merged = gate.swiglu(up)
         return self.down_proj(merged)
