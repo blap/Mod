@@ -15,7 +15,9 @@ class TestKVCache(unittest.TestCase):
             num_hidden_layers=1,
             vocab_size=100,
             intermediate_size=128,
-            max_position_embeddings=128
+            max_position_embeddings=128,
+            deltanet_head_dim=16, # reduced for test speed
+            deltanet_query_key_heads=4
         )
         model = Qwen3CoderNextForCausalLM(config)
 
@@ -26,17 +28,23 @@ class TestKVCache(unittest.TestCase):
 
         self.assertIsNotNone(cache)
         self.assertEqual(len(cache), 1) # 1 layer
-        k, v = cache[0]
-        self.assertEqual(k.shape[1], 5) # Seq len 5 in cache
+
+        # Layer 0 is DeltaNet (default pattern starts with deltanet)
+        state = cache[0]
+        # State should be a Tensor [B, H, D, D]
+        # [1, 4, 16, 16]
+        self.assertTrue(isinstance(state, Tensor))
+        self.assertEqual(state.shape, (1, 4, 16, 16))
 
         # 2. Generate step (next token)
         next_input = Tensor([1, 1])
         next_input.fill(2.0)
 
         logits_next, cache_next = model(next_input, past_key_values=cache, use_cache=True)
-        k_next, v_next = cache_next[0]
+        state_next = cache_next[0]
 
-        self.assertEqual(k_next.shape[1], 6) # 5 + 1
+        # State should be updated (shape remains same)
+        self.assertEqual(state_next.shape, (1, 4, 16, 16))
 
         print("Qwen3-Coder-Next KV Cache Test Passed")
 

@@ -308,13 +308,6 @@ void tensor_conv2d(Tensor* input, Tensor* weight, Tensor* bias, Tensor* out, int
 
 // Permute
 void tensor_permute(Tensor* input, Tensor* out, int* dims) {
-    // Generic permutation. Very slow if not optimized, but flexible.
-    // dims maps output dimension index to input dimension index.
-    // e.g. [0, 2, 3, 1] means out[i, j, k, l] = in[i, l, j, k] ??? No.
-    // Usually dims list the order of input dims in output.
-    // Pytorch: permute(dims). input[i, j, k] -> permute(2, 0, 1) -> input[k, i, j].
-    // Here we iterate output index, map back to input index.
-
     int ndim = input->ndim;
     int* in_strides = (int*)malloc(sizeof(int) * ndim);
     int* out_strides = (int*)malloc(sizeof(int) * ndim);
@@ -326,21 +319,11 @@ void tensor_permute(Tensor* input, Tensor* out, int* dims) {
     for(int i=0; i<out->size; i++) {
         int temp = i;
         int in_offset = 0;
-
-        // Convert flat output index i to multi-dim output indices
-        // Then map to input indices using dims[]
-        // Then convert to flat input offset
-
         for(int d=0; d<ndim; d++) {
             int coord = temp / out_strides[d];
             temp %= out_strides[d];
-
-            // This coord corresponds to dimension d in output.
-            // Which is dimension dims[d] in input.
-            // So we add coord * in_strides[dims[d]]
             in_offset += coord * in_strides[dims[d]];
         }
-
         out->data[i] = input->data[in_offset];
     }
 
@@ -349,39 +332,15 @@ void tensor_permute(Tensor* input, Tensor* out, int* dims) {
 }
 
 // Scaled Dot Product Attention (Fused)
-// Q, K, V: [Batch, Heads, Seq, HeadDim] (simplified for now)
-// Or [Batch, Seq, Heads, HeadDim]
 void tensor_scaled_dot_product_attention(Tensor* q, Tensor* k, Tensor* v, Tensor* out, float scale) {
-    // Assume Q, K, V are [Batch, Heads, Seq, HeadDim] (standard transposes already done?)
-    // Or [Batch, Seq, Heads, HeadDim] (standard Qwen).
-    // Let's assume [Batch, Seq, Heads, HeadDim] as per `rope` above.
-    // Wait, attention usually operates on Heads dimension independently.
-    // Standard Qwen: [Batch, Seq, Heads, HeadDim].
-    // To do matmul(Q, K^T), we need to handle the heads.
-    // For each Head, we do Q[Seq, HeadDim] * K[Seq, HeadDim]^T -> [Seq, Seq].
-
     int batch = q->shape[0];
     int seq = q->shape[1];
     int heads = q->shape[2];
     int head_dim = q->shape[3];
 
-    // Output: [Batch, Seq, Heads, HeadDim]
-
     #pragma omp parallel for collapse(2)
     for(int b=0; b<batch; b++) {
         for(int h=0; h<heads; h++) {
-            // Pointers to this head's data
-            // Stride: Batch*Seq*Heads*HeadDim.
-            // Offset for (b, s, h): ((b*seq + s)*heads + h)*head_dim
-            // This layout is interleaved heads: [Seq, Heads, Dim].
-            // This is terrible for attention (strided access).
-            // But we must work with it.
-
-            // Allocate score buffer on stack/heap for this thread?
-            // Size: Seq * Seq. Max 4k*4k = 16M floats. Too big for stack.
-            // Malloc per thread is slow.
-            // But this is Python-replacement, so malloc is okay compared to Python overhead.
-
             float* scores = (float*)malloc(sizeof(float) * seq * seq);
 
             // Q * K^T
@@ -429,9 +388,6 @@ void tensor_scaled_dot_product_attention(Tensor* q, Tensor* k, Tensor* v, Tensor
     }
 }
 
-// SwiGLU: Gate * SiLU(Gate) * Up? No, SwiGLU(x) = (xW_g * SiLU(xW_g)) * xW_up ?
-// Usually passed as two tensors: gate_output, up_output.
-// out = silu(gate) * up
 void tensor_swiglu(Tensor* gate, Tensor* up, Tensor* out) {
     #pragma omp parallel for simd
     for(int i=0; i<out->size; i++) {
@@ -442,7 +398,6 @@ void tensor_swiglu(Tensor* gate, Tensor* up, Tensor* out) {
     }
 }
 
-// Slice (Implementation exists but let's ensure it's here)
 void tensor_slice(Tensor* input, Tensor* out, int* start_indices, int* slice_shapes) {
     int ndim = input->ndim;
     int* in_strides = (int*)malloc(sizeof(int) * ndim);
@@ -465,7 +420,6 @@ void tensor_slice(Tensor* input, Tensor* out, int* start_indices, int* slice_sha
     free(out_strides);
 }
 
-// Precompute Freqs Cis (Implementation exists)
 void tensor_precompute_freqs_cis(int dim, int end, float theta, Tensor* out_cos, Tensor* out_sin) {
     #pragma omp parallel for
     for(int i=0; i<end; i++) {
@@ -478,7 +432,6 @@ void tensor_precompute_freqs_cis(int dim, int end, float theta, Tensor* out_cos,
     }
 }
 
-// Argmax
 void tensor_argmax(Tensor* input, Tensor* out) {
     int last_dim = input->shape[input->ndim-1];
     int batch = input->size / last_dim;
@@ -497,7 +450,6 @@ void tensor_argmax(Tensor* input, Tensor* out) {
     }
 }
 
-// Embed
 void tensor_embed(Tensor* weight, Tensor* indices, Tensor* out) {
     int embed_dim = weight->shape[1];
     #pragma omp parallel for
@@ -508,47 +460,20 @@ void tensor_embed(Tensor* weight, Tensor* indices, Tensor* out) {
     }
 }
 
-// Gather: out[i, j, k] = input[indices[i, j, k], j, k] (if axis=0)
-// Simplified: tensor_gather(input, indices, out, axis)
-// Just implement strict 1D gather for now or generic?
-// Generic gather along axis.
 void tensor_reshape(Tensor* input, Tensor* out) {
-    // Just copy data. Out shape is already set.
-    // Verify size matches?
     if(input->size != out->size) return;
     memcpy(out->data, input->data, input->size * sizeof(float));
 }
 
 void tensor_gather(Tensor* input, Tensor* indices, Tensor* out, int axis) {
-    int outer_size = 1;
-    for(int i=0; i<axis; i++) outer_size *= input->shape[i];
     int inner_size = 1;
     for(int i=axis+1; i<input->ndim; i++) inner_size *= input->shape[i];
     int dim_size = input->shape[axis];
-
-    int indices_count = indices->size;
-    // Usually gather expands the axis dimension to match indices shape?
-    // Or indices is 1D and we select slices?
-    // Let's assume PyTorch gather semantic: out[i][j][k] = input[i][index[i][j][k]][k]
-    // Output shape matches indices shape.
-
-    // Simplified: select rows. axis=0.
-    // indices is 1D list of rows.
-    // Out is [indices_len, ...inner...]
-
-    // Let's implement `take` (numpy) / `index_select` (torch) style which is common for MoE.
-    // index_select(input, dim, index)
 
     #pragma omp parallel for
     for(int i=0; i<indices->size; i++) {
         int idx = (int)indices->data[i];
         if(idx < 0 || idx >= dim_size) idx = 0;
-
-        // Copy slice
-        // Src offset: ... idx ...
-        // This requires outer loop.
-
-        // Let's do simple row gather (embedding style) if axis=0
         if(axis == 0) {
             float* src = input->data + idx * inner_size;
             float* dst = out->data + i * inner_size;
@@ -557,26 +482,16 @@ void tensor_gather(Tensor* input, Tensor* indices, Tensor* out, int axis) {
     }
 }
 
-// Scatter: out[indices[i]] = src[i]
-// index_add style?
 void tensor_scatter_add(Tensor* input, Tensor* indices, Tensor* src, int axis) {
-    // input is updated in place
-    // input[indices[i]] += src[i]
-
     int inner_size = 1;
     for(int i=axis+1; i<input->ndim; i++) inner_size *= input->shape[i];
 
     if(axis == 0) {
-        // Simple row scatter add
         #pragma omp parallel for
         for(int i=0; i<indices->size; i++) {
             int idx = (int)indices->data[i];
             float* s = src->data + i * inner_size;
             float* d = input->data + idx * inner_size;
-
-            // Atomic add needed if duplicates in indices?
-            // OpenMP atomic for array? No.
-            // Critical section or atomic per float.
             for(int j=0; j<inner_size; j++) {
                 #pragma omp atomic
                 d[j] += s[j];
@@ -585,13 +500,7 @@ void tensor_scatter_add(Tensor* input, Tensor* indices, Tensor* src, int axis) {
     }
 }
 
-
-// Cat
 void tensor_cat(Tensor** inputs, int count, int axis, Tensor* out) {
-    // Check shapes
-    // Calculate offsets
-    // Copy
-    // Simplified for now: assume valid inputs
     int outer_size = 1;
     for(int i=0; i<axis; i++) outer_size *= out->shape[i];
     int inner_size = 1;
@@ -613,10 +522,6 @@ void tensor_cat(Tensor** inputs, int count, int axis, Tensor* out) {
     }
 }
 
-// TopK
-// Input: [Batch, Dim]
-// Output: [Batch, K] (values), [Batch, K] (indices)
-// Simplified O(N*K) or O(N log K) implementation
 void tensor_topk(Tensor* input, int k, Tensor* out_values, Tensor* out_indices) {
     int last_dim = input->shape[input->ndim-1];
     int batch = input->size / last_dim;
@@ -627,21 +532,13 @@ void tensor_topk(Tensor* input, int k, Tensor* out_values, Tensor* out_indices) 
         float* val_ptr = out_values->data + b*k;
         float* idx_ptr = out_indices->data + b*k;
 
-        // Simple selection sort for small K
-        // For large K, use heap or quickselect
-        // Assume K is small (e.g. 1-5 for MoE)
-
-        // Init with first K
         for(int i=0; i<k; i++) {
-            val_ptr[i] = -1e18f; // -Inf
+            val_ptr[i] = -1e18f;
             idx_ptr[i] = -1.0f;
         }
 
         for(int i=0; i<last_dim; i++) {
             float val = in_ptr[i];
-
-            // Insert into sorted top-k list
-            // Find position
             int pos = -1;
             for(int j=0; j<k; j++) {
                 if(val > val_ptr[j]) {
@@ -649,9 +546,7 @@ void tensor_topk(Tensor* input, int k, Tensor* out_values, Tensor* out_indices) 
                     break;
                 }
             }
-
             if(pos != -1) {
-                // Shift right
                 for(int j=k-1; j>pos; j--) {
                     val_ptr[j] = val_ptr[j-1];
                     idx_ptr[j] = idx_ptr[j-1];
@@ -708,13 +603,52 @@ void tensor_scatter_add_by_index(Tensor* out, Tensor* src, Tensor* indices) {
              float* s = src->data + i * hidden_size;
              float* d = out->data + idx * hidden_size;
              for(int j=0; j<hidden_size; j++) {
+                 // Atomic optional but good practice
+                 #pragma omp atomic
                  d[j] += s[j];
              }
         }
     }
 }
 
-// Image Resize is in image_ops.c
+// DeltaNet Recurrence
+void tensor_deltanet_recurrence(Tensor* q, Tensor* k, Tensor* v, Tensor* beta, Tensor* state, Tensor* out) {
+    int B = q->shape[0];
+    int S = q->shape[1];
+    int H = q->shape[2];
+    int D = q->shape[3];
 
-// Safetensors (Stub implementation as separate file handles it or simplified here)
-// Real implementation is in safetensors_loader.c usually linked together
+    #pragma omp parallel for collapse(2)
+    for(int b=0; b<B; b++) {
+        for(int h=0; h<H; h++) {
+            float* s_ptr = state->data + (b*H + h) * D * D;
+
+            for(int t=0; t<S; t++) {
+                int offset = ((b*S + t)*H + h);
+                float* q_vec = q->data + offset * D;
+                float* k_vec = k->data + offset * D;
+                float* v_vec = v->data + offset * D;
+                float* out_vec = out->data + offset * D;
+                float b_val = beta->data[offset];
+
+                // State Update
+                for(int i=0; i<D; i++) {
+                    for(int j=0; j<D; j++) {
+                        float old_s = s_ptr[i*D + j];
+                        float val = k_vec[i] * v_vec[j];
+                        s_ptr[i*D + j] = b_val * old_s + val;
+                    }
+                }
+
+                // Output
+                for(int j=0; j<D; j++) {
+                    float sum = 0.0f;
+                    for(int i=0; i<D; i++) {
+                        sum += q_vec[i] * s_ptr[i*D + j];
+                    }
+                    out_vec[j] = sum;
+                }
+            }
+        }
+    }
+}

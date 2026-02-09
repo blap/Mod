@@ -34,7 +34,7 @@ class Qwen3CoderNextModel(Module):
 
         self.layers = []
         for i in range(config.num_hidden_layers):
-            layer = Qwen3CoderNextDecoderLayer(config, self.cos_cache, self.sin_cache)
+            layer = Qwen3CoderNextDecoderLayer(config, self.cos_cache, self.sin_cache, layer_idx=i)
             self.layers.append(layer)
             self._modules[f"layer_{i}"] = layer
 
@@ -97,23 +97,84 @@ class Qwen3CoderNextForCausalLM(Module):
 
         return current_ids
 
-class Qwen3CoderNextDecoderLayer(Module):
-    def __init__(self, config, cos_cache, sin_cache):
+class Qwen3CoderNextDeltaNet(Module):
+    def __init__(self, config):
         super().__init__()
         self.hidden_size = config.hidden_size
-        self.self_attn = Qwen3CoderNextAttention(config, cos_cache, sin_cache)
+        self.num_heads = config.deltanet_query_key_heads
+        self.value_heads = config.deltanet_value_heads
+        self.head_dim = config.deltanet_head_dim
+
+        self.q_proj = Linear(self.hidden_size, self.num_heads * self.head_dim, bias=False)
+        self.k_proj = Linear(self.hidden_size, self.num_heads * self.head_dim, bias=False)
+        self.v_proj = Linear(self.hidden_size, self.num_heads * self.head_dim, bias=False)
+        self.beta_proj = Linear(self.hidden_size, self.num_heads, bias=False)
+        self.o_proj = Linear(self.num_heads * self.head_dim, self.hidden_size, bias=False)
+
+        # State: [Batch, Heads, HeadDim, HeadDim]
+        # We don't pre-allocate state in init because batch size is variable.
+        # State is passed in via past_key_values or init to zeros.
+
+    def forward(self, x, past_key_value=None, use_cache=False):
+        # x: [B, S, H]
+        B = x.shape[0]
+        S = x.shape[1]
+
+        q = self.q_proj(x)
+        k = self.k_proj(x)
+        v = self.v_proj(x)
+        beta = self.beta_proj(x) # [B, S, Heads]
+
+        # Reshape to [B, S, Heads, Dim]
+        new_shape = [B, S, self.num_heads, self.head_dim]
+        q = q.reshape(new_shape)
+        k = k.reshape(new_shape)
+        v = v.reshape(new_shape)
+
+        # Beta activation (SiLU as proxy for Sigmoid)
+        beta = beta.silu()
+
+        state = past_key_value
+        if state is None:
+            # Init state [B, Heads, Dim, Dim]
+            state = Tensor([B, self.num_heads, self.head_dim, self.head_dim], device=x.device)
+            state.fill(0.0)
+
+        # Run Kernel
+        out = q.deltanet_recurrence(k, v, beta, state)
+
+        # Flatten
+        out = out.reshape([B, S, self.num_heads * self.head_dim])
+        out = self.o_proj(out)
+
+        return out, state if use_cache else None
+
+class Qwen3CoderNextDecoderLayer(Module):
+    def __init__(self, config, cos_cache, sin_cache, layer_idx=0):
+        super().__init__()
+        self.hidden_size = config.hidden_size
+
+        # Select layer type based on hybrid pattern
+        pattern = config.hybrid_block_pattern
+        layer_type = pattern[layer_idx % len(pattern)]
+
+        if layer_type == "deltanet":
+            self.self_attn = Qwen3CoderNextDeltaNet(config)
+        else:
+            self.self_attn = Qwen3CoderNextAttention(config, cos_cache, sin_cache)
+
         self.input_layernorm = RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
-        # Check config for MoE
+
         if hasattr(config, "num_experts") and config.num_experts > 1:
             self.mlp = Qwen3CoderNextMoE(config)
         else:
             self.mlp = Qwen3CoderNextMLP(config)
         self.post_attention_layernorm = RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
 
-    def forward(self, hidden_states: Tensor, past_key_value: Optional[Tuple[Tensor, Tensor]] = None, use_cache: bool = False) -> Tuple[Tensor, Optional[Tuple[Tensor, Tensor]]]:
+    def forward(self, hidden_states: Tensor, past_key_value: Optional[Any] = None, use_cache: bool = False) -> Tuple[Tensor, Optional[Any]]:
         residual = hidden_states
         hidden_states = self.input_layernorm(hidden_states)
-        hidden_states, pkv = self.self_attn(hidden_states, past_key_value=past_key_value, use_cache=use_cache)
+        hidden_states, pkv = self.self_attn(hidden_states, past_key_value if past_key_value is not None else None, use_cache=use_cache)
         hidden_states = residual + hidden_states
         residual = hidden_states
         hidden_states = self.post_attention_layernorm(hidden_states)

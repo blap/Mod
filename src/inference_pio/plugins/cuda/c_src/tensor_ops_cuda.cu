@@ -262,6 +262,83 @@ __global__ void scatter_add_kernel(float* out, float* src, float* indices, int c
     }
 }
 
+// DeltaNet Kernel
+// One block per (Batch, Head). Threads handle D dimension.
+// Assuming D <= 1024 (CUDA max threads per block).
+__global__ void deltanet_recurrence_kernel(float* q, float* k, float* v, float* beta, float* state, float* out,
+                                           int B, int S, int H, int D) {
+    int b = blockIdx.x;
+    int h = blockIdx.y;
+    int tid = threadIdx.x; // Handles 'i' or 'j' logic?
+
+    // State is [D, D]. Size D*D. Too big for registers/shared mem if D=128 (16KB).
+    // Shared mem limit usually 48KB. 16KB fits!
+    // Let's use shared memory for state.
+
+    extern __shared__ float s_mem[]; // Size D*D
+
+    // Load State
+    float* global_state = state + (b*H + h) * D * D;
+    for (int i = tid; i < D*D; i += blockDim.x) {
+        s_mem[i] = global_state[i];
+    }
+    __syncthreads();
+
+    // Loop over Time
+    for (int t = 0; t < S; t++) {
+        int offset = ((b*S + t)*H + h);
+        float* q_vec = q + offset * D;
+        float* k_vec = k + offset * D;
+        float* v_vec = v + offset * D;
+        float* out_vec = out + offset * D;
+        float b_val = beta[offset];
+
+        // Load Q, K, V to registers? Or just access global (L1 cache hits likely)
+        float k_val = k_vec[tid];
+        float v_val = v_vec[tid];
+        float q_val = q_vec[tid];
+
+        // Update State: S = beta * S + K^T * V
+        // Each thread updates one row? Or simple parallel loop.
+        // S[i][j]
+        for (int i = tid; i < D*D; i += blockDim.x) {
+            int r = i / D;
+            int c = i % D;
+            // K[r] * V[c]
+            // We need random access to K and V.
+            // Better to load K and V into shared mem? D is small.
+            // But let's simplify:
+            // S[i] = beta * S[i] + k[r] * v[c]
+            // Read global K, V.
+            // Warning: Divergent access?
+            // All threads read same K[r] for a given r? No.
+
+            float old = s_mem[i];
+            float kv = k_vec[r] * v_vec[c];
+            s_mem[i] = b_val * old + kv;
+        }
+        __syncthreads();
+
+        // Compute Output: O = Q * S
+        // O[j] = sum_i (Q[i] * S[i][j])
+        // Thread `tid` computes O[tid] (column j=tid).
+        // Sum over i.
+        if (tid < D) {
+            float sum = 0.0f;
+            for (int i = 0; i < D; i++) {
+                sum += q_vec[i] * s_mem[i*D + tid];
+            }
+            out_vec[tid] = sum;
+        }
+        __syncthreads();
+    }
+
+    // Write State Back
+    for (int i = tid; i < D*D; i += blockDim.x) {
+        global_state[i] = s_mem[i];
+    }
+}
+
 // Exports
 EXPORT Tensor* create_tensor(int* shape, int ndim, int device_id) {
     Tensor* t = (Tensor*)malloc(sizeof(Tensor));
@@ -292,7 +369,33 @@ EXPORT void tensor_gather_by_value(Tensor* input, Tensor* indices, float value, 
 EXPORT void tensor_scatter_add_by_index(Tensor* out, Tensor* src, Tensor* indices) { if (out->device_id >= 0) { int count = indices->size; int hidden_size = src->shape[src->ndim - 1]; int total_rows = out->size / hidden_size; int total_elements = count * hidden_size; int threads = 256; int blocks = (total_elements + threads - 1) / threads; scatter_add_kernel<<<blocks, threads>>>(out->data, src->data, indices->data, count, hidden_size, total_rows); CUDA_CHECK(cudaDeviceSynchronize()); } }
 EXPORT void tensor_load_data(Tensor* t, float* buffer, int size) { if (t->device_id >= 0) CUDA_CHECK(cudaMemcpy(t->data, buffer, size*4, cudaMemcpyHostToDevice)); else memcpy(t->data, buffer, size*4); }
 EXPORT void tensor_get_data(Tensor* t, float* buffer, int size) { if (t->device_id >= 0) CUDA_CHECK(cudaMemcpy(buffer, t->data, size*4, cudaMemcpyDeviceToHost)); else memcpy(buffer, t->data, size*4); }
+EXPORT void tensor_deltanet_recurrence(Tensor* q, Tensor* k, Tensor* v, Tensor* beta, Tensor* state, Tensor* out) {
+    if (q->device_id >= 0) {
+        int B = q->shape[0];
+        int S = q->shape[1];
+        int H = q->shape[2];
+        int D = q->shape[3];
+        int blocks_x = B;
+        int blocks_y = H;
+        dim3 blocks(blocks_x, blocks_y);
+        int threads = 256;
+        // Shared mem size: D*D floats
+        // Warning: if D=128, 16KB. If D=256, 64KB (might fail on some GPUs).
+        // Max shared mem per block is 48KB/64KB depending on arch.
+        // Assuming D <= 128 for now based on config.
+        int shared_size = D * D * sizeof(float);
+
+        deltanet_recurrence_kernel<<<blocks, threads, shared_size>>>(
+            q->data, k->data, v->data, beta->data, state->data, out->data,
+            B, S, H, D
+        );
+        CUDA_CHECK(cudaDeviceSynchronize());
+    }
+}
+
 // Missing: slice, precompute (add empty or copy from previous if not modified, assuming typical impl)
 // Adding minimal versions to prevent link error
 __global__ void slice_kernel(float* in, float* out, int size, int* start, int* h_in, int* h_out, int ndim) { int idx = blockIdx.x*blockDim.x + threadIdx.x; if(idx<size) { int temp=idx; int offset=0; for(int i=0; i<ndim; i++) { int c=temp/h_out[i]; temp%=h_out[i]; offset+=(start[i]+c)*h_in[i]; } out[idx]=in[offset]; } }
 EXPORT void tensor_slice(Tensor* input, Tensor* out, int* start_indices, int* slice_shapes) { if (out->device_id >= 0) { int ndim = input->ndim; int* h_in = (int*)malloc(ndim*4); int* h_out = h_in + ndim; h_in[ndim-1]=1; h_out[ndim-1]=1; for(int i=ndim-2; i>=0; i--) { h_in[i] = h_in[i+1]*input->shape[i+1]; h_out[i] = h_out[i+1]*out->shape[i+1]; } int* d_params; CUDA_CHECK(cudaMalloc((void**)&d_params, 3*ndim*4)); CUDA_CHECK(cudaMemcpy(d_params, start_indices, ndim*4, cudaMemcpyHostToDevice)); CUDA_CHECK(cudaMemcpy(d_params+ndim, h_in, ndim*4, cudaMemcpyHostToDevice)); CUDA_CHECK(cudaMemcpy(d_params+2*ndim, h_out, ndim*4, cudaMemcpyHostToDevice)); int size = out->size; int threads=256; int blocks=(size+255)/256; slice_kernel<<<blocks, threads>>>(input->data, out->data, size, d_params, d_params+ndim, d_params+2*ndim, ndim); CUDA_CHECK(cudaDeviceSynchronize()); CUDA_CHECK(cudaFree(d_params)); free(h_in); } }
+__global__ void precompute_freqs_kernel(float* cos, float* sin, int end, int half, float theta) { int idx = blockIdx.x*blockDim.x + threadIdx.x; if(idx < end*half) { int i = idx / half; int j = idx % half; float freq = 1.0f / powf(theta, (float)(2*j) / (half*2)); float val = i * freq; cos[idx] = cosf(val); sin[idx] = sinf(val); } }
+EXPORT void tensor_precompute_freqs_cis(int dim, int end, float theta, Tensor* out_cos, Tensor* out_sin) { if (out_cos->device_id >= 0) { int half = dim/2; int total = end*half; int th=256; int bl=(total+255)/256; precompute_freqs_kernel<<<bl, th>>>(out_cos->data, out_sin->data, end, half, theta); CUDA_CHECK(cudaDeviceSynchronize()); } }
