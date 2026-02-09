@@ -4,8 +4,8 @@ Integration test for Qwen3-Coder-Next using Custom Backend
 
 import pytest
 from src.inference_pio.core.engine.backend import Tensor, Linear, cat
-from src.inference_pio.models.qwen3_coder_next.model import Qwen3CoderNextModel
-from src.inference_pio.models.qwen3_coder_next.config import Qwen3CoderNextConfig
+from src.inference_pio.models.qwen3_coder_30b.model import Qwen3Coder30BModel
+from src.inference_pio.models.qwen3_coder_30b.config import Qwen3Coder30BConfig
 
 def test_tensor_ops():
     """Verify basic backend ops needed for model."""
@@ -28,7 +28,7 @@ def test_tensor_ops():
 
 def test_model_structure():
     """Verify model can instantiate without torch."""
-    config = Qwen3CoderNextConfig(
+    config = Qwen3Coder30BConfig(
         vocab_size=100,
         hidden_size=32,
         num_hidden_layers=2,
@@ -36,7 +36,7 @@ def test_model_structure():
         intermediate_size=64
     )
 
-    model = Qwen3CoderNextModel(config)
+    model = Qwen3Coder30BModel(config)
 
     # Check parameters
     assert model.embed_tokens.weight.shape == (100, 32)
