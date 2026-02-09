@@ -663,6 +663,57 @@ void tensor_topk(Tensor* input, int k, Tensor* out_values, Tensor* out_indices) 
     }
 }
 
+// MoE Primitives
+void tensor_count_value(Tensor* t, float value, int* count) {
+    int c = 0;
+    #pragma omp parallel for reduction(+:c)
+    for(int i=0; i<t->size; i++) {
+        if(fabsf(t->data[i] - value) < 1e-6) {
+            c++;
+        }
+    }
+    *count = c;
+}
+
+void tensor_gather_by_value(Tensor* input, Tensor* indices, float value, Tensor* out_data, Tensor* out_indices) {
+    int total_tokens = indices->size;
+    int hidden_size = input->shape[input->ndim-1];
+
+    int current_idx = 0;
+
+    #pragma omp parallel for
+    for(int i=0; i<total_tokens; i++) {
+        if(fabsf(indices->data[i] - value) < 1e-6) {
+            int pos;
+            #pragma omp atomic capture
+            pos = current_idx++;
+
+            out_indices->data[pos] = (float)i;
+            float* src = input->data + i * hidden_size;
+            float* dst = out_data->data + pos * hidden_size;
+            memcpy(dst, src, hidden_size * sizeof(float));
+        }
+    }
+}
+
+void tensor_scatter_add_by_index(Tensor* out, Tensor* src, Tensor* indices) {
+    int count = indices->size;
+    int hidden_size = src->shape[src->ndim-1];
+    int total_rows = out->size / hidden_size;
+
+    #pragma omp parallel for
+    for(int i=0; i<count; i++) {
+        int idx = (int)indices->data[i];
+        if(idx >= 0 && idx < total_rows) {
+             float* s = src->data + i * hidden_size;
+             float* d = out->data + idx * hidden_size;
+             for(int j=0; j<hidden_size; j++) {
+                 d[j] += s[j];
+             }
+        }
+    }
+}
+
 // Image Resize is in image_ops.c
 
 // Safetensors (Stub implementation as separate file handles it or simplified here)

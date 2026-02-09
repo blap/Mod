@@ -77,11 +77,23 @@ class VisionSelfAttentionKernel(Module):
 
     def forward(self, hidden_states: Tensor) -> Tensor:
         # Expects [B, Seq, Hidden]
+        B = hidden_states.shape[0]
+        S = hidden_states.shape[1]
+
         q = self.query(hidden_states)
         k = self.key(hidden_states)
         v = self.value(hidden_states)
 
+        # Reshape to [B, Seq, Heads, HeadDim] for backend SDPA
+        new_shape = [B, S, self.num_attention_heads, self.head_dim]
+        q = q.reshape(new_shape)
+        k = k.reshape(new_shape)
+        v = v.reshape(new_shape)
+
         out = scaled_dot_product_attention(q, k, v, scale=self.scale)
+
+        # Reshape back to [B, Seq, Hidden]
+        out = out.reshape([B, S, self.hidden_size])
 
         return self.output_projection(out)
 
