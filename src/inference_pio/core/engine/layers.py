@@ -1,59 +1,51 @@
 """
 Neural Network Layers (C Backend)
+Dependency-Free
 """
-from typing import Optional, Tuple, Union
-from .backend import Tensor, randn, zeros
+from typing import Optional, Tuple, Union, List
+from .backend import Tensor, Module as BackendModule
 
-# ... (Module, Linear, RMSNorm, ModuleList same as before) ...
-class Module:
-    def __init__(self):
-        self._parameters = {}
-        self._buffers = {}
-        self._modules = {}
-        self.training = False
-    def __call__(self, *args, **kwargs): return self.forward(*args, **kwargs)
-    def forward(self, *args, **kwargs): raise NotImplementedError
-    def register_parameter(self, name: str, param: Tensor): self._parameters[name] = param
-    def register_buffer(self, name: str, buffer: Tensor): self._buffers[name] = buffer
-    def add_module(self, name: str, module: 'Module'): self._modules[name] = module
-    def state_dict(self):
-        sd = {}
-        for k, v in self._parameters.items():
-            if v is not None: sd[k] = v
-        for k, v in self._buffers.items():
-            if v is not None: sd[k] = v
-        for name, module in self._modules.items():
-            for k, v in module.state_dict().items():
-                sd[f"{name}.{k}"] = v
-        return sd
+# Re-exporting from backend to maintain interface or extending
+# Since backend.py has Module/Linear/etc, we can just alias or extend.
+# To ensure clean separation, we alias.
+
+Module = BackendModule
 
 class Linear(Module):
-    def __init__(self, in_features: int, out_features: int, bias: bool = True):
+    def __init__(self, in_features, out_features, bias=True):
         super().__init__()
-        self.weight = randn([out_features, in_features])
-        self.bias = zeros([out_features]) if bias else None
+        self.in_features = in_features
+        self.out_features = out_features
+        # Init weights (random not fully implemented in C, using zeros/ones placeholder or random via python loop)
+        import random
+        self.weight = Tensor([out_features, in_features])
+        # Naive init
+        self.weight.fill(0.01)
+        self.bias = Tensor([out_features]) if bias else None
+        if self.bias: self.bias.fill(0.0)
+
         self.register_parameter("weight", self.weight)
         if bias: self.register_parameter("bias", self.bias)
-    def forward(self, input: Tensor) -> Tensor: return input.linear(self.weight, self.bias)
+
+    def forward(self, input):
+        return input.linear(self.weight, self.bias)
 
 class Embedding(Module):
-    def __init__(self, num_embeddings: int, embedding_dim: int, padding_idx: Optional[int] = None):
+    def __init__(self, num, dim):
         super().__init__()
-        self.weight = randn([num_embeddings, embedding_dim])
+        self.weight = Tensor([num, dim])
+        self.weight.fill(0.01)
         self.register_parameter("weight", self.weight)
-
-    def forward(self, input: Tensor) -> Tensor:
-        # Use new efficient C embed op
-        return self.weight.embed(input)
+    def forward(self, input): return self.weight.embed(input)
 
 class RMSNorm(Module):
-    def __init__(self, hidden_size: int, eps: float = 1e-6):
+    def __init__(self, dim, eps=1e-6):
         super().__init__()
-        self.weight = zeros([hidden_size])
+        self.weight = Tensor([dim])
         self.weight.fill(1.0)
         self.eps = eps
         self.register_parameter("weight", self.weight)
-    def forward(self, hidden_states: Tensor) -> Tensor: return hidden_states.rms_norm(self.weight, self.eps)
+    def forward(self, x): return x.rms_norm(self.weight, self.eps)
 
 class ModuleList(Module):
     def __init__(self, modules=None):
@@ -66,10 +58,20 @@ class ModuleList(Module):
         self.add_module(str(len(self._modules_list)-1), module)
     def __getitem__(self, idx): return self._modules_list[idx]
     def __iter__(self): return iter(self._modules_list)
+    def __len__(self): return len(self._modules_list)
 
 class Conv2d(Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, bias=True):
+    def __init__(self, in_c, out_c, kernel, stride=1, padding=0, groups=1, bias=True):
         super().__init__()
-        self.weight = randn([out_channels, in_channels]) # Simplified
-        self.bias = zeros([out_channels]) if bias else None
-    def forward(self, x): return x
+        c_in_g = in_c // groups
+        self.weight = Tensor([out_c, c_in_g, kernel, kernel])
+        self.weight.fill(0.01)
+        self.bias = Tensor([out_c]) if bias else None
+        if self.bias: self.bias.fill(0.0)
+        self.stride = stride
+        self.padding = padding
+        self.groups = groups
+        self.register_parameter("weight", self.weight)
+        if bias: self.register_parameter("bias", self.bias)
+    def forward(self, x):
+        return x.conv2d(self.weight, self.bias, self.stride, self.padding, self.groups)

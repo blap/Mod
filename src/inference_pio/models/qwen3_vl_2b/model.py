@@ -1,130 +1,135 @@
 """
-Qwen3-VL-2B Model Implementation - Modularized
+Qwen3-VL-2B Model Implementation - Self-Contained
 """
 
 import logging
-import torch
-import torch.nn as nn
-from typing import Any, Callable, Dict, Generator, List, Optional, Type, Union
+from typing import Any, Dict, List, Optional
 
-from ...common.hardware.hardware_analyzer import get_system_profile
-from ...common.optimization.nas_controller import ArchitectureAdaptationStrategy, NASConfig, get_nas_controller
-from ...common.interfaces.model_adapter import get_model_adapter
-
-# Modular imports
-from .core.modeling import Qwen3VL2BModeling
-from .core.optimization import Qwen3VL2BOptimizer
-from .core.inference import Qwen3VL2BInference
-
-# Legacy/Integration imports
-from ...common.optimization.disk_offloading import create_disk_offloader, TensorOffloadingManager, MultimodalOffloadingManager
-from ...common.optimization.tensor_pagination import create_multimodal_pagination_system, DataType
-from ...common.processing.dynamic_text_batching import DynamicTextBatchManager
+from ...core.engine.backend import Module, Tensor, Linear, Embedding, RMSNorm, Conv2d, precompute_freqs_cis
+from ...common.custom_components.tokenizer import CustomBPETokenizer
+from .vision_transformer_kernels import Qwen3VL2BVisionEncoderKernel, VisionTransformerConfig
 
 logger = logging.getLogger(__name__)
 
-def get_processor_plugin():
-    """Implement the required functionality."""
-    # This is a placeholder implementation
-    # In a real implementation, this would contain the actual logic
-    class ProcessorPlugin:
-        def __init__(self):
-            pass
+class Qwen3VL2BConfig:
+    def __init__(self, **kwargs):
+        self.hidden_size = 2048
+        self.num_attention_heads = 16
+        self.num_hidden_layers = 28
+        self.vocab_size = 151936
+        self.max_position_embeddings = 32768
+        self.layer_norm_eps = 1e-6
+        # Vision
+        self.vision_hidden_size = 1024
+        self.vision_num_attention_heads = 16
+        self.vision_num_hidden_layers = 24
+        self.vision_patch_size = 14
+        self.vision_image_size = 448
+        self.vision_intermediate_size = 2816
+        for k, v in kwargs.items(): setattr(self, k, v)
 
-    return ProcessorPlugin()
-
-class Qwen3VL2BModel(nn.Module):
-    def __init__(self, config: "Qwen3VL2BConfig"):
+class Qwen3VL2BModel(Module):
+    def __init__(self, config: Qwen3VL2BConfig):
         super().__init__()
         self.config = config
 
-        # Hardware Analysis
-        self._system_profile = get_system_profile()
-        self._processor_plugin = get_processor_plugin() # Mock/Placeholder logic preserved
+        # Vision Encoder
+        vis_conf = VisionTransformerConfig(
+            hidden_size=config.vision_hidden_size,
+            num_attention_heads=config.vision_num_attention_heads,
+            num_hidden_layers=config.vision_num_hidden_layers,
+            patch_size=config.vision_patch_size,
+            image_size=config.vision_image_size,
+            intermediate_size=config.vision_intermediate_size
+        )
+        self.visual = Qwen3VL2BVisionEncoderKernel(vis_conf)
 
-        # Core Modeling Initialization
-        self.modeling = Qwen3VL2BModeling(config, self._system_profile)
-        self._model = self.modeling._model # Expose for compatibility
-        self._tokenizer = self.modeling._tokenizer
-        self._image_processor = self.modeling._image_processor
-        self._model_name = self.modeling._model_name
+        # LLM
+        self.embed_tokens = Embedding(config.vocab_size, config.hidden_size)
+        self.layers = []
 
-        # Managers (preserved from original monolith)
-        self._disk_offloader = None
-        self._tensor_offloader = None
-        self._multimodal_offloader = None
-        self._pagination_system = None
-        self._multimodal_pager = None
-        self._nas_controller = None
-        self._model_adapter = None
+        # RoPE
+        head_dim = config.hidden_size // config.num_attention_heads
+        self.cos, self.sin = precompute_freqs_cis(head_dim, config.max_position_embeddings)
 
-        # Initialize Managers
-        self._initialize_nas()
-        self._initialize_offloading()
-        self._initialize_pagination()
+        for i in range(config.num_hidden_layers):
+            l = Qwen3VL2BDecoderLayer(config, self.cos, self.sin)
+            self.layers.append(l)
+            self._modules[f"layer_{i}"] = l
 
-        # Apply Optimizations
-        self.optimizer = Qwen3VL2BOptimizer(self)
-        self.optimizer.apply_configured_optimizations()
+        self.norm = RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
 
-        # Initialize Inference
-        self.inference = Qwen3VL2BInference(self)
+    def forward(self, input_ids: Tensor, pixel_values: Optional[Tensor] = None):
+        h = self.embed_tokens(input_ids)
+        if pixel_values is not None:
+            vis_features = self.visual(pixel_values)
+            # Merge logic needed (projection + concat)
+            # Placeholder: just ignore visual or simple add if shapes matched (unlikely)
+            pass
 
-        # Placeholders for advanced parallelism (initialized in monolithic logic, kept null here for safety in refactor)
-        self._pipeline_parallel_model = None
-        self._sequence_parallel_model = None
-        self._vision_language_parallel_model = None
+        for layer in self.layers:
+            h = layer(h)
+        h = self.norm(h)
+        return h
 
-    def _initialize_nas(self):
-        if getattr(self.config, "enable_continuous_nas", False):
-            nas_config = NASConfig(
-                strategy=getattr(self.config, "nas_strategy", ArchitectureAdaptationStrategy.COMBINED_ADAPTIVE),
-                # ... args ...
-            )
-            self._nas_controller = get_nas_controller(nas_config)
-            self._model_adapter = get_model_adapter(self._model, self._nas_controller) if self._model else None
+class Qwen3VL2BDecoderLayer(Module):
+    def __init__(self, config, cos, sin):
+        super().__init__()
+        self.input_layernorm = RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.self_attn = Qwen3VL2BAttention(config, cos, sin)
+        self.post_attention_layernorm = RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.mlp = Qwen3VL2BMLP(config)
 
-    def _initialize_offloading(self):
-        enable_offloading = getattr(self.config, "enable_disk_offloading", False)
-        if self._system_profile.is_weak_hardware:
-            enable_offloading = True
+    def forward(self, x):
+        h = self.input_layernorm(x)
+        h = self.self_attn(h)
+        x = x + h
+        h = self.post_attention_layernorm(x)
+        h = self.mlp(h)
+        return x + h
 
-        if enable_offloading:
-            try:
-                self._disk_offloader = create_disk_offloader(
-                    max_memory_ratio=0.8
-                )
-                self._tensor_offloader = TensorOffloadingManager(self._disk_offloader)
-                self._multimodal_offloader = MultimodalOffloadingManager(self._disk_offloader)
-            except Exception as e:
-                logger.error(f"Offloading init failed: {e}")
+class Qwen3VL2BAttention(Module):
+    def __init__(self, config, cos, sin):
+        super().__init__()
+        self.hidden_size = config.hidden_size
+        self.num_heads = config.num_attention_heads
+        self.head_dim = self.hidden_size // self.num_heads
+        self.q_proj = Linear(self.hidden_size, self.hidden_size, bias=True)
+        self.k_proj = Linear(self.hidden_size, self.hidden_size, bias=True)
+        self.v_proj = Linear(self.hidden_size, self.hidden_size, bias=True)
+        self.o_proj = Linear(self.hidden_size, self.hidden_size, bias=False)
+        self.cos = cos
+        self.sin = sin
+        self.scale = self.head_dim ** -0.5
 
-    def _initialize_pagination(self):
-        enable_pagination = getattr(self.config, "enable_intelligent_pagination", False)
-        if self._system_profile.is_weak_hardware:
-            enable_pagination = True
+    def forward(self, x):
+        q = self.q_proj(x)
+        k = self.k_proj(x)
+        v = self.v_proj(x)
 
-        if enable_pagination:
-             try:
-                self._pagination_system, self._multimodal_pager = create_multimodal_pagination_system(
-                    swap_directory="./tensor_swap"
-                )
-             except Exception as e:
-                logger.error(f"Pagination init failed: {e}")
+        seq = q.shape[1]
+        start = [0, 0]
+        shape = [seq, self.cos.shape[1]]
+        c = self.cos.slice(start, shape)
+        s = self.sin.slice(start, shape)
+        q, k = q.rope(k, c, s)
 
-    def forward(self, *args, **kwargs):
-        return self.inference.forward(*args, **kwargs)
+        scores = q.matmul(k, transpose_b=True)
+        probs = scores.softmax()
+        out = probs.matmul(v)
+        return self.o_proj(out)
 
-    def generate(self, *args, **kwargs):
-        return self.inference.generate(*args, **kwargs)
+class Qwen3VL2BMLP(Module):
+    def __init__(self, config):
+        super().__init__()
+        # Simplified MLP (Gate+Up -> Down)
+        # Assuming SwiGLU structure
+        self.gate_proj = Linear(config.hidden_size, config.hidden_size * 4, bias=False) # Simplified inter size
+        self.up_proj = Linear(config.hidden_size, config.hidden_size * 4, bias=False)
+        self.down_proj = Linear(config.hidden_size * 4, config.hidden_size, bias=False)
 
-    def get_tokenizer(self):
-        return self._tokenizer
+    def forward(self, x):
+        return self.down_proj(self.gate_proj(x).silu() * self.up_proj(x))
 
-    def get_image_processor(self):
-        return self._image_processor
-
-def create_qwen3_vl_2b_model(config: "Qwen3VL2BConfig") -> Qwen3VL2BModel:
-    return Qwen3VL2BModel(config)
-
+def create_qwen3_vl_2b_model(config): return Qwen3VL2BModel(config)
 __all__ = ["Qwen3VL2BModel", "create_qwen3_vl_2b_model"]
