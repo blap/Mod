@@ -152,17 +152,12 @@ class Qwen3CoderNextAttention(Module):
         v = v.reshape(new_shape)
 
         # Apply RoPE
-        # We need total sequence length for RoPE if caching is used
         if past_key_value is not None:
-            # past_key_value[0] is k: [B, PastLen, Heads, HeadDim]
             past_len = past_key_value[0].shape[1]
         else:
             past_len = 0
 
-        current_len = S + past_len
-
         # RoPE indices: slice from past_len to current_len
-        # cos_cache is [MaxPos, Dim]
         slice_start = [past_len, 0]
         slice_shape = [S, self.cos_cache.shape[1]]
 

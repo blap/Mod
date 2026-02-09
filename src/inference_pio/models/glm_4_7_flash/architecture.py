@@ -69,15 +69,7 @@ class GLMAttention(Module):
         v = v.reshape(new_shape)
 
         # RoPE
-        # Calc offset if cache
         past_len = past_key_value[0].shape[1] if past_key_value is not None else 0
-        total_len = S + past_len
-
-        # RoPE cache slice
-        # Assuming rotary_emb handles seq_len or indices.
-        # But standard precomputed usually needs slice logic.
-        # Original: cos, sin = self.rotary_emb(v, S) -> slices from 0 to S.
-        # We need from past_len to total_len.
 
         start = [past_len, 0]
         shape = [S, self.rotary_emb.cos.shape[1]]

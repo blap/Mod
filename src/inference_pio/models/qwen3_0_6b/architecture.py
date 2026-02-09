@@ -53,7 +53,14 @@ class Qwen3Attention(Module):
         k = k.reshape(new_shape)
         v = v.reshape(new_shape)
 
-        cos, sin = self.rotary_emb(v, S)
+        # RoPE with correct offset
+        past_len = past_key_value[0].shape[1] if past_key_value is not None else 0
+
+        start = [past_len, 0]
+        shape = [S, self.rotary_emb.cos.shape[1]]
+        cos = self.rotary_emb.cos.slice(start, shape)
+        sin = self.rotary_emb.sin.slice(start, shape)
+
         q, k = q.rope(k, cos, sin)
 
         if past_key_value is not None:
