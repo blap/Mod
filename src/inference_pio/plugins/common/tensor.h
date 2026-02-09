@@ -48,6 +48,7 @@ EXPORT void tensor_rope(Tensor* q, Tensor* k, Tensor* cos, Tensor* sin, Tensor* 
 // New Ops
 EXPORT void tensor_slice(Tensor* input, Tensor* out, int* start_indices, int* slice_shapes);
 EXPORT void tensor_precompute_freqs_cis(int dim, int end, float theta, Tensor* out_cos, Tensor* out_sin);
+EXPORT void tensor_conv2d(Tensor* input, Tensor* weight, Tensor* bias, Tensor* out, int stride, int padding, int groups);
 
 // Ops that were implicitly exported before but good to decl
 EXPORT void tensor_argmax(Tensor* input, Tensor* out);

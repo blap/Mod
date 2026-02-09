@@ -3,7 +3,7 @@ Qwen3-0.6B Architecture - C Backend (Real Generation)
 """
 
 from typing import Optional, Tuple, List
-from ...core.engine.backend import Tensor, Module, Linear, Embedding, RMSNorm, cat, precompute_freqs_cis
+from ...core.engine.backend import Module, Linear, Embedding, RMSNorm, Tensor, cat, precompute_freqs_cis
 
 class Qwen3RotaryEmbedding(Module):
     def __init__(self, dim, max_position_embeddings=32768, base=10000.0):
@@ -81,11 +81,11 @@ class Qwen3Model(Module):
     def __init__(self, config):
         super().__init__()
         self.embed_tokens = Embedding(config.vocab_size, config.hidden_size)
-        self.layers = [] # ModuleList not fully impl
-        for _ in range(config.num_hidden_layers):
+        self.layers = []
+        for i in range(config.num_hidden_layers):
              l = Qwen3DecoderLayer(config)
              self.layers.append(l)
-             # register submodules manually if needed
+             self._modules[f"layer_{i}"] = l
         self.norm = RMSNorm(config.hidden_size)
 
     def forward(self, input_ids, past_key_values=None, use_cache=None):
@@ -117,8 +117,6 @@ class Qwen3ForCausalLM(Module):
                 # Use slice to get last token
                 # current_ids shape [1, Seq]
                 seq_len = current_ids.shape[1]
-                # Slice [1, 1] from end?
-                # slice takes start indices and shape
                 start = [0, seq_len-1]
                 shape = [1, 1]
                 model_input = current_ids.slice(start, shape)
@@ -130,9 +128,6 @@ class Qwen3ForCausalLM(Module):
 
             next_token_ids = logits.argmax()
 
-            # Slice last token from argmax result (if logits were seq)
-            # If using cache, logits is [1, 1, V] -> argmax [1, 1]. No slice needed.
-            # If initial, logits [1, S, V] -> argmax [1, S]. Slice last.
             if next_token_ids.shape[1] > 1:
                  start = [0, next_token_ids.shape[1]-1]
                  shape = [1, 1]

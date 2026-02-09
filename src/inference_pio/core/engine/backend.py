@@ -1,4 +1,4 @@
-# ... (Previous parts of backend.py) ...
+# ... (Previous imports and init) ...
 
 """
 Unified Backend for C Tensor Engine (CPU/CUDA)
@@ -10,6 +10,7 @@ import os
 import sys
 from typing import Tuple, List, Optional, Dict, Union, Any
 
+# ... (Load library logic) ...
 def _load_library(name: str) -> Optional[ctypes.CDLL]:
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     paths = []
@@ -46,6 +47,7 @@ class CTensor(ctypes.Structure):
 
 def _setup_sigs(lib):
     if not lib: return
+    # Basic
     lib.create_tensor.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_int]
     lib.create_tensor.restype = ctypes.POINTER(CTensor)
     lib.free_tensor.argtypes = [ctypes.POINTER(CTensor)]
@@ -53,6 +55,7 @@ def _setup_sigs(lib):
     lib.tensor_add.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
     lib.tensor_mul.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
 
+    # Math
     if hasattr(lib, 'tensor_matmul'): lib.tensor_matmul.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
     if hasattr(lib, 'tensor_matmul_transposed'): lib.tensor_matmul_transposed.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
     if hasattr(lib, 'tensor_linear'): lib.tensor_linear.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
@@ -62,6 +65,7 @@ def _setup_sigs(lib):
     if hasattr(lib, 'tensor_rms_norm'): lib.tensor_rms_norm.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_float]
     if hasattr(lib, 'tensor_rope'): lib.tensor_rope.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
 
+    # Data
     lib.tensor_load_data.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.c_float), ctypes.c_int]
     lib.tensor_get_data.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.c_float), ctypes.c_int]
 
@@ -69,11 +73,14 @@ def _setup_sigs(lib):
     if hasattr(lib, 'tensor_embed'): lib.tensor_embed.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
     if hasattr(lib, 'tensor_cat'): lib.tensor_cat.argtypes = [ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_int, ctypes.POINTER(CTensor)]
 
-    # New Ops
     if hasattr(lib, 'tensor_slice'):
         lib.tensor_slice.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int)]
     if hasattr(lib, 'tensor_precompute_freqs_cis'):
         lib.tensor_precompute_freqs_cis.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_float, ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+
+    # NEW: Conv2d
+    if hasattr(lib, 'tensor_conv2d'):
+        lib.tensor_conv2d.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int, ctypes.c_int, ctypes.c_int]
 
     if hasattr(lib, 'open_safetensors'):
         lib.open_safetensors.argtypes = [ctypes.c_char_p]
@@ -150,21 +157,16 @@ class Tensor:
         if self.device != other.device: raise ValueError("Device mismatch")
         m = self.shape[-2]
         k = self.shape[-1]
-
         if transpose_b:
             n = other.shape[-2]
             if other.shape[-1] != k: raise ValueError(f"Matmul Transpose shape mismatch {self.shape} vs {other.shape}")
         else:
             n = other.shape[-1]
             if other.shape[-2] != k: raise ValueError(f"Matmul shape mismatch {self.shape} vs {other.shape}")
-
         out_shape = list(self.shape[:-2]) + [m, n]
         out = Tensor(out_shape, device=self.device)
-
-        if transpose_b and hasattr(self._lib, 'tensor_matmul_transposed'):
-            self._lib.tensor_matmul_transposed(self._handle, other._handle, out._handle)
-        else:
-            self._lib.tensor_matmul(self._handle, other._handle, out._handle)
+        if transpose_b and hasattr(self._lib, 'tensor_matmul_transposed'): self._lib.tensor_matmul_transposed(self._handle, other._handle, out._handle)
+        else: self._lib.tensor_matmul(self._handle, other._handle, out._handle)
         return out
 
     def add(self, other: 'Tensor') -> 'Tensor':
@@ -187,6 +189,26 @@ class Tensor:
         out = Tensor(out_shape, device=self.device)
         b_handle = bias._handle if bias else None
         self._lib.tensor_linear(self._handle, weight._handle, b_handle, out._handle)
+        return out
+
+    def conv2d(self, weight: 'Tensor', bias: Optional['Tensor'] = None, stride: int = 1, padding: int = 0, groups: int = 1) -> 'Tensor':
+        # Input: [N, C_in, H, W]
+        # Weight: [C_out, C_in/g, KH, KW]
+        if self.ndim != 4: raise ValueError("Conv2d requires 4D input")
+
+        N, C_in, H, W = self.shape
+        C_out, _, KH, KW = weight.shape
+
+        H_out = (H + 2*padding - KH) // stride + 1
+        W_out = (W + 2*padding - KW) // stride + 1
+
+        out = Tensor([N, C_out, H_out, W_out], device=self.device)
+        b_handle = bias._handle if bias else None
+
+        if hasattr(self._lib, 'tensor_conv2d'):
+            self._lib.tensor_conv2d(self._handle, weight._handle, b_handle, out._handle, stride, padding, groups)
+        else:
+            raise NotImplementedError("Conv2d not implemented in backend")
         return out
 
     def softmax(self, dim: int = -1) -> 'Tensor':
@@ -228,10 +250,7 @@ class Tensor:
         return out
 
     def slice(self, start_indices: List[int], slice_shapes: List[int]) -> 'Tensor':
-        # out = input[start:start+slice]
-        if len(start_indices) != self.ndim or len(slice_shapes) != self.ndim:
-            raise ValueError("Slice args dim mismatch")
-
+        if len(start_indices) != self.ndim or len(slice_shapes) != self.ndim: raise ValueError("Slice args dim mismatch")
         out = Tensor(slice_shapes, device=self.device)
         if hasattr(self._lib, 'tensor_slice'):
             c_start = (ctypes.c_int * self.ndim)(*start_indices)
@@ -239,7 +258,6 @@ class Tensor:
             self._lib.tensor_slice(self._handle, out._handle, c_start, c_shape)
         return out
 
-    # Image Ops
     def resize_image(self, target_h: int, target_w: int) -> 'Tensor':
         if self.ndim != 3: raise ValueError("Image resize expects 3D tensor")
         if self.device != "cpu": raise ValueError("Image ops only on CPU currently")
@@ -249,7 +267,8 @@ class Tensor:
             self._lib.image_resize_bilinear(self._handle.contents.data, c, h, w, out._handle.contents.data, target_h, target_w)
         return out
 
-# ... (Module, Linear, Embedding, etc classes same as before) ...
+# ... (Module classes) ...
+
 class Module:
     def __init__(self):
         self._parameters = {}
@@ -272,13 +291,26 @@ class Module:
 class Linear(Module):
     def __init__(self, in_features: int, out_features: int, bias: bool = True):
         super().__init__()
-        self.in_features = in_features
-        self.out_features = out_features
         self.weight = Tensor([out_features, in_features])
         self.bias = Tensor([out_features]) if bias else None
         self.register_parameter("weight", self.weight)
         if bias: self.register_parameter("bias", self.bias)
     def forward(self, input: Tensor) -> Tensor: return input.linear(self.weight, self.bias)
+
+class Conv2d(Module):
+    def __init__(self, in_channels: int, out_channels: int, kernel_size: int, stride: int = 1, padding: int = 0, groups: int = 1, bias: bool = True):
+        super().__init__()
+        self.stride = stride
+        self.padding = padding
+        self.groups = groups
+        # Weight shape: [C_out, C_in/groups, K, K]
+        c_in_group = in_channels // groups
+        self.weight = Tensor([out_channels, c_in_group, kernel_size, kernel_size])
+        self.bias = Tensor([out_channels]) if bias else None
+        self.register_parameter("weight", self.weight)
+        if bias: self.register_parameter("bias", self.bias)
+    def forward(self, input: Tensor) -> Tensor:
+        return input.conv2d(self.weight, self.bias, self.stride, self.padding, self.groups)
 
 class Embedding(Module):
     def __init__(self, num_embeddings: int, embedding_dim: int):
@@ -324,11 +356,9 @@ def zeros(shape: List[int], device="cpu") -> Tensor:
     return t
 
 def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0, device="cpu") -> Tuple[Tensor, Tensor]:
-    # Returns [end, dim/2] tensors for cos/sin
     half_dim = dim // 2
     cos = Tensor([end, half_dim], device=device)
     sin = Tensor([end, half_dim], device=device)
-
     lib = _lib_cuda if "cuda" in device and HAS_CUDA else _lib_cpu
     if hasattr(lib, 'tensor_precompute_freqs_cis'):
         lib.tensor_precompute_freqs_cis(dim, end, ctypes.c_float(theta), cos._handle, sin._handle)
