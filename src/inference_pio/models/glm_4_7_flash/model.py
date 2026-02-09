@@ -11,7 +11,6 @@ from ...common.custom_components.tokenizer import CustomBPETokenizer
 logger = logging.getLogger(__name__)
 
 class GLM47FlashConfig:
-    # Simplified config
     def __init__(self, **kwargs):
         self.hidden_size = 4096
         self.num_attention_heads = 32
@@ -28,7 +27,6 @@ class GLM47FlashModel(Module):
         self.embed_tokens = Embedding(config.vocab_size, config.hidden_size)
         self.layers = []
 
-        # RoPE
         dim = config.hidden_size // config.num_attention_heads
         self.cos, self.sin = precompute_freqs_cis(dim, config.max_position_embeddings)
 
@@ -75,38 +73,34 @@ class GLM47FlashAttention(Module):
         self.scale = self.head_dim ** -0.5
 
     def forward(self, x):
-        # QKV
+        # QKV Proj
         qkv = self.query_key_value(x)
-        # Split (Not implemented in backend, assuming separate Linears usually better, but for GLM structure:)
-        # We need slice.
-        # q = qkv[..., :hidden]
-        # k = qkv[..., hidden:2*hidden]
-        # v = qkv[..., 2*hidden:]
 
-        # Using slice
-        seq = x.shape[1]
+        # Split using backend slice logic
+        # qkv: [B, Seq, 3*H]
+        # We need to split into 3 chunks of size H along last dim
+        B, Seq, _ = qkv.shape
+        H = self.hidden_size
 
-        # This split logic is tedious without helper.
-        # But feasible.
-        # For brevity, I assume q/k/v separation via slice is done or I'd rewrite to 3 linear layers.
-        # Rewriting to 3 linear layers is cleaner for "No Stubs" if weight loading handles it.
-        # Since we use custom loader, we can map weights.
-
-        # Placeholder for split:
-        q = qkv # Logic needed
-        k = qkv
-        v = qkv
+        q = qkv.slice([0, 0, 0], [B, Seq, H])
+        k = qkv.slice([0, 0, H], [B, Seq, H])
+        v = qkv.slice([0, 0, 2*H], [B, Seq, H])
 
         # RoPE
         start = [0, 0]
-        shape = [seq, self.cos.shape[1]]
+        shape = [Seq, self.cos.shape[1]]
         c = self.cos.slice(start, shape)
         s = self.sin.slice(start, shape)
         q, k = q.rope(k, c, s)
 
-        # Attn
+        # Attention
         scores = q.matmul(k, transpose_b=True)
-        # Scale...
+
+        # Scale
+        scale_tensor = Tensor(scores.shape, device=scores.device)
+        scale_tensor.fill(self.scale)
+        scores = scores * scale_tensor
+
         probs = scores.softmax()
         out = probs.matmul(v)
         return self.dense(out)
