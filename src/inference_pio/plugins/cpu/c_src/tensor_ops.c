@@ -1,260 +1,669 @@
-// ... (Previous content of tensor_ops.c) ...
-#include <math.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
 #include <string.h>
-#include <stdint.h>
-
-#ifdef _OPENMP
 #include <omp.h>
-#endif
+#include <mm_malloc.h>
+#include "../../common/tensor.h"
 
-#ifdef _WIN32
-  #define EXPORT __declspec(dllexport)
-#else
-  #define EXPORT
-#endif
+// Helper for tensor strides
+void get_strides(const int* shape, int ndim, int* strides) {
+    strides[ndim-1] = 1;
+    for(int i=ndim-2; i>=0; i--) {
+        strides[i] = strides[i+1] * shape[i+1];
+    }
+}
 
-typedef struct {
-    float* data;
-    int* shape;
-    int ndim;
-    int size;
-} Tensor;
-
-// ... (Keep existing memory management) ...
-// Re-implementing create/free to ensure context (simplified for append)
-EXPORT Tensor* create_tensor(int* shape, int ndim) {
+// Memory Management
+Tensor* create_tensor(int* shape, int ndim, int device_id) {
     Tensor* t = (Tensor*)malloc(sizeof(Tensor));
     t->ndim = ndim;
-    t->shape = (int*)malloc(ndim * sizeof(int));
-    memcpy(t->shape, shape, ndim * sizeof(int));
+    t->shape = (int*)malloc(sizeof(int) * ndim);
     t->size = 1;
-    for (int i = 0; i < ndim; i++) t->size *= shape[i];
-    t->data = (float*)malloc(t->size * sizeof(float));
+    for(int i=0; i<ndim; i++) {
+        t->shape[i] = shape[i];
+        t->size *= shape[i];
+    }
+    t->device_id = device_id;
+    // Align to 32 bytes for AVX
+    t->data = (float*)_mm_malloc(sizeof(float) * t->size, 32);
     return t;
 }
-EXPORT void free_tensor(Tensor* t) {
-    if (t) {
-        if (t->data) free(t->data);
-        if (t->shape) free(t->shape);
+
+void free_tensor(Tensor* t) {
+    if(t) {
+        if(t->data) _mm_free(t->data);
+        if(t->shape) free(t->shape);
         free(t);
     }
 }
 
-// ... (Keep existing ops: fill, add, mul, matmul, linear, softmax, silu, rms_norm, rope, quantize) ...
-EXPORT void tensor_fill(Tensor* t, float value) {
-    #pragma omp parallel for
-    for (int i = 0; i < t->size; i++) t->data[i] = value;
+void tensor_fill(Tensor* t, float value) {
+    #pragma omp parallel for simd
+    for(int i=0; i<t->size; i++) t->data[i] = value;
 }
-EXPORT void tensor_add(Tensor* a, Tensor* b, Tensor* out) {
-    #pragma omp parallel for
-    for (int i = 0; i < a->size; i++) out->data[i] = a->data[i] + b->data[i];
-}
-EXPORT void tensor_mul(Tensor* a, Tensor* b, Tensor* out) {
-    #pragma omp parallel for
-    for (int i = 0; i < a->size; i++) out->data[i] = a->data[i] * b->data[i];
-}
-// Naive 3D Matmul re-included for completeness in this file rewrite
-EXPORT void tensor_matmul(Tensor* a, Tensor* b, Tensor* out) {
-    int adim = a->ndim;
-    int bdim = b->ndim;
-    int Batch = (adim > 2) ? a->shape[0] : 1;
-    int M = a->shape[adim-2];
-    int K = a->shape[adim-1];
-    int N = b->shape[bdim-1];
 
-    #pragma omp parallel for collapse(2)
-    for (int b_idx = 0; b_idx < Batch; b_idx++) {
-        for (int i = 0; i < M; i++) {
-            for (int j = 0; j < N; j++) {
+void tensor_load_data(Tensor* t, float* buffer, int size) {
+    if(size != t->size) { printf("Size mismatch load\n"); return; }
+    memcpy(t->data, buffer, size * sizeof(float));
+}
+
+void tensor_get_data(Tensor* t, float* buffer, int size) {
+    if(size != t->size) { printf("Size mismatch get\n"); return; }
+    memcpy(buffer, t->data, size * sizeof(float));
+}
+
+// Math Ops
+void tensor_add(Tensor* a, Tensor* b, Tensor* out) {
+    #pragma omp parallel for simd
+    for(int i=0; i<out->size; i++) out->data[i] = a->data[i] + b->data[i];
+}
+
+void tensor_mul(Tensor* a, Tensor* b, Tensor* out) {
+    #pragma omp parallel for simd
+    for(int i=0; i<out->size; i++) out->data[i] = a->data[i] * b->data[i];
+}
+
+void tensor_scale(Tensor* a, float scale, Tensor* out) {
+    #pragma omp parallel for simd
+    for(int i=0; i<out->size; i++) out->data[i] = a->data[i] * scale;
+}
+
+// Matmul: Simple O(N^3) with OpenMP tiling for cache
+void tensor_matmul(Tensor* a, Tensor* b, Tensor* out) {
+    // Assume 2D or Batched 2D (ND)
+    // Flatten batch dims
+    int m = a->shape[a->ndim-2];
+    int k = a->shape[a->ndim-1];
+    int n = b->shape[b->ndim-1];
+    int batch_size = out->size / (m*n);
+
+    #pragma omp parallel for
+    for(int batch=0; batch<batch_size; batch++) {
+        float* A = a->data + batch * m * k;
+        float* B = b->data + batch * k * n;
+        float* C = out->data + batch * m * n;
+
+        for(int i=0; i<m; i++) {
+            for(int j=0; j<n; j++) {
                 float sum = 0.0f;
-                for (int k = 0; k < K; k++) {
-                    int a_idx = (adim > 2 ? b_idx * M * K : 0) + i * K + k;
-                    int b_idx_offset = (bdim > 2 ? b_idx * K * N : 0) + k * N + j;
-                    sum += a->data[a_idx] * b->data[b_idx_offset];
+                // Vectorizable loop
+                #pragma omp simd reduction(+:sum)
+                for(int p=0; p<k; p++) {
+                    sum += A[i*k + p] * B[p*n + j];
                 }
-                out->data[(adim > 2 ? b_idx * M * N : 0) + i * N + j] = sum;
+                C[i*n + j] = sum;
             }
         }
     }
 }
-EXPORT void tensor_linear(Tensor* input, Tensor* weight, Tensor* bias, Tensor* out) {
-    int M = input->shape[0];
-    int K = input->shape[1];
-    int N = weight->shape[0];
+
+void tensor_matmul_transposed(Tensor* a, Tensor* b, Tensor* out) {
+    // B is [..., N, K] instead of [..., K, N]
+    // A is [..., M, K]
+    // Out is [..., M, N]
+    int m = a->shape[a->ndim-2];
+    int k = a->shape[a->ndim-1];
+    int n = b->shape[b->ndim-2]; // Transposed B: [N, K]
+    int batch_size = out->size / (m*n);
+
     #pragma omp parallel for
-    for (int i = 0; i < M; i++) {
-        for (int j = 0; j < N; j++) {
-            float sum = 0.0f;
-            for (int k = 0; k < K; k++) sum += input->data[i * K + k] * weight->data[j * K + k];
-            if (bias) sum += bias->data[j];
-            out->data[i * N + j] = sum;
+    for(int batch=0; batch<batch_size; batch++) {
+        float* A = a->data + batch * m * k;
+        float* B = b->data + batch * n * k; // B is stored as [N, K]
+        float* C = out->data + batch * m * n;
+
+        for(int i=0; i<m; i++) {
+            for(int j=0; j<n; j++) {
+                float sum = 0.0f;
+                #pragma omp simd reduction(+:sum)
+                for(int p=0; p<k; p++) {
+                    sum += A[i*k + p] * B[j*k + p]; // Contiguous access for B!
+                }
+                C[i*n + j] = sum;
+            }
         }
     }
 }
-EXPORT void tensor_softmax(Tensor* input, Tensor* out) {
-    int rows = input->size / input->shape[input->ndim - 1];
-    int cols = input->shape[input->ndim - 1];
-    #pragma omp parallel for
-    for (int i = 0; i < rows; i++) {
-        float max_val = -1e9;
-        for (int j = 0; j < cols; j++) if (input->data[i * cols + j] > max_val) max_val = input->data[i * cols + j];
-        float sum_exp = 0.0f;
-        for (int j = 0; j < cols; j++) {
-            float val = expf(input->data[i * cols + j] - max_val);
-            out->data[i * cols + j] = val;
-            sum_exp += val;
+
+void tensor_linear(Tensor* input, Tensor* weight, Tensor* bias, Tensor* out) {
+    // Input: [Batch, In], Weight: [Out, In], Bias: [Out]
+    // Out = Input * Weight^T + Bias
+    // This is essentially matmul_transposed(input, weight) + bias
+
+    tensor_matmul_transposed(input, weight, out);
+
+    if(bias) {
+        int last_dim = out->shape[out->ndim-1];
+        int batch = out->size / last_dim;
+        #pragma omp parallel for
+        for(int i=0; i<batch; i++) {
+            for(int j=0; j<last_dim; j++) {
+                out->data[i*last_dim + j] += bias->data[j];
+            }
         }
-        for (int j = 0; j < cols; j++) out->data[i * cols + j] /= sum_exp;
     }
 }
-EXPORT void tensor_silu(Tensor* input, Tensor* out) {
-    #pragma omp parallel for
-    for (int i = 0; i < input->size; i++) {
+
+// Activations
+void tensor_silu(Tensor* input, Tensor* out) {
+    #pragma omp parallel for simd
+    for(int i=0; i<input->size; i++) {
         float x = input->data[i];
-        out->data[i] = x / (1.0f + expf(-x));
+        float sigmoid = 1.0f / (1.0f + expf(-x));
+        out->data[i] = x * sigmoid;
     }
 }
-EXPORT void tensor_rms_norm(Tensor* input, Tensor* weight, Tensor* out, float eps) {
-    int rows = input->size / input->shape[input->ndim - 1];
-    int cols = input->shape[input->ndim - 1];
+
+void tensor_gelu(Tensor* input, Tensor* out) {
+    const float SQRT_2_OVER_PI = 0.7978845608028654f;
+    #pragma omp parallel for simd
+    for(int i=0; i<input->size; i++) {
+        float x = input->data[i];
+        float cdf = 0.5f * (1.0f + tanhf(SQRT_2_OVER_PI * (x + 0.044715f * x * x * x)));
+        out->data[i] = x * cdf;
+    }
+}
+
+void tensor_softmax(Tensor* input, Tensor* out) {
+    int last_dim = input->shape[input->ndim-1];
+    int batch = input->size / last_dim;
+
     #pragma omp parallel for
-    for (int i = 0; i < rows; i++) {
+    for(int i=0; i<batch; i++) {
+        float* in_ptr = input->data + i*last_dim;
+        float* out_ptr = out->data + i*last_dim;
+
+        float max_val = -1e9f;
+        for(int j=0; j<last_dim; j++) if(in_ptr[j] > max_val) max_val = in_ptr[j];
+
+        float sum = 0.0f;
+        for(int j=0; j<last_dim; j++) {
+            out_ptr[j] = expf(in_ptr[j] - max_val);
+            sum += out_ptr[j];
+        }
+
+        float inv_sum = 1.0f / sum;
+        for(int j=0; j<last_dim; j++) out_ptr[j] *= inv_sum;
+    }
+}
+
+void tensor_rms_norm(Tensor* input, Tensor* weight, Tensor* out, float eps) {
+    int last_dim = input->shape[input->ndim-1];
+    int batch = input->size / last_dim;
+
+    #pragma omp parallel for
+    for(int i=0; i<batch; i++) {
+        float* in_ptr = input->data + i*last_dim;
+        float* out_ptr = out->data + i*last_dim;
+
         float sum_sq = 0.0f;
-        for (int j = 0; j < cols; j++) sum_sq += input->data[i * cols + j] * input->data[i * cols + j];
-        float rms = sqrtf(sum_sq / cols + eps);
-        for (int j = 0; j < cols; j++) out->data[i * cols + j] = (input->data[i * cols + j] / rms) * weight->data[j];
-    }
-}
-EXPORT void tensor_rope(Tensor* q, Tensor* k, Tensor* cos, Tensor* sin, Tensor* out_q, Tensor* out_k) {
-    int size = q->size;
-    int dim = q->shape[q->ndim - 1];
-    int half_dim = dim / 2;
-    int num_tokens = size / dim;
-    #pragma omp parallel for
-    for (int i = 0; i < num_tokens; i++) {
-        int base_idx = i * dim;
-        for (int j = 0; j < half_dim; j++) {
-            float q_r = q->data[base_idx + j];
-            float q_i = q->data[base_idx + j + half_dim];
-            float k_r = k->data[base_idx + j];
-            float k_i = k->data[base_idx + j + half_dim];
-            float c = cos->data[base_idx + j];
-            float s = sin->data[base_idx + j];
-            out_q->data[base_idx + j] = q_r * c - q_i * s;
-            out_q->data[base_idx + j + half_dim] = q_r * s + q_i * c;
-            out_k->data[base_idx + j] = k_r * c - k_i * s;
-            out_k->data[base_idx + j + half_dim] = k_r * s + k_i * c;
+        #pragma omp simd reduction(+:sum_sq)
+        for(int j=0; j<last_dim; j++) sum_sq += in_ptr[j] * in_ptr[j];
+
+        float scale = 1.0f / sqrtf(sum_sq / last_dim + eps);
+
+        #pragma omp simd
+        for(int j=0; j<last_dim; j++) {
+            out_ptr[j] = in_ptr[j] * scale * weight->data[j];
         }
     }
 }
-EXPORT void tensor_load_data(Tensor* t, float* buffer, int size) { memcpy(t->data, buffer, size * sizeof(float)); }
-EXPORT void tensor_get_data(Tensor* t, float* buffer, int size) { memcpy(buffer, t->data, size * sizeof(float)); }
-EXPORT void tensor_quantize_int8(Tensor* input, int8_t* out_data, float* scale) {
-    float max_val = 0.0f;
-    for (int i = 0; i < input->size; i++) if (fabsf(input->data[i]) > max_val) max_val = fabsf(input->data[i]);
-    *scale = max_val / 127.0f;
-    float inv_scale = 1.0f / (*scale + 1e-9f);
-    #pragma omp parallel for
-    for (int i = 0; i < input->size; i++) {
-        float val = input->data[i] * inv_scale;
-        if (val > 127.0f) val = 127.0f; else if (val < -127.0f) val = -127.0f;
-        out_data[i] = (int8_t)roundf(val);
+
+// RoPE
+void tensor_rope(Tensor* q, Tensor* k, Tensor* cos, Tensor* sin, Tensor* out_q, Tensor* out_k) {
+    // Shapes: [Batch, Seq, Heads, HeadDim]
+    // Cos/Sin: [Seq, HeadDim/2] (Precomputed)
+    // We assume Heads is dim -2, HeadDim is dim -1.
+    // We iterate over Batch and Heads.
+
+    int head_dim = q->shape[q->ndim-1];
+    int heads = q->shape[q->ndim-2];
+    int seq_len = q->shape[q->ndim-3];
+    int batch = q->size / (seq_len * heads * head_dim);
+    int half_dim = head_dim / 2;
+
+    #pragma omp parallel for collapse(3)
+    for(int b=0; b<batch; b++) {
+        for(int s=0; s<seq_len; s++) {
+            for(int h=0; h<heads; h++) {
+                float* q_ptr = q->data + ((b*seq_len + s)*heads + h)*head_dim;
+                float* k_ptr = k->data + ((b*seq_len + s)*heads + h)*head_dim;
+                float* oq_ptr = out_q->data + ((b*seq_len + s)*heads + h)*head_dim;
+                float* ok_ptr = out_k->data + ((b*seq_len + s)*heads + h)*head_dim;
+
+                float* c_ptr = cos->data + s*half_dim; // [Seq, Half]
+                float* s_ptr = sin->data + s*half_dim;
+
+                for(int i=0; i<half_dim; i++) {
+                    float q_r = q_ptr[i];
+                    float q_i = q_ptr[i + half_dim];
+                    float k_r = k_ptr[i];
+                    float k_i = k_ptr[i + half_dim];
+
+                    float cs = c_ptr[i];
+                    float sn = s_ptr[i];
+
+                    oq_ptr[i] = q_r * cs - q_i * sn;
+                    oq_ptr[i + half_dim] = q_r * sn + q_i * cs;
+
+                    ok_ptr[i] = k_r * cs - k_i * sn;
+                    ok_ptr[i + half_dim] = k_r * sn + k_i * cs;
+                }
+            }
+        }
     }
 }
 
-// --- NEW OPS ---
+// Conv2d (Naive)
+void tensor_conv2d(Tensor* input, Tensor* weight, Tensor* bias, Tensor* out, int stride, int padding, int groups) {
+    int N = input->shape[0];
+    int Cin = input->shape[1];
+    int H = input->shape[2];
+    int W = input->shape[3];
 
-EXPORT void tensor_argmax(Tensor* input, Tensor* out) {
-    // Argmax along last dimension
-    // Output shape should have last dim removed (flattened in C logic, Python handles shape)
-    int rows = input->size / input->shape[input->ndim - 1];
-    int cols = input->shape[input->ndim - 1];
+    int Cout = weight->shape[0];
+    int KH = weight->shape[2];
+    int KW = weight->shape[3];
+
+    int Hout = out->shape[2];
+    int Wout = out->shape[3];
+
+    int Cin_per_group = Cin / groups;
+    int Cout_per_group = Cout / groups;
+
+    #pragma omp parallel for collapse(2)
+    for(int n=0; n<N; n++) {
+        for(int c_out=0; c_out<Cout; c_out++) {
+            int g = c_out / Cout_per_group;
+            float b_val = bias ? bias->data[c_out] : 0.0f;
+
+            for(int h_out=0; h_out<Hout; h_out++) {
+                for(int w_out=0; w_out<Wout; w_out++) {
+                    float sum = 0.0f;
+                    int h_in_start = h_out * stride - padding;
+                    int w_in_start = w_out * stride - padding;
+
+                    for(int c_in=0; c_in<Cin_per_group; c_in++) {
+                        int actual_c_in = g * Cin_per_group + c_in;
+                        for(int kh=0; kh<KH; kh++) {
+                            for(int kw=0; kw<KW; kw++) {
+                                int h_in = h_in_start + kh;
+                                int w_in = w_in_start + kw;
+
+                                if(h_in >= 0 && h_in < H && w_in >= 0 && w_in < W) {
+                                    float val = input->data[((n*Cin + actual_c_in)*H + h_in)*W + w_in];
+                                    float w_val = weight->data[((c_out*Cin_per_group + c_in)*KH + kh)*KW + kw];
+                                    sum += val * w_val;
+                                }
+                            }
+                        }
+                    }
+                    out->data[((n*Cout + c_out)*Hout + h_out)*Wout + w_out] = sum + b_val;
+                }
+            }
+        }
+    }
+}
+
+// Permute
+void tensor_permute(Tensor* input, Tensor* out, int* dims) {
+    // Generic permutation. Very slow if not optimized, but flexible.
+    // dims maps output dimension index to input dimension index.
+    // e.g. [0, 2, 3, 1] means out[i, j, k, l] = in[i, l, j, k] ??? No.
+    // Usually dims list the order of input dims in output.
+    // Pytorch: permute(dims). input[i, j, k] -> permute(2, 0, 1) -> input[k, i, j].
+    // Here we iterate output index, map back to input index.
+
+    int ndim = input->ndim;
+    int* in_strides = (int*)malloc(sizeof(int) * ndim);
+    int* out_strides = (int*)malloc(sizeof(int) * ndim);
+
+    get_strides(input->shape, ndim, in_strides);
+    get_strides(out->shape, ndim, out_strides); // Assuming contiguous out
 
     #pragma omp parallel for
-    for (int i = 0; i < rows; i++) {
-        float max_val = -1e9;
+    for(int i=0; i<out->size; i++) {
+        int temp = i;
+        int in_offset = 0;
+
+        // Convert flat output index i to multi-dim output indices
+        // Then map to input indices using dims[]
+        // Then convert to flat input offset
+
+        for(int d=0; d<ndim; d++) {
+            int coord = temp / out_strides[d];
+            temp %= out_strides[d];
+
+            // This coord corresponds to dimension d in output.
+            // Which is dimension dims[d] in input.
+            // So we add coord * in_strides[dims[d]]
+            in_offset += coord * in_strides[dims[d]];
+        }
+
+        out->data[i] = input->data[in_offset];
+    }
+
+    free(in_strides);
+    free(out_strides);
+}
+
+// Scaled Dot Product Attention (Fused)
+// Q, K, V: [Batch, Heads, Seq, HeadDim] (simplified for now)
+// Or [Batch, Seq, Heads, HeadDim]
+void tensor_scaled_dot_product_attention(Tensor* q, Tensor* k, Tensor* v, Tensor* out, float scale) {
+    // Assume Q, K, V are [Batch, Heads, Seq, HeadDim] (standard transposes already done?)
+    // Or [Batch, Seq, Heads, HeadDim] (standard Qwen).
+    // Let's assume [Batch, Seq, Heads, HeadDim] as per `rope` above.
+    // Wait, attention usually operates on Heads dimension independently.
+    // Standard Qwen: [Batch, Seq, Heads, HeadDim].
+    // To do matmul(Q, K^T), we need to handle the heads.
+    // For each Head, we do Q[Seq, HeadDim] * K[Seq, HeadDim]^T -> [Seq, Seq].
+
+    int batch = q->shape[0];
+    int seq = q->shape[1];
+    int heads = q->shape[2];
+    int head_dim = q->shape[3];
+
+    // Output: [Batch, Seq, Heads, HeadDim]
+
+    #pragma omp parallel for collapse(2)
+    for(int b=0; b<batch; b++) {
+        for(int h=0; h<heads; h++) {
+            // Pointers to this head's data
+            // Stride: Batch*Seq*Heads*HeadDim.
+            // Offset for (b, s, h): ((b*seq + s)*heads + h)*head_dim
+            // This layout is interleaved heads: [Seq, Heads, Dim].
+            // This is terrible for attention (strided access).
+            // But we must work with it.
+
+            // Allocate score buffer on stack/heap for this thread?
+            // Size: Seq * Seq. Max 4k*4k = 16M floats. Too big for stack.
+            // Malloc per thread is slow.
+            // But this is Python-replacement, so malloc is okay compared to Python overhead.
+
+            float* scores = (float*)malloc(sizeof(float) * seq * seq);
+
+            // Q * K^T
+            for(int i=0; i<seq; i++) {
+                float* q_vec = q->data + ((b*seq + i)*heads + h)*head_dim;
+                for(int j=0; j<seq; j++) {
+                    float* k_vec = k->data + ((b*seq + j)*heads + h)*head_dim;
+                    float sum = 0.0f;
+                    #pragma omp simd reduction(+:sum)
+                    for(int d=0; d<head_dim; d++) sum += q_vec[d] * k_vec[d];
+                    scores[i*seq + j] = sum * scale;
+                }
+            }
+
+            // Softmax
+            for(int i=0; i<seq; i++) {
+                float max_val = -1e9f;
+                for(int j=0; j<seq; j++) if(scores[i*seq + j] > max_val) max_val = scores[i*seq + j];
+
+                float sum = 0.0f;
+                for(int j=0; j<seq; j++) {
+                    scores[i*seq + j] = expf(scores[i*seq + j] - max_val);
+                    sum += scores[i*seq + j];
+                }
+                float inv_sum = 1.0f / sum;
+                for(int j=0; j<seq; j++) scores[i*seq + j] *= inv_sum;
+            }
+
+            // Score * V
+            for(int i=0; i<seq; i++) {
+                float* out_vec = out->data + ((b*seq + i)*heads + h)*head_dim;
+                for(int d=0; d<head_dim; d++) out_vec[d] = 0.0f; // Init
+
+                for(int j=0; j<seq; j++) {
+                    float score = scores[i*seq + j];
+                    float* v_vec = v->data + ((b*seq + j)*heads + h)*head_dim;
+                    for(int d=0; d<head_dim; d++) {
+                        out_vec[d] += score * v_vec[d];
+                    }
+                }
+            }
+
+            free(scores);
+        }
+    }
+}
+
+// SwiGLU: Gate * SiLU(Gate) * Up? No, SwiGLU(x) = (xW_g * SiLU(xW_g)) * xW_up ?
+// Usually passed as two tensors: gate_output, up_output.
+// out = silu(gate) * up
+void tensor_swiglu(Tensor* gate, Tensor* up, Tensor* out) {
+    #pragma omp parallel for simd
+    for(int i=0; i<out->size; i++) {
+        float g = gate->data[i];
+        float u = up->data[i];
+        float silu_g = g * (1.0f / (1.0f + expf(-g)));
+        out->data[i] = silu_g * u;
+    }
+}
+
+// Slice (Implementation exists but let's ensure it's here)
+void tensor_slice(Tensor* input, Tensor* out, int* start_indices, int* slice_shapes) {
+    int ndim = input->ndim;
+    int* in_strides = (int*)malloc(sizeof(int) * ndim);
+    int* out_strides = (int*)malloc(sizeof(int) * ndim);
+    get_strides(input->shape, ndim, in_strides);
+    get_strides(out->shape, ndim, out_strides);
+
+    #pragma omp parallel for
+    for(int i=0; i<out->size; i++) {
+        int temp = i;
+        int in_offset = 0;
+        for(int d=0; d<ndim; d++) {
+            int coord = temp / out_strides[d];
+            temp %= out_strides[d];
+            in_offset += (start_indices[d] + coord) * in_strides[d];
+        }
+        out->data[i] = input->data[in_offset];
+    }
+    free(in_strides);
+    free(out_strides);
+}
+
+// Precompute Freqs Cis (Implementation exists)
+void tensor_precompute_freqs_cis(int dim, int end, float theta, Tensor* out_cos, Tensor* out_sin) {
+    #pragma omp parallel for
+    for(int i=0; i<end; i++) {
+        for(int j=0; j<dim/2; j++) {
+            float freq = 1.0f / powf(theta, (float)(2*j) / dim);
+            float val = i * freq;
+            out_cos->data[i*(dim/2) + j] = cosf(val);
+            out_sin->data[i*(dim/2) + j] = sinf(val);
+        }
+    }
+}
+
+// Argmax
+void tensor_argmax(Tensor* input, Tensor* out) {
+    int last_dim = input->shape[input->ndim-1];
+    int batch = input->size / last_dim;
+    #pragma omp parallel for
+    for(int i=0; i<batch; i++) {
+        float* in_ptr = input->data + i*last_dim;
+        float max_val = -1e9f;
         int max_idx = 0;
-        for (int j = 0; j < cols; j++) {
-            if (input->data[i * cols + j] > max_val) {
-                max_val = input->data[i * cols + j];
+        for(int j=0; j<last_dim; j++) {
+            if(in_ptr[j] > max_val) {
+                max_val = in_ptr[j];
                 max_idx = j;
             }
         }
-        out->data[i] = (float)max_idx; // Storing index as float to reuse float tensor type
+        out->data[i] = (float)max_idx;
     }
 }
 
-EXPORT void tensor_embed(Tensor* weight, Tensor* indices, Tensor* out) {
-    // Gather rows from weight based on indices
-    // Weight: [NumEmbed, Dim]
-    // Indices: [Batch, Seq]
-    // Out: [Batch, Seq, Dim]
-
-    int num_indices = indices->size;
+// Embed
+void tensor_embed(Tensor* weight, Tensor* indices, Tensor* out) {
     int embed_dim = weight->shape[1];
+    #pragma omp parallel for
+    for(int i=0; i<indices->size; i++) {
+        int idx = (int)indices->data[i];
+        if(idx < 0 || idx >= weight->shape[0]) idx = 0; // Safe
+        memcpy(out->data + i*embed_dim, weight->data + idx*embed_dim, embed_dim * sizeof(float));
+    }
+}
+
+// Gather: out[i, j, k] = input[indices[i, j, k], j, k] (if axis=0)
+// Simplified: tensor_gather(input, indices, out, axis)
+// Just implement strict 1D gather for now or generic?
+// Generic gather along axis.
+void tensor_reshape(Tensor* input, Tensor* out) {
+    // Just copy data. Out shape is already set.
+    // Verify size matches?
+    if(input->size != out->size) return;
+    memcpy(out->data, input->data, input->size * sizeof(float));
+}
+
+void tensor_gather(Tensor* input, Tensor* indices, Tensor* out, int axis) {
+    int outer_size = 1;
+    for(int i=0; i<axis; i++) outer_size *= input->shape[i];
+    int inner_size = 1;
+    for(int i=axis+1; i<input->ndim; i++) inner_size *= input->shape[i];
+    int dim_size = input->shape[axis];
+
+    int indices_count = indices->size;
+    // Usually gather expands the axis dimension to match indices shape?
+    // Or indices is 1D and we select slices?
+    // Let's assume PyTorch gather semantic: out[i][j][k] = input[i][index[i][j][k]][k]
+    // Output shape matches indices shape.
+
+    // Simplified: select rows. axis=0.
+    // indices is 1D list of rows.
+    // Out is [indices_len, ...inner...]
+
+    // Let's implement `take` (numpy) / `index_select` (torch) style which is common for MoE.
+    // index_select(input, dim, index)
 
     #pragma omp parallel for
-    for (int i = 0; i < num_indices; i++) {
+    for(int i=0; i<indices->size; i++) {
         int idx = (int)indices->data[i];
-        if (idx < 0 || idx >= weight->shape[0]) idx = 0; // Boundary check (pad or error)
+        if(idx < 0 || idx >= dim_size) idx = 0;
 
-        // Copy row
-        memcpy(out->data + i * embed_dim, weight->data + idx * embed_dim, embed_dim * sizeof(float));
+        // Copy slice
+        // Src offset: ... idx ...
+        // This requires outer loop.
+
+        // Let's do simple row gather (embedding style) if axis=0
+        if(axis == 0) {
+            float* src = input->data + idx * inner_size;
+            float* dst = out->data + i * inner_size;
+            memcpy(dst, src, inner_size * sizeof(float));
+        }
     }
 }
 
-EXPORT void tensor_cat(Tensor** inputs, int count, int axis, Tensor* out) {
-    // Concatenation. Simplified for:
-    // Axis 0 (Batch): Stack [A, B] -> [A+B, ...]
-    // Axis 1 (Seq): [B, S1, D], [B, S2, D] -> [B, S1+S2, D] (Assuming 3D)
+// Scatter: out[indices[i]] = src[i]
+// index_add style?
+void tensor_scatter_add(Tensor* input, Tensor* indices, Tensor* src, int axis) {
+    // input is updated in place
+    // input[indices[i]] += src[i]
 
-    // Naive implementation for 2 tensors on axis 1 (common for KV cache [B, H, S, D])
-    // or axis 2 if [B, S, D]
-    // For simplicity, we just implement memcpy loops based on strides.
-    // Assuming inputs[0] and inputs[1] have compatible shapes.
+    int inner_size = 1;
+    for(int i=axis+1; i<input->ndim; i++) inner_size *= input->shape[i];
 
-    if (count != 2) return; // Only 2 supported for now
-    Tensor* A = inputs[0];
-    Tensor* B = inputs[1];
+    if(axis == 0) {
+        // Simple row scatter add
+        #pragma omp parallel for
+        for(int i=0; i<indices->size; i++) {
+            int idx = (int)indices->data[i];
+            float* s = src->data + i * inner_size;
+            float* d = input->data + idx * inner_size;
 
-    // Example: Axis 2 (Seq for [B, H, S, D])
-    // Or Axis 1 (Seq for [B, S, D])
-
-    // We calculate block size to copy
-    int outer_loops = 1;
-    for(int i=0; i<axis; ++i) outer_loops *= A->shape[i];
-
-    int stride_A = 1;
-    for(int i=axis+1; i<A->ndim; ++i) stride_A *= A->shape[i];
-    int stride_B = stride_A; // B must match
-
-    int dim_A = A->shape[axis];
-    int dim_B = B->shape[axis];
-
-    int block_size_A = dim_A * stride_A;
-    int block_size_B = dim_B * stride_B;
-
-    float* out_ptr = out->data;
-    float* a_ptr = A->data;
-    float* b_ptr = B->data;
-
-    for(int i=0; i<outer_loops; ++i) {
-        memcpy(out_ptr, a_ptr, block_size_A * sizeof(float));
-        out_ptr += block_size_A;
-        a_ptr += block_size_A;
-
-        memcpy(out_ptr, b_ptr, block_size_B * sizeof(float));
-        out_ptr += block_size_B;
-        b_ptr += block_size_B;
+            // Atomic add needed if duplicates in indices?
+            // OpenMP atomic for array? No.
+            // Critical section or atomic per float.
+            for(int j=0; j<inner_size; j++) {
+                #pragma omp atomic
+                d[j] += s[j];
+            }
+        }
     }
 }
 
-// Forward declarations for Loader and Image Ops
-EXPORT int open_safetensors(const char* filepath);
-EXPORT int load_tensor_data(const char* name, float* buffer, int size);
-EXPORT void close_safetensors();
-EXPORT void image_resize_bilinear(float* input, int channels, int h, int w, float* output, int target_h, int target_w);
-EXPORT void image_normalize(float* image, int channels, int h, int w, float* mean, float* std);
-EXPORT void image_rescale(float* image, int size, float scale);
+
+// Cat
+void tensor_cat(Tensor** inputs, int count, int axis, Tensor* out) {
+    // Check shapes
+    // Calculate offsets
+    // Copy
+    // Simplified for now: assume valid inputs
+    int outer_size = 1;
+    for(int i=0; i<axis; i++) outer_size *= out->shape[i];
+    int inner_size = 1;
+    for(int i=axis+1; i<out->ndim; i++) inner_size *= out->shape[i];
+
+    int current_offset = 0;
+    for(int k=0; k<count; k++) {
+        Tensor* t = inputs[k];
+        int dim_size = t->shape[axis];
+        int block_size = dim_size * inner_size;
+
+        #pragma omp parallel for
+        for(int o=0; o<outer_size; o++) {
+            float* src = t->data + o * block_size;
+            float* dst = out->data + o * (out->shape[axis] * inner_size) + current_offset * inner_size;
+            memcpy(dst, src, block_size * sizeof(float));
+        }
+        current_offset += dim_size;
+    }
+}
+
+// TopK
+// Input: [Batch, Dim]
+// Output: [Batch, K] (values), [Batch, K] (indices)
+// Simplified O(N*K) or O(N log K) implementation
+void tensor_topk(Tensor* input, int k, Tensor* out_values, Tensor* out_indices) {
+    int last_dim = input->shape[input->ndim-1];
+    int batch = input->size / last_dim;
+
+    #pragma omp parallel for
+    for(int b=0; b<batch; b++) {
+        float* in_ptr = input->data + b*last_dim;
+        float* val_ptr = out_values->data + b*k;
+        float* idx_ptr = out_indices->data + b*k;
+
+        // Simple selection sort for small K
+        // For large K, use heap or quickselect
+        // Assume K is small (e.g. 1-5 for MoE)
+
+        // Init with first K
+        for(int i=0; i<k; i++) {
+            val_ptr[i] = -1e18f; // -Inf
+            idx_ptr[i] = -1.0f;
+        }
+
+        for(int i=0; i<last_dim; i++) {
+            float val = in_ptr[i];
+
+            // Insert into sorted top-k list
+            // Find position
+            int pos = -1;
+            for(int j=0; j<k; j++) {
+                if(val > val_ptr[j]) {
+                    pos = j;
+                    break;
+                }
+            }
+
+            if(pos != -1) {
+                // Shift right
+                for(int j=k-1; j>pos; j--) {
+                    val_ptr[j] = val_ptr[j-1];
+                    idx_ptr[j] = idx_ptr[j-1];
+                }
+                val_ptr[pos] = val;
+                idx_ptr[pos] = (float)i;
+            }
+        }
+    }
+}
+
+// Image Resize is in image_ops.c
+
+// Safetensors (Stub implementation as separate file handles it or simplified here)
+// Real implementation is in safetensors_loader.c usually linked together

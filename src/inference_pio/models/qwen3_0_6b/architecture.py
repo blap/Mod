@@ -3,26 +3,19 @@ Qwen3-0.6B Architecture - C Backend (Real Generation)
 """
 
 from typing import Optional, Tuple, List
-from ...core.engine.layers import Module, Linear, Embedding, RMSNorm, ModuleList
-from ...core.engine.backend import Tensor, cat, arange
-
-# ... (Rotary, MLP, Attention same as before but need to ensure cache handling is correct) ...
-# Re-implementing simplified classes for clarity in this file context
+from ...core.engine.backend import Module, Linear, Embedding, RMSNorm, Tensor, cat, precompute_freqs_cis, scaled_dot_product_attention
 
 class Qwen3RotaryEmbedding(Module):
     def __init__(self, dim, max_position_embeddings=32768, base=10000.0):
         super().__init__()
-        # ... logic ...
-        self.cos, self.sin = self._precompute(dim, max_position_embeddings, base) # Assume implementation in backend/ops or here
-
-    def _precompute(self, dim, end, base):
-        # Stub logic for brevity in file write - reusing what was there or assuming tensor_ops has it
-        from ...core.engine.tensor_ops import precompute_freqs_cis
-        return precompute_freqs_cis(dim, end, base)
+        self.cos, self.sin = precompute_freqs_cis(dim, max_position_embeddings, base)
+        self.register_buffer("cos", self.cos)
+        self.register_buffer("sin", self.sin)
 
     def forward(self, x, seq_len):
-        # Slice logic would be needed. For now return full.
-        return self.cos, self.sin
+        start = [0, 0]
+        shape = [seq_len, self.cos.shape[1]]
+        return self.cos.slice(start, shape), self.sin.slice(start, shape)
 
 class Qwen3MLP(Module):
     def __init__(self, config):
@@ -31,7 +24,9 @@ class Qwen3MLP(Module):
         self.up_proj = Linear(config.hidden_size, config.intermediate_size, bias=False)
         self.down_proj = Linear(config.intermediate_size, config.hidden_size, bias=False)
     def forward(self, x):
-        return self.down_proj(self.gate_proj(x).silu().mul(self.up_proj(x)))
+        gate = self.gate_proj(x)
+        up = self.up_proj(x)
+        return self.down_proj(gate.swiglu(up))
 
 class Qwen3Attention(Module):
     def __init__(self, config):
@@ -48,23 +43,29 @@ class Qwen3Attention(Module):
         k = self.k_proj(hidden_states)
         v = self.v_proj(hidden_states)
 
-        # RoPE (Simplified call)
-        cos, sin = self.rotary_emb(v, k.shape[1]) # seq_len
+        # Reshape [B, S, Hidden] -> [B, S, Heads, HeadDim]
+        B = q.shape[0]
+        S = q.shape[1]
+        H = q.shape[2]
+        heads = H // self.head_dim
+        new_shape = [B, S, heads, self.head_dim]
+        q = q.reshape(new_shape)
+        k = k.reshape(new_shape)
+        v = v.reshape(new_shape)
+
+        cos, sin = self.rotary_emb(v, S)
         q, k = q.rope(k, cos, sin)
 
-        # Cache Management
         if past_key_value is not None:
-            # Concat on seq dim (dim 1)
             k = cat([past_key_value[0], k], axis=1)
             v = cat([past_key_value[1], v], axis=1)
 
         current_cache = (k, v) if use_cache else None
 
-        # Attention Q @ K.T (Backend handles transpose logic usually or we need explicit)
-        # C-Engine matmul is simplified.
-        attn = q.matmul(k)
-        attn = attn.softmax()
-        out = attn.matmul(v)
+        out = scaled_dot_product_attention(q, k, v)
+
+        # Flatten back
+        out = out.reshape([B, S, H])
 
         return self.o_proj(out), None, current_cache
 
@@ -93,7 +94,11 @@ class Qwen3Model(Module):
     def __init__(self, config):
         super().__init__()
         self.embed_tokens = Embedding(config.vocab_size, config.hidden_size)
-        self.layers = ModuleList([Qwen3DecoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layers = []
+        for i in range(config.num_hidden_layers):
+             l = Qwen3DecoderLayer(config)
+             self.layers.append(l)
+             self._modules[f"layer_{i}"] = l
         self.norm = RMSNorm(config.hidden_size)
 
     def forward(self, input_ids, past_key_values=None, use_cache=None):
@@ -117,46 +122,32 @@ class Qwen3ForCausalLM(Module):
         return logits, pkv
 
     def generate(self, input_ids, max_new_tokens=10, **kwargs):
-        # Real Autoregressive Loop
         current_ids = input_ids
         past_key_values = None
 
         for _ in range(max_new_tokens):
-            # Only process last token if we have cache
             if past_key_values:
-                # Slice last token logic needed.
-                # Since C-slice isn't explicit, we rely on the caller or assuming input_ids is growing
-                # Ideally: input_ids_step = current_ids[:, -1:]
-                # We need slice op.
-                # Workaround: Use full input (slower) or implement slice.
-                # "Efficient custom code": we should use slice.
-                # Since I didn't impl C-slice yet, I will use full input for correctness (no stub),
-                # acknowledging perf hit, OR use python list slicing before Tensor conversion if possible.
-                # But current_ids is Tensor.
-                # Let's assume full fwd for now to satisfy "No Stub".
-                model_input = current_ids
+                # Use slice to get last token
+                # current_ids shape [1, Seq]
+                seq_len = current_ids.shape[1]
+                start = [0, seq_len-1]
+                shape = [1, 1]
+                model_input = current_ids.slice(start, shape)
             else:
                 model_input = current_ids
 
             logits, pkv = self.forward(model_input, past_key_values=past_key_values, use_cache=True)
-            # past_key_values = pkv # Re-assigning might duplicate if not careful with shapes in naive implementation
+            past_key_values = pkv
 
-            # Greedy Decode: Argmax on last token logits
-            # Logits: [Batch, Seq, Vocab]
-            # Argmax: [Batch, Seq]
             next_token_ids = logits.argmax()
 
-            # We need the last token. C-Argmax returns tensor of indices.
-            # We need to slice the last one.
-            # Since we lack slice, we convert to list, take last, convert back.
-            # "No numpy".
-            ids_list = next_token_ids.to_list()
-            next_token_val = ids_list[-1]
+            if next_token_ids.shape[1] > 1:
+                 start = [0, next_token_ids.shape[1]-1]
+                 shape = [1, 1]
+                 next_token_tensor = next_token_ids.slice(start, shape)
+            else:
+                 next_token_tensor = next_token_ids
 
-            # Create new tensor [1, 1]
-            next_token_tensor = Tensor([1, 1], [float(next_token_val)])
-
-            # Concat
             current_ids = cat([current_ids, next_token_tensor], axis=1)
 
         return current_ids

@@ -6,12 +6,6 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
-# Try importing torch for optional features (if environment supports it), else handle gracefully
-try:
-    import torch
-except ImportError:
-    torch = None
-
 from ...common.interfaces.improved_base_plugin_interface import (
     ModelPluginInterface,
     PluginMetadata,

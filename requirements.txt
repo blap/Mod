@@ -1,141 +1,24 @@
 # Core dependencies for Inference-PIO - Self-Contained Plugin Architecture
 # Optimized for various hardware configurations with plugin-based flexibility
 
-# Core PyTorch ecosystem
-torch==2.1.2
-torchvision==0.16.2
-torchaudio==2.1.2
-torchtyping==0.1.4
-typeguard==2.13.3
-
-# Transformers and AI libraries
-transformers==4.36.2
-tokenizers==0.15.0
-datasets==2.15.0
-evaluate==0.4.1
-accelerate==0.25.0
-bitsandbytes==0.41.3
-
-# Core mathematical and scientific computing
-numpy==1.24.3
-scipy==1.11.4
-pandas==2.1.4
-scikit-learn==1.3.2
-
-# Deep learning optimization libraries
-optimum==1.15.0
-onnx==1.15.0
-onnxruntime==1.16.3
-tensorrt==8.6.1  # For NVIDIA GPU optimization
-
-# Memory and performance optimization
-psutil==5.9.7
-GPUtil==1.4.0
-memory-profiler==0.61.0
-py-cpuinfo==9.0.0
-
-# Hardware-specific optimizations
-ninja==1.11.1
-pybind11==2.11.1
-
-# Flash Attention implementations
-flash-attn==2.4.0
-xformers==0.0.23.post1
-
-# Vision processing (for multimodal plugins)
-Pillow==10.1.0
-opencv-python==4.8.1.78
-opencv-contrib-python==4.8.1.78
-timm==0.9.12
-
-# Text processing and tokenization
-sentencepiece==0.1.99
-protobuf==4.25.1
-safetensors==0.4.1
-
-# Logging and monitoring
-tensorboard==2.15.1
-wandb==0.16.1
-logging-color-formatter==1.0.3
-
-# Utilities and helpers
-pyyaml==6.0.1
-jinja2==3.1.2
-pygments==2.17.2
-markdown==3.5.1
-tqdm==4.66.1
-requests==2.31.0
-huggingface-hub==0.19.4
-hf-transfer==0.1.4
-
-# Development and testing tools
-black==23.11.0
-flake8==6.1.0
-mypy==1.7.1
-pre-commit==3.6.0
-jupyter==1.0.0
-notebook==7.0.6
-
-# System and hardware monitoring
-pynvml==11.5.0
-nvidia-ml-py3==7.352.0
-intel-extension-for-pytorch==2.1.10  # For Intel CPU optimizations
-
-# Additional optimization libraries
-einops==0.7.0
-rotary-embedding-torch==0.6.2
-vector-quantize-pytorch==1.12.9
-cosmos-tokenizer==0.0.6
-
-# Distributed training support
-deepspeed==0.13.1
-fairscale==0.4.13
-torch-tensorrt==1.4.0
-
-# Code quality and linting
-pylint==3.0.3
-isort==5.13.2
-autoflake==2.2.1
-yapf==0.40.2
-
-# Type checking and annotations
-typing-extensions==4.8.0
-jaxtyping==0.2.25
-
-# Async and parallel processing
-asyncio==3.4.3
-concurrentbuffer==0.1.2
-
-# Serialization and data handling
-pickle5==0.0.11  # For older Python compatibility
-h5py==3.10.0
-zstandard==0.21.0
-
-# Environment management
-virtualenv==20.24.6
-pip==23.3.2
-
-# Documentation and markup
-sphinx==7.2.6
-sphinx-rtd-theme==1.3.0
-recommonmark==0.7.1
-
-# Configuration and parsing
-configparser==6.0.0
-python-dotenv==1.0.0
-omegaconf==2.3.0
-
-# Performance profiling
-line-profiler==4.1.2
-memory-profiler==0.61.0
-cProfile==1.0.1
-
-# Development utilities
-ipywidgets==8.1.1
-matplotlib==3.8.2
-seaborn==0.13.0
-plotly==5.18.0
-
-# Plugin system dependencies
-dependency-injector==4.41.0
+# Core Utilities (No Heavy ML Deps)
+typing-extensions>=4.8.0
+psutil>=5.9.0
+tqdm>=4.66.0
 rich>=13.0.0
+pyyaml>=6.0.0
+requests>=2.31.0
+
+# Image Processing (Pillow only)
+Pillow>=10.0.0
+
+# Development Tools
+mypy>=1.7.0
+black>=23.0.0
+flake8>=6.0.0
+pre-commit>=3.6.0
+pylint>=3.0.0
+isort>=5.13.0
+
+# Testing
+pytest>=7.0.0

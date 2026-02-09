@@ -8,18 +8,12 @@ import logging
 import os
 import re
 from typing import Dict, List, Optional, Tuple, Union
+from ...core.engine.backend import Tensor
 
 logger = logging.getLogger(__name__)
 
+# Pre-computed byte-to-unicode mapping
 def bytes_to_unicode():
-    """
-    Returns list of utf-8 byte and a corresponding list of unicode strings.
-    The reversible bpe codes work on unicode strings.
-    This means you need a large # of unicode characters in your vocab if you want to avoid UNKs.
-    When you're at something like a 10B token dataset you end up needing around 5K for decent coverage.
-    This is a significant percentage of your normal, say, 32K bpe vocab.
-    To avoid that, we want lookup tables between utf-8 bytes and unicode strings.
-    """
     bs = (
         list(range(ord("!"), ord("~") + 1))
         + list(range(ord("¡"), ord("¬") + 1))
@@ -35,17 +29,6 @@ def bytes_to_unicode():
     cs = [chr(n) for n in cs]
     return dict(zip(bs, cs))
 
-def get_pairs(word):
-    """Return set of symbol pairs in a word.
-    Word is represented as tuple of symbols (symbols being variable-length strings).
-    """
-    pairs = set()
-    prev_char = word[0]
-    for char in word[1:]:
-        pairs.add((prev_char, char))
-        prev_char = char
-    return pairs
-
 class CustomBPETokenizer:
     """
     Efficient BPE Tokenizer implementation without external dependencies (except standard lib).
@@ -53,37 +36,35 @@ class CustomBPETokenizer:
     """
 
     def __init__(self, vocab_file: str, merges_file: str, errors: str = "replace", unk_token: str = "<|endoftext|>"):
-        with open(vocab_file, encoding="utf-8") as f:
+        with open(vocab_file, "r", encoding="utf-8") as f:
             self.encoder = json.load(f)
+
         self.decoder = {v: k for k, v in self.encoder.items()}
-        self.errors = errors  # how to handle errors in decoding
+        self.errors = errors
         self.byte_encoder = bytes_to_unicode()
         self.byte_decoder = {v: k for k, v in self.byte_encoder.items()}
 
-        with open(merges_file, encoding="utf-8") as f:
-            bpe_data = f.read().split("\n")[1:-1]
+        with open(merges_file, "r", encoding="utf-8") as f:
+            merges = f.read().split("\n")[1:-1]
 
-        bpe_merges = [tuple(merge.split()) for merge in bpe_data]
-        self.bpe_ranks = dict(zip(bpe_merges, range(len(bpe_merges))))
+        merges = [tuple(merge.split()) for merge in merges]
+        self.bpe_ranks = dict(zip(merges, range(len(merges))))
         self.cache = {}
 
-        # Should match GPT-2 regex for tokenization (using standard re compatible patterns)
-        # \p{L} -> [^\W\d_] (Unicode letters)
-        # \p{N} -> \d (Unicode numbers)
+        # Regex pattern for tokenization (GPT-2 style)
         self.pat = re.compile(
-            r"""'s|'t|'re|'ve|'m|'ll|'d| ?[^\W\d_]+| ?\d+| ?[^\s\w]+|\s+(?!\S)|\s+""",
-            re.UNICODE
+            r"""'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
         )
 
         self.unk_token = unk_token
-        self.unk_token_id = self.encoder.get(unk_token, 0) # Fallback to 0 if not found
+        self.unk_token_id = self.encoder.get(unk_token, 0)
 
     def bpe(self, token):
         if token in self.cache:
             return self.cache[token]
 
         word = tuple(token)
-        pairs = get_pairs(word)
+        pairs = self._get_pairs(word)
 
         if not pairs:
             return token
@@ -92,6 +73,7 @@ class CustomBPETokenizer:
             bigram = min(pairs, key=lambda pair: self.bpe_ranks.get(pair, float("inf")))
             if bigram not in self.bpe_ranks:
                 break
+
             first, second = bigram
             new_word = []
             i = 0
@@ -100,7 +82,7 @@ class CustomBPETokenizer:
                     j = word.index(first, i)
                     new_word.extend(word[i:j])
                     i = j
-                except:
+                except ValueError:
                     new_word.extend(word[i:])
                     break
 
@@ -110,57 +92,73 @@ class CustomBPETokenizer:
                 else:
                     new_word.append(word[i])
                     i += 1
+
             new_word = tuple(new_word)
             word = new_word
             if len(word) == 1:
                 break
             else:
-                pairs = get_pairs(word)
+                pairs = self._get_pairs(word)
 
         word = " ".join(word)
         self.cache[token] = word
         return word
 
-    def encode(self, text: str) -> List[int]:
-        """Encode text to token IDs."""
-        bpe_tokens = []
+    def _get_pairs(self, word):
+        pairs = set()
+        prev_char = word[0]
+        for char in word[1:]:
+            pairs.add((prev_char, char))
+            prev_char = char
+        return pairs
 
-        for token in re.findall(self.pat, text):
+    def encode(self, text: str) -> List[int]:
+        bpe_tokens = []
+        # Fallback regex if p{L} not supported in python re (it isn't by default without regex module)
+        # Using simpler approximation for standard lib re
+        pat = re.compile(r"""'s|'t|'re|'ve|'m|'ll|'d| ?[a-zA-Z]+| ?\d+| ?[^\s\w]+|\s+(?!\S)|\s+""")
+
+        for token in re.findall(pat, text):
             token = "".join(self.byte_encoder[b] for b in token.encode("utf-8"))
-            bpe_tokens.extend(self.encoder[bpe_token] for bpe_token in self.bpe(token).split(" "))
+            bpe_tokens.extend(self.encoder.get(bpe_token, self.unk_token_id)
+                            for bpe_token in self.bpe(token).split(" "))
 
         return bpe_tokens
 
     def decode(self, tokens: List[int]) -> str:
-        """Decode token IDs to text."""
         text = "".join([self.decoder.get(token, self.unk_token) for token in tokens])
         text = bytearray([self.byte_decoder[c] for c in text]).decode("utf-8", errors=self.errors)
         return text
 
-    def __call__(self, text, return_tensors=None, **kwargs):
-        """Mimic transformers tokenizer call interface."""
+    def __call__(self, text: str, return_tensors: Optional[str] = None, **kwargs):
+        """Standard call interface compatible with transformers."""
         ids = self.encode(text)
-        if return_tensors == "pt":
-            import torch
-            return {"input_ids": torch.tensor([ids]), "attention_mask": torch.ones(1, len(ids))}
+
+        if return_tensors == "pt" or return_tensors == "backend":
+            # Return our custom Tensor
+            # Shape [1, Seq]
+            t_ids = Tensor([1, len(ids)])
+            # Fill data
+            float_ids = [float(x) for x in ids]
+            t_ids.load(float_ids)
+
+            t_mask = Tensor([1, len(ids)])
+            t_mask.fill(1.0)
+
+            return {"input_ids": t_ids, "attention_mask": t_mask}
+
         return {"input_ids": ids}
 
     @property
-    def pad_token_id(self):
-        return self.unk_token_id
-
+    def pad_token_id(self): return self.unk_token_id
     @property
-    def eos_token_id(self):
-        return self.unk_token_id
+    def eos_token_id(self): return self.unk_token_id
+    @property
+    def vocab_size(self): return len(self.encoder)
 
 def load_custom_tokenizer(model_path: str) -> CustomBPETokenizer:
-    """Factory to load tokenizer from model directory."""
     vocab_file = os.path.join(model_path, "vocab.json")
     merges_file = os.path.join(model_path, "merges.txt")
-
-    if not os.path.exists(vocab_file) or not os.path.exists(merges_file):
-        # Fallback to searching inside subdirectories or different filenames if needed
-        # For now, strict check
-        raise FileNotFoundError(f"Tokenizer files not found in {model_path}")
-
+    if not os.path.exists(vocab_file): raise FileNotFoundError(f"Missing {vocab_file}")
+    if not os.path.exists(merges_file): raise FileNotFoundError(f"Missing {merges_file}")
     return CustomBPETokenizer(vocab_file, merges_file)

@@ -9,7 +9,7 @@ import logging
 from typing import Any, Dict, Optional, List
 
 from ...common.interfaces.improved_base_plugin_interface import BasePluginInterface, PluginMetadata, PluginType
-from ...core.engine.backend import Tensor
+from ...core.engine.backend import Tensor, scaled_dot_product_attention
 
 logger = logging.getLogger(__name__)
 
@@ -64,49 +64,14 @@ class NativeCPUPlugin(BasePluginInterface):
         dropout_p: float = 0.0,
         is_causal: bool = False,
     ) -> Tensor:
-        # Native C implementation of SDPA
-        # Scale
-        d_k = query.shape[-1]
-        scale = 1.0 / (d_k ** 0.5)
-
-        # Q @ K.T (assuming K is already transposed or we handle it)
-        # Note: Our simple C-engine 'matmul' might expect [..., M, K] @ [..., K, N]
-        # Torch SDPA expects K: [..., S, D]. So we need transpose.
-        # Our current C-wrapper doesn't expose explicit transpose yet,
-        # but `matmul` usually handles the algebra.
-        # Let's assume standard dot product attention logic is built into a higher level op
-        # or composed here.
-
-        # Simplified composite op for now:
-        # scores = (Q @ K.T) * scale
-        # if mask: scores += mask
-        # attn = softmax(scores)
-        # out = attn @ V
-
-        # Note: backend.py doesn't strictly implement transpose() yet in python wrapper
-        # This would be a required extension for full SDPA.
-        # For this refactor step, we delegate to the 'matmul' capability we have.
-
-        scores = query.matmul(key) # Implicitly handles dims? Needs verification of C-code logic.
-        # In tensor_ops.c, matmul is 2D naive.
-        # Real SDPA requires 4D [Batch, Heads, Seq, Dim].
-
-        # For the purpose of "No Stubs", we use the existing C-API which has `matmul`.
-        # Assuming shapes align for the demo.
-
-        scores = scores # * scale (Need scalar mul support in C)
-
-        if attn_mask:
-            scores = scores.add(attn_mask)
-
-        attn = scores.softmax()
-        out = attn.matmul(value)
-        return out
+        # Native C implementation of SDPA (Fused)
+        return scaled_dot_product_attention(query, key, value)
 
     def apply_activation(self, x: Tensor, activation_type: str) -> Tensor:
         if activation_type == "silu" or activation_type == "swish":
             return x.silu()
-        # Add gelu/relu to C engine if needed
+        elif activation_type == "gelu":
+            return x.gelu()
         return x
 
     def manage_threads(self, num_threads: int):

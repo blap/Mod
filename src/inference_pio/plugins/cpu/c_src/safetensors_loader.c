@@ -2,164 +2,113 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include "../../common/tensor.h"
 
-#ifdef _WIN32
-  #define EXPORT __declspec(dllexport)
-#else
-  #define EXPORT
-#endif
+// Minimal SafeTensors Loader (Dependency-Free)
+// Supports reading tensors from a .safetensors file by name.
 
-// Minimal JSON parser helper (very basic, assumes standard SafeTensors header format)
-// Returns the offset to the start of binary data and fills tensor info map (simplified)
-
-typedef struct {
-    char name[256];
-    size_t shape[8];
-    int ndim;
-    size_t data_offset[2]; // start, end
-    char dtype[16];
-} TensorInfo;
-
-// Simplified loader that reads the header size and finds tensor offsets
-// In a real implementation, we would use a JSON library like cJSON or JSMN.
-// Here we implement a naive parser sufficient for the task without external deps.
-
-uint64_t read_u64(FILE* f) {
-    uint64_t val;
-    if (fread(&val, sizeof(uint64_t), 1, f) != 1) return 0;
-    return val; // SafeTensors is little-endian
-}
-
-// Global buffer for loaded tensors metadata (simplified storage)
-#define MAX_TENSORS 1024
-TensorInfo g_tensor_registry[MAX_TENSORS];
-int g_tensor_count = 0;
 FILE* g_current_file = NULL;
+char* g_header_json = NULL;
 uint64_t g_header_size = 0;
 
-EXPORT void close_safetensors() {
-    if (g_current_file) {
-        fclose(g_current_file);
-        g_current_file = NULL;
-    }
-    g_tensor_count = 0;
-}
-
-EXPORT int open_safetensors(const char* filepath) {
-    close_safetensors();
+int open_safetensors(const char* filepath) {
+    if (g_current_file) fclose(g_current_file);
     g_current_file = fopen(filepath, "rb");
-    if (!g_current_file) return -1;
+    if (!g_current_file) return 0;
 
-    // Read header size (8 bytes, little endian)
-    g_header_size = read_u64(g_current_file);
-    if (g_header_size == 0) return -2;
-
-    // Read header JSON string
-    char* header_json = (char*)malloc(g_header_size + 1);
-    if (fread(header_json, 1, g_header_size, g_current_file) != g_header_size) {
-        free(header_json);
-        return -3;
-    }
-    header_json[g_header_size] = '\0';
-
-    // Parse JSON (Naive regex-like scan)
-
-    char* cursor = header_json;
-    while (*cursor && g_tensor_count < MAX_TENSORS) {
-        // Find next key (tensor name)
-        char* key_start = strchr(cursor, '\"');
-        if (!key_start) break;
-        key_start++;
-        char* key_end = strchr(key_start, '\"');
-        if (!key_end) break;
-
-        // Check if this is metadata key "__metadata__"
-        if (strncmp(key_start, "__metadata__", 12) == 0) {
-            cursor = strchr(key_end + 1, '}'); // Skip object
-            if (!cursor) break;
-            cursor++;
-            continue;
-        }
-
-        // Store Name
-        int name_len = key_end - key_start;
-        if (name_len > 255) name_len = 255;
-        strncpy(g_tensor_registry[g_tensor_count].name, key_start, name_len);
-        g_tensor_registry[g_tensor_count].name[name_len] = '\0';
-
-        // Find data_offsets
-        char* offsets_key = strstr(key_end, "\"data_offsets\"");
-        if (!offsets_key) break;
-        char* bracket_start = strchr(offsets_key, '[');
-        if (!bracket_start) break;
-
-        long start = strtol(bracket_start + 1, &cursor, 10);
-        while (*cursor == ' ' || *cursor == ',') cursor++;
-        long end = strtol(cursor, &cursor, 10);
-
-        g_tensor_registry[g_tensor_count].data_offset[0] = start;
-        g_tensor_registry[g_tensor_count].data_offset[1] = end;
-
-        g_tensor_count++;
-
-        // Find end of this object
-        char* obj_end = strchr(key_end, '}');
-        if (!obj_end) break;
-        cursor = obj_end + 1;
+    // Read header size (8 bytes, little endian uint64)
+    if (fread(&g_header_size, 8, 1, g_current_file) != 1) {
+        fclose(g_current_file); g_current_file = NULL; return 0;
     }
 
-    free(header_json);
-    return g_tensor_count;
+    // Read header JSON
+    if (g_header_json) free(g_header_json);
+    g_header_json = (char*)malloc(g_header_size + 1);
+    if (fread(g_header_json, 1, g_header_size, g_current_file) != g_header_size) {
+        free(g_header_json); g_header_json = NULL;
+        fclose(g_current_file); g_current_file = NULL; return 0;
+    }
+    g_header_json[g_header_size] = '\0';
+    return 1;
 }
 
-// Load tensor data by name into a pre-allocated float buffer
-// Returns 0 on success, -1 on failure/not found
-EXPORT int load_tensor_data(const char* name, float* buffer, int size) {
-    if (!g_current_file) return -1;
+// Simple string search for "tensor_name": { ... "data_offsets": [start, end] ... }
+// This is fragile but works for standard safetensors if keys are quoted.
+int load_tensor_data(const char* name, float* buffer, int size) {
+    if (!g_current_file || !g_header_json) return 0;
 
-    for (int i = 0; i < g_tensor_count; i++) {
-        if (strcmp(g_tensor_registry[i].name, name) == 0) {
-            long start = g_tensor_registry[i].data_offset[0];
-            long end = g_tensor_registry[i].data_offset[1];
-            long bytes = end - start;
+    char search_key[256];
+    snprintf(search_key, 256, "\"%s\"", name);
 
-            // Seek to data (Header Size + 8 bytes length + offset)
-            long file_offset = 8 + g_header_size + start;
-            fseek(g_current_file, file_offset, SEEK_SET);
+    char* pos = strstr(g_header_json, search_key);
+    if (!pos) return 0;
 
-            if (bytes == size * sizeof(float)) {
-                // Direct read (FP32)
-                fread(buffer, sizeof(float), size, g_current_file);
-            } else if (bytes == size * sizeof(uint16_t)) {
-                // Convert FP16 to FP32 on the fly
-                uint16_t* temp = (uint16_t*)malloc(bytes);
-                fread(temp, 1, bytes, g_current_file);
+    // Found name. Find "data_offsets" after it.
+    char* offsets_key = "\"data_offsets\"";
+    char* offsets_pos = strstr(pos, offsets_key);
+    if (!offsets_pos) return 0;
 
-                #pragma omp parallel for
-                for (int j = 0; j < size; j++) {
-                    uint16_t h = temp[j];
-                    uint16_t h_exp = (h >> 10) & 0x1f;
-                    uint16_t h_sig = h & 0x3ff;
+    // Parse [start, end]
+    char* bracket_start = strchr(offsets_pos, '[');
+    if (!bracket_start) return 0;
 
-                    uint32_t f_sign = (h >> 15) << 31;
-                    uint32_t f_exp = (h_exp + 112) << 23;
-                    uint32_t f_sig = h_sig << 13;
+    long start, end;
+    if (sscanf(bracket_start + 1, "%ld, %ld", &start, &end) != 2) return 0;
 
-                    if (h_exp == 0) {
-                        if (h_sig == 0) f_exp = 0;
-                        else f_exp = 0;
-                    } else if (h_exp == 0x1f) {
-                        f_exp = 0xff << 23;
+    // Seek and read
+    long data_start = 8 + g_header_size + start;
+    fseek(g_current_file, data_start, SEEK_SET);
+
+    // Check size (bytes vs float elements)
+    long bytes = end - start;
+    if (bytes == size * sizeof(float)) {
+        if (fread(buffer, sizeof(float), size, g_current_file) != (size_t)size) return 0;
+    } else if (bytes == size * sizeof(uint16_t)) {
+        // Handle fp16 -> fp32 conversion
+        uint16_t* temp = (uint16_t*)malloc(bytes);
+        if (fread(temp, 1, bytes, g_current_file) != (size_t)bytes) { free(temp); return 0; }
+
+        // Simple fp16 to fp32 (ignoring denormals/inf/nan handling for brevity or using library)
+        // Since no library, we use a simple conversion or just cast if compiler supports _Float16
+        // or shift bits.
+        // Fast approx: extract exponent and mantissa.
+        for(int i=0; i<size; i++) {
+            uint16_t h = temp[i];
+            uint32_t s = (h >> 15) & 0x1;
+            uint32_t e = (h >> 10) & 0x1F;
+            uint32_t m = h & 0x3FF;
+
+            uint32_t f;
+            if (e == 0) {
+                if (m == 0) f = s << 31;
+                else {
+                    // Denormal
+                    while (!(m & 0x400)) {
+                        m <<= 1;
+                        e--;
                     }
-
-                    uint32_t f_bits = f_sign | f_exp | f_sig;
-                    memcpy(&buffer[j], &f_bits, sizeof(float));
+                    e++;
+                    m &= ~0x400;
+                    f = (s << 31) | ((e + 112) << 23) | (m << 13);
                 }
-                free(temp);
+            } else if (e == 31) {
+                if (m == 0) f = (s << 31) | 0x7F800000; // Inf
+                else f = (s << 31) | 0x7F800000 | (m << 13); // NaN
+            } else {
+                f = (s << 31) | ((e + 112) << 23) | (m << 13);
             }
 
-            return 0;
+            memcpy(&buffer[i], &f, sizeof(float));
         }
+        free(temp);
+    } else {
+        return 0; // Size mismatch / unknown type
     }
-    return -1; // Not found
+
+    return 1;
+}
+
+void close_safetensors() {
+    if (g_current_file) { fclose(g_current_file); g_current_file = NULL; }
+    if (g_header_json) { free(g_header_json); g_header_json = NULL; }
 }

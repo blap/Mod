@@ -1,51 +1,18 @@
 """
 Qwen3-Coder-30B Model Implementation - Self-Contained Version
-
-This module implements the Qwen3-Coder-30B model following the self-contained plugin architecture
-for the Inference-PIO system. This implementation is optimized specifically for Qwen3-Coder-30B
-characteristics while maintaining compatibility with the generic model interface.
+Dependency-Free using Custom Backend
 """
 
 import logging
-import time
-import subprocess
-import sys
-from concurrent.futures import Future
-from datetime import datetime
-from typing import Any, Callable, Dict, Generator, List, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Union
 
-import torch
-import torch.nn as nn
-from src.inference_pio.common.custom_components.model_loader import CustomModelLoader
-from src.inference_pio.common.custom_components.tokenizer import CustomBPETokenizer
-
-from src.inference_pio.common.processing.adaptive_batch_manager import get_adaptive_batch_manager
-from src.inference_pio.common.processing.dynamic_text_batching import (
-    DynamicTextBatchManager,
-    get_dynamic_text_batch_manager,
-)
-from src.inference_pio.common.processing.input_complexity_analyzer import get_complexity_analyzer
-from src.inference_pio.common.processing.streaming_computation import (
-    StreamingComputationEngine,
-    StreamRequest,
-    StreamResult,
-    create_streaming_engine,
-)
+from ...core.engine.backend import Module, Tensor, Linear, Embedding, RMSNorm, precompute_freqs_cis, scaled_dot_product_attention, cat
+from ...common.custom_components.tokenizer import CustomBPETokenizer
 from .config import Qwen3Coder30BConfig
 
 logger = logging.getLogger(__name__)
 
-# Import energy estimation separately if available
-try:
-    from ...utils.snn_utils import estimate_energy_savings
-except ImportError:
-    # Define a dummy function if not available
-    def estimate_energy_savings(model, input_shape):
-        """Implement the required functionality."""
-        # This is a placeholder implementation
-        return None
-
-class Qwen3Coder30BModel(nn.Module):
+class Qwen3Coder30BModel(Module):
     """
     Qwen3-Coder-30B model implementation.
     """
@@ -53,332 +20,139 @@ class Qwen3Coder30BModel(nn.Module):
     def __init__(self, config: Qwen3Coder30BConfig):
         super().__init__()
         self.config = config
-        self._model = None
         self._tokenizer = None
-        self._sequence_parallel_model = None
-        self._pipeline_parallel_model = None
-        self._nas_controller = None
-        self._model_adapter = None
-        self._async_manager = None
-        self._tensor_offloader = None
-        self._disk_offloader = None
-        self._pagination_system = None
-        self._caching_manager = None
 
-        self._initialize_model()
+        # Initialize Architecture
+        self.embed_tokens = Embedding(config.vocab_size, config.hidden_size)
+        self.layers = []
 
-    def _initialize_model(self):
-        """
-        Initialize the model using CustomModelLoader.
-        """
-        logger.info("Initializing Qwen3-Coder-30B model...")
+        # RoPE Cache
+        head_dim = config.hidden_size // config.num_attention_heads
+        self.cos_cache, self.sin_cache = precompute_freqs_cis(head_dim, config.max_position_embeddings, config.rope_theta)
 
-        # Load Model
-        loader = CustomModelLoader()
-        device = self.config.device if hasattr(self.config, "device") else ("cuda" if torch.cuda.is_available() else "cpu")
-        dtype = getattr(torch, self.config.torch_dtype) if hasattr(self.config, "torch_dtype") and hasattr(torch, self.config.torch_dtype) else torch.float16
+        for i in range(config.num_hidden_layers):
+            layer = Qwen3Coder30BDecoderLayer(config, self.cos_cache, self.sin_cache)
+            self.layers.append(layer)
+            self._modules[f"layer_{i}"] = layer
 
+        self.norm = RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.lm_head = Linear(config.hidden_size, config.vocab_size, bias=False)
+
+        # Helper components
+        self._initialize_tokenizer()
+
+    def _initialize_tokenizer(self):
         try:
-            self._model = loader.load_model(self.config.model_path, device=device, dtype=dtype)
+            # Assuming tokenizer files are at config.model_path or handled by factory
+            pass
         except Exception as e:
-            logger.warning(f"Could not load model using CustomModelLoader: {e}. Using mock model for now.")
-            self._model = nn.Linear(10, 10) # Mock
-
-        # Load Tokenizer
-        try:
-            self._tokenizer = CustomBPETokenizer()
-            # self._tokenizer.load(self.config.model_path) # If implemented
-        except Exception as e:
-            logger.warning(f"Could not load custom tokenizer: {e}")
-            self._tokenizer = None
-
-    def forward(self, *args, **kwargs):
-        start_time = time.time()
-
-        # Use sequence parallel model if enabled (takes precedence over pipeline parallel)
-        if self._sequence_parallel_model is not None:
-            # Prepare inputs for sequence parallel
-            if args:
-                input_tensor = args[0]
-            elif "input_ids" in kwargs:
-                input_tensor = kwargs["input_ids"]
-            elif "inputs_embeds" in kwargs:
-                input_tensor = kwargs["inputs_embeds"]
-            else:
-                input_tensor = None
-
-            if input_tensor is not None:
-                try:
-                    result = self._sequence_parallel_model(input_tensor)
-                    return result
-                except Exception as e:
-                    logger.warning(
-                        f"Sequence parallel forward failed: {e}, falling back to other models"
-                    )
-
-        # Use pipeline parallel model if enabled
-        if self._pipeline_parallel_model is not None:
-            # Prepare inputs for pipeline
-            if args:
-                input_tensor = args[0]
-            elif "input_ids" in kwargs:
-                input_tensor = kwargs["input_ids"]
-            elif "inputs_embeds" in kwargs:
-                input_tensor = kwargs["inputs_embeds"]
-            else:
-                input_tensor = None
-
-            if input_tensor is not None:
-                try:
-                    result = self._pipeline_parallel_model(input_tensor)
-                    return result
-                except Exception as e:
-                    logger.warning(
-                        f"Pipeline parallel forward failed: {e}, falling back to regular model"
-                    )
-
-        result = self._model(*args, **kwargs)
-        return result
+            logger.warning(f"Tokenizer init warning: {e}")
 
     def get_tokenizer(self):
-        """
-        Get the tokenizer associated with the model.
-        """
         return self._tokenizer
 
-    def generate_with_adaptive_batching(
-        self, inputs: Union[torch.Tensor, List[str]], **kwargs
-    ):
-        """
-        Generate text using the model with adaptive batching based on input complexity.
-        """
-        # Simplified implementation using standard generate
-        if self._model:
-             # This is a placeholder. In real implementation we would batch.
-             return self._model.generate(inputs, **kwargs) if hasattr(self._model, "generate") else None
-        return None
+    def forward(self, input_ids: Tensor) -> Tensor:
+        hidden_states = self.embed_tokens(input_ids)
+        for layer in self.layers:
+            hidden_states = layer(hidden_states)
+        hidden_states = self.norm(hidden_states)
+        return hidden_states
 
-    def _generate_chunk(self, chunk_inputs: Union[torch.Tensor, List[str]], **kwargs):
-        """
-        Helper method to generate for a chunk of inputs.
-        """
-        if isinstance(chunk_inputs, list) and self._tokenizer:
-            # Tokenize list of strings
-            inputs_tensor = self._tokenizer.encode_batch(chunk_inputs)
-            # .to(self._model.device) # custom tokenizer might return list or tensor
-        else:
-            inputs_tensor = chunk_inputs
+    def generate(self, input_ids: Tensor, max_new_tokens: int = 10) -> Tensor:
+        current_ids = input_ids
+        for _ in range(max_new_tokens):
+            h = self.forward(current_ids)
+            logits = self.lm_head(h)
 
-        return self._model.generate(inputs_tensor, **kwargs)
+            # Greedy decode last token
+            B = logits.shape[0]
+            S = logits.shape[1]
+            V = logits.shape[2]
 
-    def setup_streaming_computation(
-        self, max_concurrent_requests: int = 4, buffer_size: int = 100
-    ):
-        """
-        Setup streaming computation for continuous processing.
-        """
-        # Create streaming computation engine for this model
-        self.streaming_engine = create_streaming_engine(
-            model=self._model,
-            name=f"qwen3_coder_{id(self)}",
-            max_concurrent_requests=max_concurrent_requests,
-            buffer_size=buffer_size,
-            device=next(self._model.parameters()).device if self._model else "cpu",
-        )
-        self.streaming_engine.start()
-        logger.info(
-            f"Setup streaming computation for Qwen3-Coder-30B model with max_concurrent={max_concurrent_requests}"
-        )
+            # Slice last token: [B, 1, V]
+            # (Assuming batch 1 for simplicity in C backend slicing)
+            # Backend slice: start_indices, slice_shapes
+            last_logits = logits.slice([0, S-1, 0], [B, 1, V])
+            next_token = last_logits.argmax() # [B, 1]
 
-    def submit_stream_request(
-        self, request_id: str, data: Any, callback: Optional[Callable] = None
-    ) -> Future:
-        """
-        Submit a request to the streaming computation engine.
-        """
-        if not hasattr(self, "streaming_engine"):
-            raise RuntimeError(
-                "Streaming computation not initialized. Call setup_streaming_computation first."
-            )
+            current_ids = cat([current_ids, next_token], axis=1)
 
-        request = StreamRequest(id=request_id, data=data, callback=callback)
+        return current_ids
 
-        return self.streaming_engine.submit_request(request)
+class Qwen3Coder30BDecoderLayer(Module):
+    def __init__(self, config, cos, sin):
+        super().__init__()
+        self.input_layernorm = RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.self_attn = Qwen3Coder30BAttention(config, cos, sin)
+        self.post_attention_layernorm = RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.mlp = Qwen3Coder30BMLP(config)
 
-    def generate_stream(
-        self,
-        prompts: Union[str, List[str], Generator],
-        max_new_tokens: int = 512,
-        **kwargs,
-    ) -> Generator[StreamResult, None, None]:
-        """
-        Generate streaming outputs for continuous processing.
-        """
-        if not hasattr(self, "streaming_engine"):
-            raise RuntimeError(
-                "Streaming computation not initialized. Call setup_streaming_computation first."
-            )
+    def forward(self, x):
+        residual = x
+        h = self.input_layernorm(x)
+        h = self.self_attn(h)
+        x = residual + h
 
-        return self.streaming_engine.generate_stream(prompts, max_new_tokens, **kwargs)
+        residual = x
+        h = self.post_attention_layernorm(x)
+        h = self.mlp(h)
+        x = residual + h
+        return x
 
-    def process_async(self, text: str, **kwargs):
-        """
-        Process text asynchronously using the async unimodal processing system.
-        """
-        if self._async_manager is None:
-            raise RuntimeError(
-                "Async unimodal processing not initialized. Call with enable_async_unimodal_processing=True in config."
-            )
+class Qwen3Coder30BAttention(Module):
+    def __init__(self, config, cos, sin):
+        super().__init__()
+        self.hidden_size = config.hidden_size
+        self.num_heads = config.num_attention_heads
+        self.head_dim = self.hidden_size // self.num_heads
 
-        # Run the async processing in a new event loop or the current one
-        import asyncio
+        self.q_proj = Linear(self.hidden_size, self.hidden_size, bias=True)
+        self.k_proj = Linear(self.hidden_size, self.hidden_size, bias=True)
+        self.v_proj = Linear(self.hidden_size, self.hidden_size, bias=True)
+        self.o_proj = Linear(self.hidden_size, self.hidden_size, bias=False)
 
-        async def run_async_processing():
-            return await self._async_manager.process_unimodal_request(
-                text=text, **kwargs
-            )
+        self.cos = cos
+        self.sin = sin
+        self.scale = 1.0 / (self.head_dim ** 0.5)
 
-        # If we're already in an event loop, use run_coroutine_threadsafe
-        try:
-            loop = asyncio.get_running_loop()
-            import concurrent.futures
+    def forward(self, x):
+        q = self.q_proj(x)
+        k = self.k_proj(x)
+        v = self.v_proj(x)
 
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(asyncio.run, run_async_processing())
-                return future.result()
-        except RuntimeError:
-            return asyncio.run(run_async_processing())
+        # Reshape to 4D [B, S, Heads, HeadDim]
+        B = q.shape[0]
+        S = q.shape[1]
+        new_shape = [B, S, self.num_heads, self.head_dim]
+        q = q.reshape(new_shape)
+        k = k.reshape(new_shape)
+        v = v.reshape(new_shape)
 
-    def process_batch_async(self, texts: List[str], **kwargs):
-        """
-        Process a batch of texts asynchronously using the async unimodal processing system.
-        """
-        if self._async_manager is None:
-            raise RuntimeError(
-                "Async unimodal processing not initialized. Call with enable_async_unimodal_processing=True in config."
-            )
+        # RoPE
+        start = [0, 0]
+        shape = [S, self.cos.shape[1]]
+        cos_slice = self.cos.slice(start, shape)
+        sin_slice = self.sin.slice(start, shape)
+        q, k = q.rope(k, cos_slice, sin_slice)
 
-        # Create requests from texts
-        requests = [{"text": text} for text in texts]
+        # Fused Attention
+        context = scaled_dot_product_attention(q, k, v, scale=self.scale)
 
-        # Run the async processing in a new event loop or the current one
-        import asyncio
+        # Flatten back
+        context = context.reshape([B, S, self.hidden_size])
 
-        async def run_batch_async_processing():
-            return await self._async_manager.process_batch_unimodal_requests(
-                requests, **kwargs
-            )
+        return self.o_proj(context)
 
-        # If we're already in an event loop, use run_coroutine_threadsafe
-        try:
-            loop = asyncio.get_running_loop()
-            import concurrent.futures
+class Qwen3Coder30BMLP(Module):
+    def __init__(self, config):
+        super().__init__()
+        self.gate_proj = Linear(config.hidden_size, config.intermediate_size, bias=False)
+        self.up_proj = Linear(config.hidden_size, config.intermediate_size, bias=False)
+        self.down_proj = Linear(config.intermediate_size, config.hidden_size, bias=False)
 
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(asyncio.run, run_batch_async_processing())
-                return future.result()
-        except RuntimeError:
-            return asyncio.run(run_batch_async_processing())
-
-    def get_async_stats(self) -> Dict[str, Any]:
-        """
-        Get statistics about the async processing system.
-        """
-        if self._async_manager is None:
-            return {"error": "Async unimodal processing not initialized"}
-
-        return self._async_manager.get_stats()
-
-    def install(self):
-        """
-        Install or prepare any dependencies or configurations required for the model.
-        """
-        logger.info(
-            "Installing/Preparing Qwen3-Coder-30B model dependencies and configurations..."
-        )
-
-        # Check and install required packages
-        required_packages = ["torch", "huggingface_hub", "safetensors"] # Removed transformers
-
-        for package in required_packages:
-            try:
-                __import__(package)
-                logger.info(f"{package} is already installed")
-            except ImportError:
-                logger.info(f"Installing {package}...")
-                subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-
-        if torch.cuda.is_available():
-            logger.info(
-                "CUDA is available, ensuring appropriate PyTorch version is installed"
-            )
-        else:
-            logger.info("CUDA is not available, model will run on CPU")
-
-        # Verify model files are accessible
-        import os
-        model_name = self.config.model_path if hasattr(self.config, "model_path") else "Qwen/Qwen3-Coder-30B"
-
-        if os.path.exists(model_name):
-            logger.info(f"Model is accessible at: {model_name}")
-        else:
-            logger.warning(
-                f"Model files not found at {model_name}, they will be downloaded when the model is initialized"
-            )
-
-        logger.info("Qwen3-Coder-30B model installation/preparation completed")
-
-    def cleanup(self):
-        """
-        Clean up resources including disk offloading, pagination, and caching systems.
-        """
-        # Stop proactive management if running
-        if self._tensor_offloader:
-            try:
-                self._tensor_offloader.stop_proactive_management()
-            except Exception as e:
-                logger.warning(f"Error stopping proactive management: {e}")
-
-        # Clean up disk offloader if exists
-        if self._disk_offloader:
-            try:
-                self._disk_offloader.cleanup()
-            except Exception as e:
-                logger.warning(f"Error cleaning up disk offloader: {e}")
-
-        # Clean up pagination system if exists
-        if self._pagination_system:
-            try:
-                self._pagination_system.stop_proactive_management()
-                self._pagination_system.cleanup()
-            except Exception as e:
-                logger.warning(f"Error cleaning up pagination system: {e}")
-
-        # Clean up caching manager if exists
-        if self._caching_manager:
-            try:
-                self._caching_manager.clear_cache()
-                logger.info("Caching system cleaned up successfully")
-            except Exception as e:
-                logger.warning(f"Error cleaning up caching manager: {e}")
-
-        # Clean up async manager if exists
-        if self._async_manager:
-            try:
-                # We can't properly close the async manager here since it runs async tasks
-                # The proper way would be to have a shutdown method that awaits the tasks
-                logger.info(
-                    "Async manager cleanup - note: async tasks may still be running"
-                )
-            except Exception as e:
-                logger.warning(f"Error cleaning up async manager: {e}")
-
-        # Clean up streaming engine if exists
-        if hasattr(self, "streaming_engine"):
-            try:
-                self.streaming_engine.stop()
-            except Exception as e:
-                logger.warning(f"Error stopping streaming engine: {e}")
-
+    def forward(self, x):
+        gate = self.gate_proj(x)
+        up = self.up_proj(x)
+        return self.down_proj(gate.swiglu(up))
 
 __all__ = ["Qwen3Coder30BModel"]
