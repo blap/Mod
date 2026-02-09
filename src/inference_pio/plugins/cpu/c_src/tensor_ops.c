@@ -613,6 +613,56 @@ void tensor_cat(Tensor** inputs, int count, int axis, Tensor* out) {
     }
 }
 
+// TopK
+// Input: [Batch, Dim]
+// Output: [Batch, K] (values), [Batch, K] (indices)
+// Simplified O(N*K) or O(N log K) implementation
+void tensor_topk(Tensor* input, int k, Tensor* out_values, Tensor* out_indices) {
+    int last_dim = input->shape[input->ndim-1];
+    int batch = input->size / last_dim;
+
+    #pragma omp parallel for
+    for(int b=0; b<batch; b++) {
+        float* in_ptr = input->data + b*last_dim;
+        float* val_ptr = out_values->data + b*k;
+        float* idx_ptr = out_indices->data + b*k;
+
+        // Simple selection sort for small K
+        // For large K, use heap or quickselect
+        // Assume K is small (e.g. 1-5 for MoE)
+
+        // Init with first K
+        for(int i=0; i<k; i++) {
+            val_ptr[i] = -1e18f; // -Inf
+            idx_ptr[i] = -1.0f;
+        }
+
+        for(int i=0; i<last_dim; i++) {
+            float val = in_ptr[i];
+
+            // Insert into sorted top-k list
+            // Find position
+            int pos = -1;
+            for(int j=0; j<k; j++) {
+                if(val > val_ptr[j]) {
+                    pos = j;
+                    break;
+                }
+            }
+
+            if(pos != -1) {
+                // Shift right
+                for(int j=k-1; j>pos; j--) {
+                    val_ptr[j] = val_ptr[j-1];
+                    idx_ptr[j] = idx_ptr[j-1];
+                }
+                val_ptr[pos] = val;
+                idx_ptr[pos] = (float)i;
+            }
+        }
+    }
+}
+
 // Image Resize is in image_ops.c
 
 // Safetensors (Stub implementation as separate file handles it or simplified here)

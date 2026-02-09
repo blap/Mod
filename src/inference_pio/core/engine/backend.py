@@ -96,6 +96,8 @@ def _setup_sigs(lib):
         lib.tensor_gather.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int]
     if hasattr(lib, 'tensor_scatter_add'):
         lib.tensor_scatter_add.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int]
+    if hasattr(lib, 'tensor_topk'):
+        lib.tensor_topk.argtypes = [ctypes.POINTER(CTensor), ctypes.c_int, ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
 
     if hasattr(lib, 'open_safetensors'):
         lib.open_safetensors.argtypes = [ctypes.c_char_p]
@@ -250,6 +252,16 @@ class Tensor:
     def scatter_add(self, indices: 'Tensor', src: 'Tensor', axis: int = 0):
         if hasattr(self._lib, 'tensor_scatter_add'):
             self._lib.tensor_scatter_add(self._handle, indices._handle, src._handle, axis)
+
+    def topk(self, k: int) -> Tuple['Tensor', 'Tensor']:
+        # Output: values, indices
+        out_shape = list(self.shape)
+        out_shape[-1] = k
+        values = Tensor(out_shape, device=self.device)
+        indices = Tensor(out_shape, device=self.device)
+        if hasattr(self._lib, 'tensor_topk'):
+            self._lib.tensor_topk(self._handle, k, values._handle, indices._handle)
+        return values, indices
 
     def linear(self, weight: 'Tensor', bias: Optional['Tensor'] = None) -> 'Tensor':
         in_features = weight.shape[1] if weight.ndim >= 2 else weight.shape[0]
