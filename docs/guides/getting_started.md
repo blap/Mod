@@ -3,12 +3,15 @@
 ## 1. Introduction
 Inference-PIO is a modular inference system designed for high-performance deployment of models like Qwen3-VL and GLM-4.7. It uses a plugin-based architecture where each model is completely independent with its own configuration, tests, and benchmarks.
 
+**Key Feature:** The system is built on a custom C/CUDA backend (`libtensor_ops`) and does **not** depend on heavy ML frameworks like PyTorch or TensorFlow for inference.
+
 ## 2. Installation
 
 ### Prerequisites
 *   Python 3.8+
-*   PyTorch 2.0+
-*   CUDA-compatible GPU (Recommended)
+*   C/C++ Compiler (GCC/Clang/MSVC) for backend compilation
+*   CUDA Toolkit (Optional, for GPU acceleration)
+*   **No PyTorch or Transformers required!**
 
 ### Steps
 ```bash
@@ -16,6 +19,7 @@ git clone https://github.com/inference-pio/inference-pio.git
 cd inference-pio
 pip install -r requirements.txt
 pip install -e .
+# The custom backend will be compiled automatically or pre-built binaries will be used.
 ```
 
 ## 3. Basic Usage
@@ -30,7 +34,7 @@ from src.inference_pio.models.glm_4_7_flash.plugin import create_glm_4_7_flash_p
 plugin = create_glm_4_7_flash_plugin()
 
 # 2. Initialize & Load
-plugin.initialize(device="cuda:0")
+plugin.initialize(device="cuda:0") # Or "cpu"
 plugin.load_model()
 
 # 3. Infer
@@ -71,7 +75,7 @@ You can customize model behavior during initialization:
 ```python
 plugin.initialize(
     max_new_tokens=1024,
-    use_flash_attention_2=True,
+    use_flash_attention_2=True, # Uses optimized backend kernel
     load_in_4bit=True  # For low VRAM
 )
 ```
@@ -91,3 +95,4 @@ To add a new model, simply create a new directory following the standardized str
 *   **OOM Errors:** Enable 4-bit loading, reduce batch size, or enable disk offloading.
 *   **Missing Weights:** Ensure the model path in `config.py` is correct or use the automatic download features.
 *   **Plugin Discovery:** Make sure your model has a proper `plugin_manifest.json` file for automatic discovery.
+*   **Backend Errors:** Ensure your C compiler is correctly configured if building from source.
