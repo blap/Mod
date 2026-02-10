@@ -40,7 +40,7 @@ class Qwen3CoderNextModel(Module):
 
         self.norm = RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
 
-    def forward(self, input_ids: Optional[Tensor] = None, past_key_values: Optional[List[Tuple[Tensor, Tensor]]] = None, use_cache: bool = False):
+    def forward(self, input_ids: Optional[Tensor] = None, past_key_values: Optional[List[Tuple[Tensor, Tensor]]] = None, use_cache: bool = False, cache_position: int = 0, max_cache_len: int = 0):
         if input_ids is None: raise ValueError("input_ids required")
 
         # Update device of cache if needed (naive check)
@@ -52,13 +52,24 @@ class Qwen3CoderNextModel(Module):
                  layer.self_attn.sin_cache = self.sin_cache
 
         hidden_states = self.embed_tokens(input_ids)
-        next_cache = [] if use_cache else None
+
+        # Init Cache (List of Nones if starting fresh)
+        if use_cache and past_key_values is None:
+            past_key_values = [None] * len(self.layers)
+
+        next_cache = past_key_values if use_cache else None
 
         for i, layer in enumerate(self.layers):
             layer_past = past_key_values[i] if past_key_values is not None else None
-            hidden_states, pkv = layer(hidden_states, past_key_value=layer_past, use_cache=use_cache)
-            if use_cache:
-                next_cache.append(pkv)
+            hidden_states, pkv = layer(
+                hidden_states,
+                past_key_value=layer_past,
+                use_cache=use_cache,
+                cache_position=cache_position,
+                max_cache_len=max_cache_len
+            )
+            if use_cache and next_cache is not None:
+                next_cache[i] = pkv
 
         hidden_states = self.norm(hidden_states)
         return hidden_states, next_cache
@@ -69,35 +80,39 @@ class Qwen3CoderNextForCausalLM(Module):
         self.model = Qwen3CoderNextModel(config)
         self.lm_head = Linear(config.hidden_size, config.vocab_size, bias=False)
 
-    def forward(self, input_ids: Optional[Tensor] = None, past_key_values: Optional[List[Tuple[Tensor, Tensor]]] = None, use_cache: bool = False):
-        hidden_states, next_cache = self.model(input_ids, past_key_values, use_cache)
+    def forward(self, input_ids: Optional[Tensor] = None, past_key_values: Optional[List[Tuple[Tensor, Tensor]]] = None, use_cache: bool = False, cache_position: int = 0, max_cache_len: int = 0):
+        hidden_states, next_cache = self.model(input_ids, past_key_values, use_cache, cache_position, max_cache_len)
         logits = self.lm_head(hidden_states)
         return logits, next_cache
 
     def generate(self, input_ids: Tensor, max_new_tokens: int = 10, **kwargs) -> Tensor:
+        batch_size = input_ids.shape[0]
+        seq_len = input_ids.shape[1]
+        total_len = seq_len + max_new_tokens
+
         current_ids = input_ids
-        # Pre-allocate KV Cache (Simplified)
-        # To truly pre-allocate, we need to pass a buffer to forward.
-        # Current forward expects list of tuples.
-        # We will use the standard loop for now as full pre-allocation requires
-        # changing forward signature incompatible with other models or complex state management.
-        # But we use the optimized slice-argmax.
-
         past_key_values = None
+        cache_position = 0
 
-        for _ in range(max_new_tokens):
-            if past_key_values:
-                seq_len = current_ids.shape[1]
-                model_input = current_ids.slice([0, seq_len - 1], [1, 1])
-            else:
+        for step in range(max_new_tokens):
+            if step == 0:
                 model_input = current_ids
+                cache_position = 0
+            else:
+                model_input = current_ids.slice([0, current_ids.shape[1]-1], [batch_size, 1])
+                cache_position = current_ids.shape[1] - 1
 
-            logits, pkv = self.forward(model_input, past_key_values=past_key_values, use_cache=True)
-            past_key_values = pkv
+            logits, past_key_values = self.forward(
+                model_input,
+                past_key_values=past_key_values,
+                use_cache=True,
+                cache_position=cache_position,
+                max_cache_len=total_len
+            )
 
             # Optimized Greedy
             vocab_size = logits.shape[2]
-            last_logits = logits.slice([0, logits.shape[1]-1, 0], [1, 1, vocab_size])
+            last_logits = logits.slice([0, logits.shape[1]-1, 0], [batch_size, 1, vocab_size])
             next_token = last_logits.argmax()
 
             current_ids = cat([current_ids, next_token], axis=1)
@@ -118,7 +133,7 @@ class Qwen3CoderNextDeltaNet(Module):
         self.beta_proj = Linear(self.hidden_size, self.num_heads, bias=False)
         self.o_proj = Linear(self.num_heads * self.head_dim, self.hidden_size, bias=False)
 
-    def forward(self, x, past_key_value=None, use_cache=False):
+    def forward(self, x, past_key_value=None, use_cache=False, cache_position=0, max_cache_len=0):
         # x: [B, S, H]
         B = x.shape[0]
         S = x.shape[1]
@@ -174,10 +189,16 @@ class Qwen3CoderNextDecoderLayer(Module):
             self.mlp = Qwen3CoderNextMLP(config)
         self.post_attention_layernorm = RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
 
-    def forward(self, hidden_states: Tensor, past_key_value: Optional[Any] = None, use_cache: bool = False) -> Tuple[Tensor, Optional[Any]]:
+    def forward(self, hidden_states: Tensor, past_key_value: Optional[Any] = None, use_cache: bool = False, cache_position: int = 0, max_cache_len: int = 0) -> Tuple[Tensor, Optional[Any]]:
         residual = hidden_states
         hidden_states = self.input_layernorm(hidden_states)
-        hidden_states, pkv = self.self_attn(hidden_states, past_key_value if past_key_value is not None else None, use_cache=use_cache)
+        hidden_states, pkv = self.self_attn(
+            hidden_states,
+            past_key_value if past_key_value is not None else None,
+            use_cache=use_cache,
+            cache_position=cache_position,
+            max_cache_len=max_cache_len
+        )
         hidden_states = residual + hidden_states
         residual = hidden_states
         hidden_states = self.post_attention_layernorm(hidden_states)
@@ -201,7 +222,7 @@ class Qwen3CoderNextAttention(Module):
         self.cos_cache = cos_cache
         self.sin_cache = sin_cache
 
-    def forward(self, hidden_states: Tensor, past_key_value: Optional[Tuple[Tensor, Tensor]] = None, use_cache: bool = False) -> Tuple[Tensor, Optional[Tuple[Tensor, Tensor]]]:
+    def forward(self, hidden_states: Tensor, past_key_value: Optional[Tuple[Tensor, Tensor]] = None, use_cache: bool = False, cache_position: int = 0, max_cache_len: int = 0) -> Tuple[Tensor, Optional[Tuple[Tensor, Tensor]]]:
         # Fused Projection
         qkv = self.qkv_proj(hidden_states) # [B, S, 3*H]
 
@@ -227,13 +248,10 @@ class Qwen3CoderNextAttention(Module):
         v = v.reshape(new_shape)
 
         # Apply RoPE
-        if past_key_value is not None:
-            past_len = past_key_value[0].shape[1]
-        else:
-            past_len = 0
+        # RoPE indices: slice from cache_position to current_len
+        # If cache_position > 0 (decoding), S is 1. RoPE should align.
 
-        # RoPE indices: slice from past_len to current_len
-        slice_start = [past_len, 0]
+        slice_start = [cache_position, 0]
         slice_shape = [S, self.cos_cache.shape[1]]
 
         cos = self.cos_cache.slice(slice_start, slice_shape)
@@ -241,12 +259,15 @@ class Qwen3CoderNextAttention(Module):
 
         q, k = q.rope(k, cos, sin)
 
-        # KV Cache Update
-        if past_key_value is not None:
-            k = cat([past_key_value[0], k], axis=1)
-            v = cat([past_key_value[1], v], axis=1)
-
+        # KV Cache Update (Pre-allocated logic or Cat logic fallback)
         if use_cache:
+            if past_key_value is not None:
+                # Fallback to cat for now as we didn't implement pre-allocated buffer passing yet in generate
+                # But we can use set_slice if we had the buffer.
+                # Currently using cat for robust "no stubs" until refactor is deeper.
+                k = cat([past_key_value[0], k], axis=1)
+                v = cat([past_key_value[1], v], axis=1)
+
             present_key_value = (k, v)
         else:
             present_key_value = None
@@ -255,7 +276,7 @@ class Qwen3CoderNextAttention(Module):
         context = scaled_dot_product_attention(q, k, v, scale=self.scale)
 
         # Flatten
-        context = context.reshape([B, S, H])
+        context = context.reshape([B, S, self.hidden_size])
         output = self.o_proj(context)
         return output, present_key_value
 
