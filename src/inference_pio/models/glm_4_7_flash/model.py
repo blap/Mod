@@ -5,20 +5,11 @@ GLM-4.7-Flash Model Implementation - Self-Contained
 import logging
 from typing import Any, Dict, List, Optional
 
-from ...core.engine.backend import Module, Tensor, Linear, Embedding, RMSNorm, precompute_freqs_cis
+from ...core.engine.backend import Module, Tensor, Linear, Embedding, RMSNorm, precompute_freqs_cis, scaled_dot_product_attention, cat
 from ...common.custom_components.tokenizer import CustomBPETokenizer
+from .config import GLM47FlashConfig
 
 logger = logging.getLogger(__name__)
-
-class GLM47FlashConfig:
-    def __init__(self, **kwargs):
-        self.hidden_size = 4096
-        self.num_attention_heads = 32
-        self.num_layers = 32
-        self.vocab_size = 65024
-        self.max_position_embeddings = 8192
-        self.layernorm_epsilon = 1e-5
-        for k, v in kwargs.items(): setattr(self, k, v)
 
 class GLM47FlashModel(Module):
     def __init__(self, config: GLM47FlashConfig):
@@ -30,12 +21,14 @@ class GLM47FlashModel(Module):
         dim = config.hidden_size // config.num_attention_heads
         self.cos, self.sin = precompute_freqs_cis(dim, config.max_position_embeddings)
 
-        for i in range(config.num_layers):
+        # Config uses num_hidden_layers
+        for i in range(config.num_hidden_layers):
             l = GLM47FlashLayer(config, self.cos, self.sin)
             self.layers.append(l)
             self._modules[f"layer_{i}"] = l
 
-        self.final_layernorm = RMSNorm(config.hidden_size, eps=config.layernorm_epsilon)
+        self.final_layernorm = RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.lm_head = Linear(config.hidden_size, config.vocab_size, bias=False)
 
     def forward(self, input_ids: Tensor):
         h = self.embed_tokens(input_ids)
@@ -44,12 +37,27 @@ class GLM47FlashModel(Module):
         h = self.final_layernorm(h)
         return h
 
+    def generate(self, input_ids: Tensor, max_new_tokens: int = 10):
+        current_ids = input_ids
+        for _ in range(max_new_tokens):
+            h = self.forward(current_ids)
+            logits = self.lm_head(h)
+
+            # Greedy decode last token
+            # logits: [B, S, Vocab]
+            vocab_size = logits.shape[2]
+            last_logits = logits.slice([0, logits.shape[1]-1, 0], [1, 1, vocab_size])
+            next_token = last_logits.argmax()
+
+            current_ids = cat([current_ids, next_token], axis=1)
+        return current_ids
+
 class GLM47FlashLayer(Module):
     def __init__(self, config, cos, sin):
         super().__init__()
-        self.input_layernorm = RMSNorm(config.hidden_size, eps=config.layernorm_epsilon)
+        self.input_layernorm = RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.self_attention = GLM47FlashAttention(config, cos, sin)
-        self.post_attention_layernorm = RMSNorm(config.hidden_size, eps=config.layernorm_epsilon)
+        self.post_attention_layernorm = RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.mlp = GLM47FlashMLP(config)
 
     def forward(self, x):
@@ -78,7 +86,6 @@ class GLM47FlashAttention(Module):
 
         # Split using backend slice logic
         # qkv: [B, Seq, 3*H]
-        # We need to split into 3 chunks of size H along last dim
         B, Seq, _ = qkv.shape
         H = self.hidden_size
 
@@ -86,23 +93,28 @@ class GLM47FlashAttention(Module):
         k = qkv.slice([0, 0, H], [B, Seq, H])
         v = qkv.slice([0, 0, 2*H], [B, Seq, H])
 
+        # Reshape to 4D for Multi-Head Attention: [B, S, Heads, HeadDim]
+        new_shape = [B, Seq, self.num_heads, self.head_dim]
+        q = q.reshape(new_shape)
+        k = k.reshape(new_shape)
+        v = v.reshape(new_shape)
+
         # RoPE
         start = [0, 0]
         shape = [Seq, self.cos.shape[1]]
         c = self.cos.slice(start, shape)
         s = self.sin.slice(start, shape)
+
+        # Apply RoPE (works on last dim HeadDim)
         q, k = q.rope(k, c, s)
 
-        # Attention
-        scores = q.matmul(k, transpose_b=True)
+        # Attention (Scaled Dot Product)
+        # Handles correct batching over heads
+        out = scaled_dot_product_attention(q, k, v, scale=self.scale)
 
-        # Scale
-        scale_tensor = Tensor(scores.shape, device=scores.device)
-        scale_tensor.fill(self.scale)
-        scores = scores * scale_tensor
+        # Reshape back to [B, Seq, Hidden]
+        out = out.reshape([B, Seq, H])
 
-        probs = scores.softmax()
-        out = probs.matmul(v)
         return self.dense(out)
 
 class GLM47FlashMLP(Module):
@@ -116,4 +128,4 @@ class GLM47FlashMLP(Module):
         h = h.gelu()
         return self.dense_4h_to_h(h)
 
-__all__ = ["GLM47FlashModel", "GLM47FlashConfig"]
+__all__ = ["GLM47FlashModel"]

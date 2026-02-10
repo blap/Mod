@@ -534,7 +534,8 @@ class GLM47FlashConfig(BaseConfig):
             self.model_path = "H:/GLM-4.7-Flash"
 
         # Call parent's post_init to validate config
-        super().__post_init__()
+        # BaseConfig doesn't have post_init, skipping
+        # super().__post_init__()
 
         # Set default eos_token_id from real model config if not set
         if self.eos_token_id is None:

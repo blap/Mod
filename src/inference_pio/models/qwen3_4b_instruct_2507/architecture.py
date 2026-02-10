@@ -12,6 +12,7 @@ class Qwen3RotaryEmbedding(Module):
         self.register_buffer("cos", self.cos)
         self.register_buffer("sin", self.sin)
 
+    # Note: forward is unused if Attention manages slicing directly, keeping for API compatibility if needed
     def forward(self, x, seq_len):
         start = [0, 0]
         shape = [seq_len, self.cos.shape[1]]
@@ -147,14 +148,13 @@ class Qwen3ForCausalLM(Module):
             logits, pkv = self.forward(model_input, past_key_values=past_key_values, use_cache=True)
             past_key_values = pkv
 
-            next_token_ids = logits.argmax()
+            # Efficiently slice logits to get last token prediction only
+            # logits: [1, Seq, Vocab]
+            vocab_size = logits.shape[2]
+            last_token_logits = logits.slice([0, logits.shape[1]-1, 0], [1, 1, vocab_size])
 
-            if next_token_ids.shape[1] > 1:
-                 start = [0, next_token_ids.shape[1]-1]
-                 shape = [1, 1]
-                 next_token_tensor = next_token_ids.slice(start, shape)
-            else:
-                 next_token_tensor = next_token_ids
+            # Argmax returns [1, 1]
+            next_token_tensor = last_token_logits.argmax()
 
             current_ids = cat([current_ids, next_token_tensor], axis=1)
 

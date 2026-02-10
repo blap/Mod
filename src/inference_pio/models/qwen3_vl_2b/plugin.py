@@ -1,13 +1,16 @@
 """
 Qwen3-VL-2B Plugin
 """
+from typing import Any
 from ...common.interfaces.improved_base_plugin_interface import ModelPluginInterface, PluginMetadata, PluginType
+from ...core.engine.backend import Tensor
 from .model import Qwen3VL2BModel, Qwen3VL2BConfig
 
 class Qwen3_VL_2B_Plugin(ModelPluginInterface):
     def __init__(self):
         meta = PluginMetadata(
             name="Qwen3-VL-2B", version="1.0", author="Alibaba",
+            description="Qwen3-VL-2B",
             plugin_type=PluginType.MODEL_COMPONENT,
             dependencies=[], compatibility={},
             model_architecture="Qwen3-VL", model_size="2B", required_memory_gb=10
@@ -20,7 +23,19 @@ class Qwen3_VL_2B_Plugin(ModelPluginInterface):
         self._model = Qwen3VL2BModel(c)
         return self._model
 
-    def infer(self, data): return "Qwen3-VL Output"
+    def infer(self, data: Any) -> Any:
+        if not self._model: return None
+
+        # Support tuple (ids, pixels)
+        if isinstance(data, tuple) and len(data) == 2:
+            ids, pixels = data
+            return self._model.generate(ids, pixel_values=pixels)
+
+        # Support just IDs
+        if isinstance(data, Tensor):
+            return self._model.generate(data)
+
+        return "Qwen3-VL Output (Input format not recognized)"
 
 def create_qwen3_vl_2b_plugin(): return Qwen3_VL_2B_Plugin()
 __all__ = ["Qwen3_VL_2B_Plugin", "create_qwen3_vl_2b_plugin"]

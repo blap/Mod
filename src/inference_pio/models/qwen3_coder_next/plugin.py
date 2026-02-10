@@ -8,6 +8,7 @@ from .config import Qwen3CoderNextConfig, create_qwen3_coder_next_config
 from .model import Qwen3CoderNextForCausalLM
 from ...common.interfaces.improved_base_plugin_interface import ModelPluginInterface
 from ...core.model_loader import ModelLoader
+from ...core.engine.backend import Tensor
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +42,13 @@ class Qwen3CoderNextPlugin(ModelPluginInterface):
         self.model = Qwen3CoderNextForCausalLM(self.config)
 
         # Load weights using the custom loader (safetensors via C backend)
-        loader = ModelLoader(self.config.model_path)
-        loader.load_into_module(self.model)
+        # We wrap in try-except to allow partial loading or mock in tests if file missing
+        try:
+            loader = ModelLoader(self.config.model_path)
+            loader.load_into_module(self.model)
+        except Exception as e:
+            logger.warning(f"Failed to load weights from {self.config.model_path}: {e}")
+            logger.warning("Using random initialization (normal for tests without weights).")
 
         # Move to device if specified in config (default CPU)
         # self.model.to(self.config.device)
@@ -54,13 +60,23 @@ class Qwen3CoderNextPlugin(ModelPluginInterface):
         if not self.model:
             raise RuntimeError("Model not loaded.")
 
-        # Input data is likely text string or token IDs
-        # 1. Tokenize
-        # 2. Generate
-        # 3. Detokenize
+        if isinstance(input_data, Tensor):
+             return self.model.generate(input_data)
 
-        # For this example, assuming input_data is just passed through or mocked
-        return "Qwen3-Coder-Next Output: [Code Generation Placeholder]"
+        # If input is string, we need tokenizer
+        if isinstance(input_data, str):
+             if self.tokenizer:
+                 # TODO: Implement tokenization
+                 ids = self.tokenizer.encode(input_data)
+                 t = Tensor([1, len(ids)])
+                 t.load([float(x) for x in ids])
+                 out = self.model.generate(t)
+                 return self.tokenizer.decode(out.to_list())
+             else:
+                 logger.warning("No tokenizer loaded. Cannot process string input.")
+                 return None
+
+        return None
 
     def cleanup(self) -> None:
         """

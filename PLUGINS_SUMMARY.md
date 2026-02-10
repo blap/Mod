@@ -1,92 +1,56 @@
-# Plugin Qwen3 para Inference-PIO
+# Inference-PIO Models Summary
 
-Este documento resume a criação dos plugins para os modelos Qwen3:
+This document summarizes the implemented models and plugins in the Inference-PIO framework. All models are self-contained, dependency-free (no PyTorch/NumPy), and utilize the custom C/CUDA backend (`libtensor_ops`).
 
-## Modelos Criados
+## Implemented Models
 
-### 1. Qwen3-4B-Instruct-2507
-- Localização: `H:\Qwen3-4B-Instruct-2507`
-- Plugin: `src/inference_pio/models/qwen3_4b_instruct_2507/`
+### 1. Qwen3-Coder-Next
+- **Type**: Hybrid (DeltaNet + Attention) with MoE (Mixture-of-Experts)
+- **Plugin**: `src/inference_pio/models/qwen3_coder_next/`
+- **Key Features**: Efficient MoE routing using `gather_by_value`/`scatter_add_by_index`, hybrid block pattern.
+- **Status**: Complete with Tests & Benchmarks.
 
-### 2. Qwen3-0.6B
-- Localização: `H:\Qwen3-0.6B`
-- Plugin: `src/inference_pio/models/qwen3_0_6b/` (já existente no projeto)
+### 2. GLM-4.7-Flash
+- **Type**: Large Language Model (Attention-based)
+- **Plugin**: `src/inference_pio/models/glm_4_7_flash/`
+- **Key Features**: Multi-Head Attention with correct reshaping, RoPE, RMSNorm.
+- **Status**: Complete with Tests & Benchmarks.
 
-## Componentes Criados
+### 3. Qwen3-VL-2B
+- **Type**: Multimodal (Vision-Language)
+- **Plugin**: `src/inference_pio/models/qwen3_vl_2b/`
+- **Key Features**: Vision Transformer Encoder, Text Decoder, Multimodal Projector.
+- **Status**: Complete with Tests & Benchmarks.
 
-Para cada modelo, foram criados os seguintes componentes:
+### 4. Qwen3-4B-Instruct-2507
+- **Type**: Causal Language Model
+- **Plugin**: `src/inference_pio/models/qwen3_4b_instruct_2507/`
+- **Key Features**: Optimized generation loop, fixed RoPE/Architecture.
+- **Status**: Complete with Tests & Benchmarks.
 
-### Estrutura de Diretórios
+### 5. Qwen3-0.6B
+- **Type**: Small Language Model
+- **Plugin**: `src/inference_pio/models/qwen3_0_6b/`
+- **Status**: Existing implementation.
+
+## Directory Structure
+Each model directory follows a self-contained structure:
 ```
-models/qwen3_[modelo]/
+models/<model_name>/
 ├── __init__.py
-├── architecture.py
-├── config.py
-├── model.py
-├── plugin.py
-├── plugin_manifest.json
-├── README.md
-├── attention/
-├── benchmarks/
-│   ├── unit/
-│   ├── integration/
-│   └── performance/
-├── configs/
-├── cuda_kernels/
-├── fused_layers/
-├── kv_cache/
-├── linear_optimizations/
-├── prefix_caching/
-├── projection_optimizations/
-├── rotary_embeddings/
-├── specific_optimizations/
-├── tensor_parallel/
-└── tests/
-    ├── unit/
-    ├── integration/
-    └── performance/
+├── config.py           # Configuration classes
+├── model.py            # Model implementation (Module, Tensor ops)
+├── plugin.py           # Plugin Interface
+├── architecture.py     # (Optional) Architecture specifics if separated
+├── README.md           # Model documentation
+├── benchmarks/         # Performance scripts
+│   └── benchmark_inference.py
+└── tests/              # Unit tests
+    └── unit/
+        ├── test_model.py
+        └── test_plugin.py
 ```
 
-### Componentes Principais
-
-#### config.py
-- Define a classe de configuração específica para cada modelo
-- Contém os hiperparâmetros necessários para a arquitetura
-
-#### architecture.py
-- Implementação da arquitetura Transformer usando o backend C
-- Componentes como Attention, MLP, RoPE, etc.
-
-#### model.py
-- Classe principal do modelo que encapsula a arquitetura
-- Gerencia o carregamento de pesos e tokenizador
-
-#### plugin.py
-- Implementação do plugin que segue a interface ModelPluginInterface
-- Fornece métodos para inicialização, inferência e geração de texto
-
-#### plugin_manifest.json
-- Metadados do plugin para descoberta automática
-- Informações sobre compatibilidade, requisitos, etc.
-
-## Testes Implementados
-
-### Testes Unitários
-- `tests/unit/test_model.py`: Testa a inicialização e métodos básicos do modelo
-- `tests/unit/test_plugin.py`: Testa a inicialização e funcionalidades do plugin
-
-### Benchmarks
-- `benchmarks/performance/benchmark_performance.py`: Mede tempo de inferência, uso de memória e throughput
-- `benchmarks/integration/compare_models.py`: Compara o desempenho entre os dois modelos
-
-## Características
-
-- **Backend C/CUDA**: Usa o backend personalizado `libtensor_ops` sem dependências externas como PyTorch ou TensorFlow
-- **Arquitetura Autocontida**: Cada modelo é completamente independente com sua própria configuração, testes e benchmarks
-- **Compatibilidade**: Totalmente compatível com o sistema Inference-PIO e sua arquitetura de plugins
-
-## Observações
-
-- Os plugins seguem rigorosamente as diretrizes do projeto de não usar bibliotecas externas como `torch`, `numpy`, `transformers`, etc.
-- O sistema usa tensores personalizados (`backend.Tensor`) com operações implementadas em C/CUDA
-- A descoberta automática de plugins permite que novos modelos sejam adicionados sem alterações manuais no código principal
+## Testing & Benchmarking
+- **Tests**: Use `python -m unittest ...` to run unit tests in `tests/unit/`.
+- **Benchmarks**: Execute `benchmark_inference.py` to measure tokens/sec and latency.

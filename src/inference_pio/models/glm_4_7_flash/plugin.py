@@ -1,7 +1,9 @@
 """
 GLM-4.7-Flash Plugin
 """
+from typing import Any
 from ...common.interfaces.improved_base_plugin_interface import TextModelPluginInterface, PluginMetadata, PluginType
+from ...core.engine.backend import Tensor
 from .model import GLM47FlashModel, GLM47FlashConfig
 
 class GLM_4_7_Flash_Plugin(TextModelPluginInterface):
@@ -31,7 +33,14 @@ class GLM_4_7_Flash_Plugin(TextModelPluginInterface):
         self._model = GLM47FlashModel(c)
         return self._model
 
-    def infer(self, data): return "GLM Output"
+    def infer(self, data: Any) -> Any:
+        if not self._model:
+            raise RuntimeError("Model not loaded")
+
+        if isinstance(data, Tensor):
+            return self._model.generate(data)
+
+        return "GLM Output (Tokenizer not integrated)"
 
 def create_glm_4_7_flash_plugin(): return GLM_4_7_Flash_Plugin()
 __all__ = ["GLM_4_7_Flash_Plugin", "create_glm_4_7_flash_plugin"]

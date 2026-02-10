@@ -5,8 +5,7 @@ Qwen3-VL-2B Model Implementation - Self-Contained
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
-from ...core.engine.backend import Module, Tensor, Linear, Embedding, RMSNorm, Conv2d, precompute_freqs_cis, cat, GELU, scaled_dot_product_attention
-from ...common.custom_components.tokenizer import CustomBPETokenizer
+from ...core.engine.backend import Module, Tensor, Linear, Embedding, RMSNorm, precompute_freqs_cis, cat, GELU, scaled_dot_product_attention
 from .vision_transformer_kernels import Qwen3VL2BVisionEncoderKernel, VisionTransformerConfig
 
 logger = logging.getLogger(__name__)
