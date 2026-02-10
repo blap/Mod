@@ -1,5 +1,3 @@
-# ... (Previous imports and init) ...
-
 """
 Unified Backend for C Tensor Engine (CPU/CUDA)
 Removes torch dependency entirely.
@@ -10,7 +8,6 @@ import os
 import sys
 from typing import Tuple, List, Optional, Dict, Union, Any
 
-# ... (Load library logic) ...
 def _load_library(name: str) -> Optional[ctypes.CDLL]:
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     paths = []
@@ -120,8 +117,6 @@ def _setup_sigs(lib):
 
 _setup_sigs(_lib_cpu)
 _setup_sigs(_lib_cuda)
-
-# ... (Tensor Class) ...
 
 class Tensor:
     def __init__(self, shape: List[int], data: List[float] = None, device: str = "cpu", _handle=None):
@@ -409,8 +404,6 @@ class Tensor:
             # ... Loop logic ... omitted for brevity as C kernel is preferred
             pass
         return out
-
-# ... (Module classes) ...
 
 class Module:
     def __init__(self):

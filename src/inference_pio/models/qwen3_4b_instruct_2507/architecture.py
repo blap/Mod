@@ -1,5 +1,5 @@
 """
-Qwen3-0.6B Architecture - C Backend (Real Implementation)
+Qwen3-4B-Instruct-2507 Architecture - C Backend (Real Implementation)
 """
 
 from typing import Optional, Tuple, List
@@ -23,6 +23,7 @@ class Qwen3MLP(Module):
         self.gate_proj = Linear(config.hidden_size, config.intermediate_size, bias=False)
         self.up_proj = Linear(config.hidden_size, config.intermediate_size, bias=False)
         self.down_proj = Linear(config.intermediate_size, config.hidden_size, bias=False)
+        
     def forward(self, x):
         gate = self.gate_proj(x)
         up = self.up_proj(x)

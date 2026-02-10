@@ -1,5 +1,5 @@
 """
-Qwen3-0.6B Plugin Implementation
+Qwen3-4B-Instruct-2507 Plugin Implementation
 """
 
 import logging
@@ -12,43 +12,43 @@ from ...common.interfaces.improved_base_plugin_interface import (
     PluginType,
     TextModelPluginInterface,
 )
-from .config import Qwen3_0_6B_Config, Qwen3_0_6B_DynamicConfig
-from .model import Qwen3_0_6B_Model
+from .config import Qwen3_4B_Instruct_2507_Config, Qwen3_4B_Instruct_2507_DynamicConfig
+from .model import Qwen3_4B_Instruct_2507_Model
 
 logger = logging.getLogger(__name__)
 
-class Qwen3_0_6B_Plugin(TextModelPluginInterface):
+class Qwen3_4B_Instruct_2507_Plugin(TextModelPluginInterface):
     """
-    Qwen3-0.6B Plugin - Backend Agnostic (C-Engine)
+    Qwen3-4B-Instruct-2507 Plugin - Backend Agnostic (C-Engine)
     """
 
     def __init__(self):
         # Create plugin metadata
         metadata = PluginMetadata(
-            name="Qwen3-0.6B",
+            name="Qwen3-4B-Instruct-2507",
             version="1.0.0",
             author="Alibaba Cloud",
-            description="Qwen3-0.6B small language model",
+            description="Qwen3-4B-Instruct-2507 language model",
             plugin_type=PluginType.MODEL_COMPONENT,
             dependencies=["safetensors"],
             compatibility={
                 "python_version": ">=3.8",
-                "min_memory_gb": 2.0,
+                "min_memory_gb": 8.0,
             },
             created_at=datetime.now(),
             updated_at=datetime.now(),
             model_architecture="Qwen3 Transformer",
-            model_size="0.6B",
-            required_memory_gb=2.0,
+            model_size="4B",
+            required_memory_gb=8.0,
             supported_modalities=["text"],
             license="MIT",
-            tags=["language-model", "qwen", "0.6b"],
+            tags=["language-model", "qwen", "4b", "instruct"],
             model_family="Qwen",
-            num_parameters=600000000,
+            num_parameters=4000000000,
         )
         super().__init__(metadata)
         self._model = None
-        self._config = Qwen3_0_6B_Config()
+        self._config = Qwen3_4B_Instruct_2507_Config()
 
     def initialize(self, **kwargs) -> bool:
         try:
@@ -57,7 +57,7 @@ class Qwen3_0_6B_Plugin(TextModelPluginInterface):
                 if hasattr(self._config, k):
                     setattr(self._config, k, v)
 
-            logger.info("Initializing Qwen3-0.6B Plugin")
+            logger.info("Initializing Qwen3-4B-Instruct-2507 Plugin")
             self.load_model()
             return True
         except Exception as e:
@@ -68,7 +68,7 @@ class Qwen3_0_6B_Plugin(TextModelPluginInterface):
         if config:
             self._config = config
 
-        self._model = Qwen3_0_6B_Model(self._config)
+        self._model = Qwen3_4B_Instruct_2507_Model(self._config)
         return self._model
 
     def infer(self, data: Any) -> Any:
@@ -115,22 +115,22 @@ class Qwen3_0_6B_Plugin(TextModelPluginInterface):
 
     def get_model_info(self) -> Dict[str, Any]:
         return {
-            "name": "Qwen3-0.6B",
+            "name": "Qwen3-4B-Instruct-2507",
             "architecture": "Qwen3 Transformer",
-            "parameters": 600000000,
+            "parameters": 4000000000,
             "hidden_size": self._config.hidden_size,
             "num_attention_heads": self._config.num_attention_heads,
             "num_hidden_layers": self._config.num_hidden_layers,
         }
 
     def get_model_parameters(self) -> Dict[str, Any]:
-        return {"total_parameters": 600000000}
+        return {"total_parameters": 4000000000}
 
     def get_model_config_template(self) -> Any:
-        return Qwen3_0_6B_Config()
+        return Qwen3_4B_Instruct_2507_Config()
 
     def validate_model_compatibility(self, config: Any) -> bool:
-        return isinstance(config, Qwen3_0_6B_Config)
+        return isinstance(config, Qwen3_4B_Instruct_2507_Config)
 
     # Implement required abstract methods
     def tokenize(self, text: str, **kwargs) -> Any:
@@ -153,5 +153,5 @@ class Qwen3_0_6B_Plugin(TextModelPluginInterface):
         self._model = None
         return True
 
-def create_qwen3_0_6b_plugin():
-    return Qwen3_0_6B_Plugin()
+def create_qwen3_4b_instruct_2507_plugin():
+    return Qwen3_4B_Instruct_2507_Plugin()

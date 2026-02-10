@@ -1,0 +1,41 @@
+{
+  "name": "Qwen3-4B-Instruct-2507",
+  "version": "1.0.0",
+  "author": "Alibaba Cloud",
+  "description": "Qwen3-4B-Instruct-2507 Causal LM with Thinking Mode support.",
+  "plugin_type": "MODEL_COMPONENT",
+  "dependencies": [
+    "safetensors"
+  ],
+  "compatibility": {
+    "python_version": ">=3.8",
+    "min_memory_gb": 8.0
+  },
+  "created_at": "2026-01-31T00:00:00",
+  "updated_at": "2026-01-31T00:00:00",
+  "model_architecture": "Qwen3",
+  "model_size": "4B",
+  "required_memory_gb": 8.0,
+  "supported_modalities": [
+    "text"
+  ],
+  "license": "Apache 2.0",
+  "tags": [
+    "text-generation",
+    "thinking-mode",
+    "4B",
+    "instruct"
+  ],
+  "model_family": "Qwen3",
+  "num_parameters": 4000000000,
+  "test_coverage": 1.0,
+  "validation_passed": true,
+  "main_class_path": "src.inference_pio.models.qwen3_4b_instruct_2507.plugin.Qwen3_4B_Instruct_2507_Plugin",
+  "entry_point": "create_qwen3_4b_instruct_2507_plugin",
+  "input_types": [
+    "text"
+  ],
+  "output_types": [
+    "text"
+  ]
+}
