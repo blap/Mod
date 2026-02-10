@@ -119,6 +119,8 @@ _setup_sigs(_lib_cpu)
 _setup_sigs(_lib_cuda)
 
 class Tensor:
+    __slots__ = ['device', '_lib', '_handle']
+
     def __init__(self, shape: List[int], data: List[float] = None, device: str = "cpu", _handle=None):
         if not HAS_CPU: raise RuntimeError("CPU Engine library not loaded. Build failed?")
         self.device = device

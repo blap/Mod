@@ -319,7 +319,28 @@ class Qwen3CoderNextMoE(Module):
             # Note: In a fully optimized CUDA kernel, this would be one launch.
             # Here we loop over experts, which is standard for Python-based MoE if no specific kernel exists.
 
-            for expert_idx in range(self.num_experts):
+            # Optimization: Only iterate over experts that were actually selected
+            # This avoids N_experts loop (often 64+) for every token, reducing to K loop (e.g. 2-8).
+            # However, getting unique indices efficiently from Tensor is hard without copying to CPU.
+            # But we must avoid copying to CPU for performance if running on GPU.
+            #
+            # If backend supports it, we could do `unique_indices = inds_vec.unique()`.
+            # Without it, we fallback to iterating all experts OR blindly trying.
+            # Given "No external dependencies" and minimal backend:
+            # We will assume num_experts is large and sparse activation.
+
+            # Since we cannot easily get unique indices on device without a kernel,
+            # we will iterate over experts BUT we rely on `gather_by_value` being fast (returning 0 size quickly)
+            # which is implemented in C/CUDA.
+
+            # IMPROVEMENT: Use a set on CPU if we can afford the sync?
+            # For 2048 tokens * 4 experts = 8192 indices. Copying 8k ints is cheap.
+            # Let's try to optimize by reading indices to CPU, finding unique experts, and only looping those.
+
+            indices_cpu = inds_vec.to_list()
+            unique_experts = set(int(x) for x in indices_cpu)
+
+            for expert_idx in unique_experts:
                 # Gather tokens that selected this expert at this rank k
                 # input_subset: [Count, H]
                 # original_indices: [Count]
