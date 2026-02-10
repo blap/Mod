@@ -406,6 +406,28 @@ void tensor_swiglu(Tensor* gate, Tensor* up, Tensor* out) {
     }
 }
 
+void tensor_fused_gate_up_swiglu(Tensor* gate_up, Tensor* out) {
+    // Input: [..., 2*Hidden]
+    // Output: [..., Hidden]
+    int hidden = out->shape[out->ndim-1];
+    int rows = out->size / hidden;
+    int input_stride = hidden * 2;
+
+    #pragma omp parallel for
+    for(int i=0; i<rows; i++) {
+        float* in_ptr = gate_up->data + i * input_stride;
+        float* out_ptr = out->data + i * hidden;
+
+        #pragma omp simd
+        for(int j=0; j<hidden; j++) {
+            float g = in_ptr[j]; // First half is gate (usually)
+            float u = in_ptr[j + hidden]; // Second half is up
+            float silu_g = g * (1.0f / (1.0f + expf(-g)));
+            out_ptr[j] = silu_g * u;
+        }
+    }
+}
+
 void tensor_slice(Tensor* input, Tensor* out, int* start_indices, int* slice_shapes) {
     int ndim = input->ndim;
     int* in_strides = (int*)malloc(sizeof(int) * ndim);

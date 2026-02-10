@@ -204,14 +204,12 @@ class Qwen3VL2BAttention(Module):
 class Qwen3VL2BMLP(Module):
     def __init__(self, config):
         super().__init__()
-        self.gate_proj = Linear(config.hidden_size, config.intermediate_size, bias=False)
-        self.up_proj = Linear(config.hidden_size, config.intermediate_size, bias=False)
+        self.gate_up_proj = Linear(config.hidden_size, config.intermediate_size * 2, bias=False)
         self.down_proj = Linear(config.intermediate_size, config.hidden_size, bias=False)
 
     def forward(self, x):
-        gate = self.gate_proj(x)
-        up = self.up_proj(x)
-        return self.down_proj(gate.swiglu(up))
+        fused = self.gate_up_proj(x)
+        return self.down_proj(fused.fused_swiglu())
 
 def create_qwen3_vl_2b_model(config): return Qwen3VL2BModel(config)
 __all__ = ["Qwen3VL2BModel", "create_qwen3_vl_2b_model"]

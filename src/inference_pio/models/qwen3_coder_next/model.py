@@ -184,9 +184,9 @@ class Qwen3CoderNextAttention(Module):
         self.hidden_size = config.hidden_size
         self.num_heads = config.num_attention_heads
         self.head_dim = self.hidden_size // self.num_heads
-        self.q_proj = Linear(self.hidden_size, self.hidden_size, bias=True)
-        self.k_proj = Linear(self.hidden_size, self.hidden_size, bias=True)
-        self.v_proj = Linear(self.hidden_size, self.hidden_size, bias=True)
+
+        # Fused QKV: 3 * Hidden
+        self.qkv_proj = Linear(self.hidden_size, self.hidden_size * 3, bias=True)
         self.o_proj = Linear(self.hidden_size, self.hidden_size, bias=False)
         self.scale = 1.0 / math.sqrt(self.head_dim)
 
@@ -195,12 +195,23 @@ class Qwen3CoderNextAttention(Module):
         self.sin_cache = sin_cache
 
     def forward(self, hidden_states: Tensor, past_key_value: Optional[Tuple[Tensor, Tensor]] = None, use_cache: bool = False) -> Tuple[Tensor, Optional[Tuple[Tensor, Tensor]]]:
-        q = self.q_proj(hidden_states)
-        k = self.k_proj(hidden_states)
-        v = self.v_proj(hidden_states)
+        # Fused Projection
+        qkv = self.qkv_proj(hidden_states) # [B, S, 3*H]
+
+        # Split (Slice) - Optimized backends can use strided access if supported, otherwise explicit slice
+        B = qkv.shape[0]
+        S = qkv.shape[1]
+        H = self.hidden_size
+
+        # Ideally, we should add `tensor_chunk` or `split` to backend for efficiency.
+        # But `slice` is correct. We minimize python ops.
+        # However, for RoPE, we need Q and K separated anyway.
+
+        q = qkv.slice([0, 0, 0], [B, S, H])
+        k = qkv.slice([0, 0, H], [B, S, H])
+        v = qkv.slice([0, 0, 2*H], [B, S, H])
 
         # Reshape [B, S, Hidden] -> [B, S, Heads, HeadDim]
-        B = q.shape[0]
         S = q.shape[1]
         H = q.shape[2]
         new_shape = [B, S, self.num_heads, self.head_dim]
@@ -244,15 +255,15 @@ class Qwen3CoderNextAttention(Module):
 class Qwen3CoderNextMLP(Module):
     def __init__(self, config):
         super().__init__()
-        self.gate_proj = Linear(config.hidden_size, config.intermediate_size, bias=False)
-        self.up_proj = Linear(config.hidden_size, config.intermediate_size, bias=False)
+        # Fused Gate+Up Projection
+        self.gate_up_proj = Linear(config.hidden_size, config.intermediate_size * 2, bias=False)
         self.down_proj = Linear(config.intermediate_size, config.hidden_size, bias=False)
 
     def forward(self, x: Tensor) -> Tensor:
-        gate = self.gate_proj(x)
-        up = self.up_proj(x)
-        # Fused SwiGLU
-        merged = gate.swiglu(up)
+        # Fused Projection -> [B, S, 2*Inter]
+        fused = self.gate_up_proj(x)
+        # Fused SwiGLU Kernel
+        merged = fused.fused_swiglu()
         return self.down_proj(merged)
 
 class Qwen3CoderNextMoE(Module):

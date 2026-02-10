@@ -62,6 +62,20 @@ __global__ void swiglu_kernel(float* gate, float* up, float* out, int size) {
     }
 }
 
+__global__ void fused_gate_up_swiglu_kernel(float* gate_up, float* out, int hidden, int total_elements) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < total_elements) {
+        int row = idx / hidden;
+        int col = idx % hidden;
+        int in_idx = row * (hidden * 2) + col;
+
+        float g = gate_up[in_idx];
+        float u = gate_up[in_idx + hidden];
+        float sg = g / (1.0f + expf(-g));
+        out[idx] = sg * u;
+    }
+}
+
 __global__ void rms_norm_kernel(float* input, float* weight, float* out, int rows, int cols, float eps) {
     int row = blockIdx.x;
     if (row < rows) {
@@ -406,6 +420,7 @@ EXPORT void tensor_linear(Tensor* input, Tensor* weight, Tensor* bias, Tensor* o
 EXPORT void tensor_rope(Tensor* q, Tensor* k, Tensor* cos, Tensor* sin, Tensor* out_q, Tensor* out_k) { if (out_q->device_id >= 0) { int dim = q->shape[q->ndim - 1]; int total_tokens = q->size / dim; int threads = 256; int blocks = (total_tokens * (dim/2) + threads - 1) / threads; rope_kernel<<<blocks, threads>>>(q->data, k->data, cos->data, sin->data, out_q->data, out_k->data, total_tokens, dim); CUDA_CHECK(cudaDeviceSynchronize()); } }
 EXPORT void tensor_conv2d(Tensor* input, Tensor* weight, Tensor* bias, Tensor* out, int stride, int padding, int groups) { if (out->device_id >= 0) { int N = input->shape[0]; int C_in = input->shape[1]; int H_in = input->shape[2]; int W_in = input->shape[3]; int C_out = weight->shape[0]; int KH = weight->shape[2]; int KW = weight->shape[3]; int H_out = out->shape[2]; int W_out = out->shape[3]; int total = out->size; int threads = 256; int blocks = (total + threads - 1) / threads; conv2d_kernel_naive<<<blocks, threads>>>(input->data, weight->data, bias ? bias->data : NULL, out->data, N, C_in, H_in, W_in, C_out, KH, KW, H_out, W_out, stride, padding, groups); CUDA_CHECK(cudaDeviceSynchronize()); } }
 EXPORT void tensor_swiglu(Tensor* gate, Tensor* up, Tensor* out) { if (out->device_id >= 0) { int size = out->size; int threads = 256; int blocks = (size + threads - 1) / threads; swiglu_kernel<<<blocks, threads>>>(gate->data, up->data, out->data, size); CUDA_CHECK(cudaDeviceSynchronize()); } }
+EXPORT void tensor_fused_gate_up_swiglu(Tensor* gate_up, Tensor* out) { if (out->device_id >= 0) { int hidden = out->shape[out->ndim - 1]; int size = out->size; int threads = 256; int blocks = (size + threads - 1) / threads; fused_gate_up_swiglu_kernel<<<blocks, threads>>>(gate_up->data, out->data, hidden, size); CUDA_CHECK(cudaDeviceSynchronize()); } }
 EXPORT void tensor_count_value(Tensor* t, float value, int* count) { if (t->device_id >= 0) { int* d_count; CUDA_CHECK(cudaMalloc((void**)&d_count, sizeof(int))); CUDA_CHECK(cudaMemset(d_count, 0, sizeof(int))); int threads = 256; int blocks = (t->size + threads - 1) / threads; count_value_kernel<<<blocks, threads>>>(t->data, t->size, value, d_count); CUDA_CHECK(cudaMemcpy(count, d_count, sizeof(int), cudaMemcpyDeviceToHost)); CUDA_CHECK(cudaFree(d_count)); } }
 EXPORT void tensor_gather_by_value(Tensor* input, Tensor* indices, float value, Tensor* out_data, Tensor* out_indices) { if (input->device_id >= 0) { reset_gather_idx<<<1, 1>>>(); int hidden_size = input->shape[input->ndim - 1]; int size = indices->size; int threads = 256; int blocks = (size + threads - 1) / threads; gather_by_value_kernel<<<blocks, threads>>>(input->data, indices->data, size, value, out_data->data, out_indices->data, hidden_size); CUDA_CHECK(cudaDeviceSynchronize()); } }
 EXPORT void tensor_scatter_add_by_index(Tensor* out, Tensor* src, Tensor* indices) { if (out->device_id >= 0) { int count = indices->size; int hidden_size = src->shape[src->ndim - 1]; int total_rows = out->size / hidden_size; int total_elements = count * hidden_size; int threads = 256; int blocks = (total_elements + threads - 1) / threads; scatter_add_kernel<<<blocks, threads>>>(out->data, src->data, indices->data, count, hidden_size, total_rows); CUDA_CHECK(cudaDeviceSynchronize()); } }

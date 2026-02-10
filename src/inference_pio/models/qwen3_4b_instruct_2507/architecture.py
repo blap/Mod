@@ -21,14 +21,12 @@ class Qwen3RotaryEmbedding(Module):
 class Qwen3MLP(Module):
     def __init__(self, config):
         super().__init__()
-        self.gate_proj = Linear(config.hidden_size, config.intermediate_size, bias=False)
-        self.up_proj = Linear(config.hidden_size, config.intermediate_size, bias=False)
+        self.gate_up_proj = Linear(config.hidden_size, config.intermediate_size * 2, bias=False)
         self.down_proj = Linear(config.intermediate_size, config.hidden_size, bias=False)
         
     def forward(self, x):
-        gate = self.gate_proj(x)
-        up = self.up_proj(x)
-        return self.down_proj(gate.swiglu(up))
+        fused = self.gate_up_proj(x)
+        return self.down_proj(fused.fused_swiglu())
 
 class Qwen3Attention(Module):
     def __init__(self, config):

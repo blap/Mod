@@ -85,6 +85,8 @@ def _setup_sigs(lib):
         lib.tensor_permute.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.c_int)]
     if hasattr(lib, 'tensor_swiglu'):
         lib.tensor_swiglu.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    if hasattr(lib, 'tensor_fused_gate_up_swiglu'):
+        lib.tensor_fused_gate_up_swiglu.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
     if hasattr(lib, 'tensor_scaled_dot_product_attention'):
         lib.tensor_scaled_dot_product_attention.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_float]
     if hasattr(lib, 'tensor_reshape'):
@@ -222,6 +224,21 @@ class Tensor:
             # Fallback
             silu = self.silu()
             out = silu.mul(up_proj_out)
+        return out
+
+    def fused_swiglu(self) -> 'Tensor':
+        # Self is [..., 2*Hidden] (concatenated gate|up)
+        # Output is [..., Hidden]
+        out_shape = list(self.shape)
+        out_shape[-1] = out_shape[-1] // 2
+        out = Tensor(out_shape, device=self.device)
+        if hasattr(self._lib, 'tensor_fused_gate_up_swiglu'):
+            self._lib.tensor_fused_gate_up_swiglu(self._handle, out._handle)
+        else:
+            # Fallback: slice and normal swiglu
+            # This is slow, but functional
+            # Actually we can just assume fused kernel exists if libtensor_ops is recent
+            raise NotImplementedError("Fused SwiGLU kernel missing in backend lib")
         return out
 
     def permute(self, dims: List[int]) -> 'Tensor':
