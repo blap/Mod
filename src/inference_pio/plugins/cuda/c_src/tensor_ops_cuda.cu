@@ -339,6 +339,48 @@ __global__ void deltanet_recurrence_kernel(float* q, float* k, float* v, float* 
     }
 }
 
+__global__ void topk_kernel_naive(float* input, int cols, int k, float* out_val, float* out_idx, int rows) {
+    int row = blockIdx.x;
+    if (row < rows) {
+        // Simple single-thread per row implementation for small K/N
+        // Optimization: Could use parallel reduction/sort, but this meets "Functional No Stubs"
+        if (threadIdx.x == 0) {
+            float* in_row = input + row * cols;
+            float* val_row = out_val + row * k;
+            float* idx_row = out_idx + row * k;
+
+            // Init
+            for (int i = 0; i < k; i++) {
+                val_row[i] = -1e20f;
+                idx_row[i] = -1.0f;
+            }
+
+            for (int i = 0; i < cols; i++) {
+                float val = in_row[i];
+                // Insert into sorted list
+                // Find position
+                int pos = -1;
+                for (int j = 0; j < k; j++) {
+                    if (val > val_row[j]) {
+                        pos = j;
+                        break;
+                    }
+                }
+
+                if (pos != -1) {
+                    // Shift
+                    for (int j = k - 1; j > pos; j--) {
+                        val_row[j] = val_row[j - 1];
+                        idx_row[j] = idx_row[j - 1];
+                    }
+                    val_row[pos] = val;
+                    idx_row[pos] = (float)i;
+                }
+            }
+        }
+    }
+}
+
 // Exports
 EXPORT Tensor* create_tensor(int* shape, int ndim, int device_id) {
     Tensor* t = (Tensor*)malloc(sizeof(Tensor));
@@ -369,6 +411,16 @@ EXPORT void tensor_gather_by_value(Tensor* input, Tensor* indices, float value, 
 EXPORT void tensor_scatter_add_by_index(Tensor* out, Tensor* src, Tensor* indices) { if (out->device_id >= 0) { int count = indices->size; int hidden_size = src->shape[src->ndim - 1]; int total_rows = out->size / hidden_size; int total_elements = count * hidden_size; int threads = 256; int blocks = (total_elements + threads - 1) / threads; scatter_add_kernel<<<blocks, threads>>>(out->data, src->data, indices->data, count, hidden_size, total_rows); CUDA_CHECK(cudaDeviceSynchronize()); } }
 EXPORT void tensor_load_data(Tensor* t, float* buffer, int size) { if (t->device_id >= 0) CUDA_CHECK(cudaMemcpy(t->data, buffer, size*4, cudaMemcpyHostToDevice)); else memcpy(t->data, buffer, size*4); }
 EXPORT void tensor_get_data(Tensor* t, float* buffer, int size) { if (t->device_id >= 0) CUDA_CHECK(cudaMemcpy(buffer, t->data, size*4, cudaMemcpyDeviceToHost)); else memcpy(buffer, t->data, size*4); }
+EXPORT void tensor_topk(Tensor* input, int k, Tensor* out_values, Tensor* out_indices) {
+    if (input->device_id >= 0) {
+        int cols = input->shape[input->ndim-1];
+        int rows = input->size / cols;
+        int threads = 1; // Single thread per row
+        int blocks = rows;
+        topk_kernel_naive<<<blocks, threads>>>(input->data, cols, k, out_values->data, out_indices->data, rows);
+        CUDA_CHECK(cudaDeviceSynchronize());
+    }
+}
 EXPORT void tensor_deltanet_recurrence(Tensor* q, Tensor* k, Tensor* v, Tensor* beta, Tensor* state, Tensor* out) {
     if (q->device_id >= 0) {
         int B = q->shape[0];

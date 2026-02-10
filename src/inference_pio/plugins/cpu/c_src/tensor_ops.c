@@ -3,7 +3,15 @@
 #include <math.h>
 #include <string.h>
 #include <omp.h>
+#ifdef _WIN32
+#include <malloc.h>
+#define aligned_alloc(alignment, size) _aligned_malloc(size, alignment)
+#define aligned_free(ptr) _aligned_free(ptr)
+#else
 #include <mm_malloc.h>
+#define aligned_alloc(alignment, size) _mm_malloc(size, alignment)
+#define aligned_free(ptr) _mm_free(ptr)
+#endif
 #include "../../common/tensor.h"
 
 // Helper for tensor strides
@@ -26,13 +34,13 @@ Tensor* create_tensor(int* shape, int ndim, int device_id) {
     }
     t->device_id = device_id;
     // Align to 32 bytes for AVX
-    t->data = (float*)_mm_malloc(sizeof(float) * t->size, 32);
+    t->data = (float*)aligned_alloc(32, sizeof(float) * t->size);
     return t;
 }
 
 void free_tensor(Tensor* t) {
     if(t) {
-        if(t->data) _mm_free(t->data);
+        if(t->data) aligned_free(t->data);
         if(t->shape) free(t->shape);
         free(t);
     }
