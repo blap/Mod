@@ -5,8 +5,8 @@
 | Model | Type | Params | Optimizations |
 |-------|------|--------|---------------|
 | **GLM-4.7-Flash** | Text/Reasoning | 4.7B | MoE (4 active), Reasoning Attention |
-| **Qwen3-4B-Instruct** | Instruction | 4B | Context Management, Safety |
 | **Qwen3-Coder-30B** | Code | 30B | Syntax-Aware Attention, Long Context |
+| **Qwen3-Coder-Next** | Code | TBD | Hybrid (DeltaNet + Attention) + MoE |
 | **Qwen3-VL-2B** | Multimodal | 2B | Vision Fusion, Cross-Attention |
 | **Qwen3-0.6B** | Text/Reasoning | 0.6B | Thinking Mode, Lightweight Reasoning |
 
@@ -62,6 +62,8 @@ For detailed standards, see [DOCSTRINGS.md](../standards/DOCSTRINGS.md) and [COM
 
 ## 4. Implementation Details
 
+All models are implemented using a custom high-performance backend, removing dependencies on heavy external libraries like PyTorch or Transformers.
+
 ### GLM-4.7-Flash
 Optimized for complex reasoning. Uses a mixture-of-experts architecture.
 *   **Special Feature:** `ReasoningAttention` for improved chain-of-thought.
@@ -70,20 +72,20 @@ Optimized for complex reasoning. Uses a mixture-of-experts architecture.
     plugin.infer("Solve 2x + 5 = 15")
     ```
 
-### Qwen3-4B-Instruct-2507
-Fine-tuned for chat and instruction following.
-*   **Special Feature:** Safety alignment and conversational context caching.
-*   **Usage:**
-    ```python
-    plugin.chat_completion([{"role": "user", "content": "Hello"}])
-    ```
-
 ### Qwen3-Coder-30B
 A large model for code generation.
 *   **Special Feature:** Multi-language syntax awareness and long-context optimizations for file-level coding.
 *   **Usage:**
     ```python
     plugin.generate_text("def fibonacci(n):")
+    ```
+
+### Qwen3-Coder-Next
+The next generation coding model featuring a hybrid architecture.
+*   **Special Feature:** Hybrid DeltaNet + Attention mechanism with MoE routing for extreme efficiency.
+*   **Usage:**
+    ```python
+    plugin.generate_text("class NeuralNetwork:")
     ```
 
 ### Qwen3-VL-2B
@@ -106,13 +108,13 @@ Ultra-lightweight reasoning model.
 
 Models use specific config classes (e.g., `Qwen3VL2BConfig`) extending `BaseModelConfig`.
 Common parameters:
-*   `use_flash_attention_2`: bool
+*   `use_flash_attention_2`: bool (implemented via custom backend)
 *   `load_in_4bit`: bool
 *   `max_new_tokens`: int
 
 ## 6. Optimizations
-All models leverage:
-*   **FlashAttention 2.0**
-*   **Paged KV Cache** (vLLM style)
-*   **Rotary Embeddings (RoPE)**
-*   **Tensor Parallelism** (Optional)
+All models leverage the custom C/CUDA backend `libtensor_ops` for:
+*   **FlashAttention-like Kernels** (`scaled_dot_product_attention`)
+*   **Paged KV Cache**
+*   **Rotary Embeddings (RoPE)** (via `rope` kernel)
+*   **Efficient Tensor Operations** (no overhead from PyTorch/Numpy)

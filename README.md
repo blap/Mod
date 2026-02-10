@@ -37,13 +37,12 @@ Inference-PIO is a modular, high-performance inference system built on a self-co
 │       ├── models/                 # Individual self-contained model plugins
 │       │   ├── glm_4_7_flash/      # GLM-4.7 Flash model
 │       │   ├── qwen3_0_6b/         # Qwen3-0.6B model
-│       │   ├── qwen3_4b_instruct_2507/ # Qwen3-4B-Instruct-2507 model
 │       │   ├── qwen3_coder_30b/    # Qwen3-Coder-30B model
+│       │   ├── qwen3_coder_next/   # Qwen3-Coder-Next model
 │       │   └── qwen3_vl_2b/        # Qwen3-VL-2B model
 │       ├── plugins/                # Plugin system infrastructure
 │       │   ├── base/               # Base plugin interfaces
 │       │   ├── cpu/                # CPU-specific plugins
-│       │   ├── intel/              # Intel-specific plugins
 │       │   └── manager.py          # Plugin manager implementation
 │       ├── tests/                  # Global test structure
 │       │   ├── base/               # Test base classes
