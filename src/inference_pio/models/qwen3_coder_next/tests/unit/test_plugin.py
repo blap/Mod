@@ -39,7 +39,7 @@ class TestQwen3CoderNextPlugin(unittest.TestCase):
         # Test Load Model (mock path/no weights)
         # This will fail to load real weights but catch exception and init random weights
         plugin.load_model()
-        self.assertIsNotNone(plugin.model)
+        self.assertIsNotNone(plugin._model)
 
         # Test Infer with Tensor
         input_ids = Tensor([1, 2])
@@ -52,7 +52,7 @@ class TestQwen3CoderNextPlugin(unittest.TestCase):
 
         # Cleanup
         plugin.cleanup()
-        self.assertIsNone(plugin.model)
+        self.assertIsNone(plugin._model)
 
 if __name__ == '__main__':
     unittest.main()

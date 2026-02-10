@@ -2,40 +2,61 @@
 Qwen3-VL-2B Plugin
 """
 from typing import Any
-from ...common.interfaces.improved_base_plugin_interface import ModelPluginInterface, PluginMetadata, PluginType
+from ...common.interfaces.improved_base_plugin_interface import (
+    ModelPluginInterface, PluginMetadata, PluginType, TextModelPluginInterface
+)
 from ...core.engine.backend import Tensor
 from .model import Qwen3VL2BModel, Qwen3VL2BConfig
 
-class Qwen3_VL_2B_Plugin(ModelPluginInterface):
+class Qwen3_VL_2B_Plugin(TextModelPluginInterface):
     def __init__(self):
         meta = PluginMetadata(
             name="Qwen3-VL-2B", version="1.0", author="Alibaba",
             description="Qwen3-VL-2B",
             plugin_type=PluginType.MODEL_COMPONENT,
             dependencies=[], compatibility={},
-            model_architecture="Qwen3-VL", model_size="2B", required_memory_gb=10
+            model_architecture="Qwen3-VL", model_size="2B", required_memory_gb=10,
+            supported_modalities=["text", "image"]
         )
         super().__init__(meta)
         self._model = None
+        self._config = Qwen3VL2BConfig()
+
+    def initialize(self, **kwargs) -> bool:
+        for k, v in kwargs.items():
+            if hasattr(self._config, k): setattr(self._config, k, v)
+        self.load_model()
+        return True
 
     def load_model(self, config=None):
-        c = config or Qwen3VL2BConfig()
-        self._model = Qwen3VL2BModel(c)
+        if config: self._config = config
+        self._model = Qwen3VL2BModel(self._config)
         return self._model
 
     def infer(self, data: Any) -> Any:
-        if not self._model: return None
-
-        # Support tuple (ids, pixels)
+        if isinstance(data, str):
+            return self.generate_text(data)
         if isinstance(data, tuple) and len(data) == 2:
-            ids, pixels = data
-            return self._model.generate(ids, pixel_values=pixels)
-
-        # Support just IDs
+            return self._model.generate(data[0], pixel_values=data[1])
         if isinstance(data, Tensor):
             return self._model.generate(data)
+        return None
 
-        return "Qwen3-VL Output (Input format not recognized)"
+    def generate_text(self, prompt: str, max_new_tokens: int = 512, **kwargs) -> str:
+        # Simplified text-only generation wrapper
+        if not self._model: self.load_model()
+
+        # Tokenize (Mock)
+        ids = [1.0] * 5
+        t = Tensor([1, len(ids)])
+        t.load(ids)
+
+        out = self._model.generate(t, max_new_tokens=max_new_tokens)
+        return f"Generated {out.shape[1]} tokens"
+
+    def cleanup(self) -> bool:
+        self._model = None
+        return True
 
 def create_qwen3_vl_2b_plugin(): return Qwen3_VL_2B_Plugin()
 __all__ = ["Qwen3_VL_2B_Plugin", "create_qwen3_vl_2b_plugin"]
