@@ -339,6 +339,29 @@ void tensor_permute(Tensor* input, Tensor* out, int* dims) {
     free(out_strides);
 }
 
+void tensor_set_slice(Tensor* dst, Tensor* src, int* start_indices) {
+    // Inverse of slice: copy src into dst at offsets
+    int ndim = dst->ndim;
+    int* dst_strides = (int*)malloc(sizeof(int) * ndim);
+    int* src_strides = (int*)malloc(sizeof(int) * ndim);
+    get_strides(dst->shape, ndim, dst_strides);
+    get_strides(src->shape, ndim, src_strides);
+
+    #pragma omp parallel for
+    for(int i=0; i<src->size; i++) {
+        int temp = i;
+        int dst_offset = 0;
+        for(int d=0; d<ndim; d++) {
+            int coord = temp / src_strides[d];
+            temp %= src_strides[d];
+            dst_offset += (start_indices[d] + coord) * dst_strides[d];
+        }
+        dst->data[dst_offset] = src->data[i];
+    }
+    free(dst_strides);
+    free(src_strides);
+}
+
 // Scaled Dot Product Attention (Fused)
 void tensor_scaled_dot_product_attention(Tensor* q, Tensor* k, Tensor* v, Tensor* out, float scale) {
     int batch = q->shape[0];

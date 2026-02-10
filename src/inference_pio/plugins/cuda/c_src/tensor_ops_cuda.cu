@@ -464,5 +464,49 @@ EXPORT void tensor_deltanet_recurrence(Tensor* q, Tensor* k, Tensor* v, Tensor* 
 // Adding minimal versions to prevent link error
 __global__ void slice_kernel(float* in, float* out, int size, int* start, int* h_in, int* h_out, int ndim) { int idx = blockIdx.x*blockDim.x + threadIdx.x; if(idx<size) { int temp=idx; int offset=0; for(int i=0; i<ndim; i++) { int c=temp/h_out[i]; temp%=h_out[i]; offset+=(start[i]+c)*h_in[i]; } out[idx]=in[offset]; } }
 EXPORT void tensor_slice(Tensor* input, Tensor* out, int* start_indices, int* slice_shapes) { if (out->device_id >= 0) { int ndim = input->ndim; int* h_in = (int*)malloc(ndim*4); int* h_out = h_in + ndim; h_in[ndim-1]=1; h_out[ndim-1]=1; for(int i=ndim-2; i>=0; i--) { h_in[i] = h_in[i+1]*input->shape[i+1]; h_out[i] = h_out[i+1]*out->shape[i+1]; } int* d_params; CUDA_CHECK(cudaMalloc((void**)&d_params, 3*ndim*4)); CUDA_CHECK(cudaMemcpy(d_params, start_indices, ndim*4, cudaMemcpyHostToDevice)); CUDA_CHECK(cudaMemcpy(d_params+ndim, h_in, ndim*4, cudaMemcpyHostToDevice)); CUDA_CHECK(cudaMemcpy(d_params+2*ndim, h_out, ndim*4, cudaMemcpyHostToDevice)); int size = out->size; int threads=256; int blocks=(size+255)/256; slice_kernel<<<blocks, threads>>>(input->data, out->data, size, d_params, d_params+ndim, d_params+2*ndim, ndim); CUDA_CHECK(cudaDeviceSynchronize()); CUDA_CHECK(cudaFree(d_params)); free(h_in); } }
+
+__global__ void set_slice_kernel(float* dst, float* src, int size, int* start, int* h_dst, int* h_src, int ndim) {
+    int idx = blockIdx.x*blockDim.x + threadIdx.x;
+    if(idx<size) {
+        int temp=idx; int offset=0;
+        for(int i=0; i<ndim; i++) {
+            int c=temp/h_src[i]; temp%=h_src[i];
+            offset+=(start[i]+c)*h_dst[i];
+        }
+        dst[offset]=src[idx];
+    }
+}
+EXPORT void tensor_set_slice(Tensor* dst, Tensor* src, int* start_indices) {
+    if (dst->device_id >= 0) {
+        int ndim = dst->ndim;
+        int* h_dst = (int*)malloc(ndim*4);
+        int* h_src = h_dst + ndim; // Reuse
+        // No, need 2 buffers.
+        int* strides = (int*)malloc(ndim * 2 * sizeof(int));
+        int* s_dst = strides;
+        int* s_src = strides + ndim;
+
+        s_dst[ndim-1] = 1; s_src[ndim-1] = 1;
+        for(int i=ndim-2; i>=0; i--) {
+            s_dst[i] = s_dst[i+1]*dst->shape[i+1];
+            s_src[i] = s_src[i+1]*src->shape[i+1];
+        }
+
+        int* d_params;
+        CUDA_CHECK(cudaMalloc((void**)&d_params, 3*ndim*4));
+        CUDA_CHECK(cudaMemcpy(d_params, start_indices, ndim*4, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(d_params+ndim, s_dst, ndim*4, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(d_params+2*ndim, s_src, ndim*4, cudaMemcpyHostToDevice));
+
+        int size = src->size;
+        int threads=256;
+        int blocks=(size+255)/256;
+        set_slice_kernel<<<blocks, threads>>>(dst->data, src->data, size, d_params, d_params+ndim, d_params+2*ndim, ndim);
+        CUDA_CHECK(cudaDeviceSynchronize());
+        CUDA_CHECK(cudaFree(d_params));
+        free(strides);
+        free(h_dst); // Wait, I didn't use h_dst alloc, I used strides. Just free strides.
+    }
+}
 __global__ void precompute_freqs_kernel(float* cos, float* sin, int end, int half, float theta) { int idx = blockIdx.x*blockDim.x + threadIdx.x; if(idx < end*half) { int i = idx / half; int j = idx % half; float freq = 1.0f / powf(theta, (float)(2*j) / (half*2)); float val = i * freq; cos[idx] = cosf(val); sin[idx] = sinf(val); } }
 EXPORT void tensor_precompute_freqs_cis(int dim, int end, float theta, Tensor* out_cos, Tensor* out_sin) { if (out_cos->device_id >= 0) { int half = dim/2; int total = end*half; int th=256; int bl=(total+255)/256; precompute_freqs_kernel<<<bl, th>>>(out_cos->data, out_sin->data, end, half, theta); CUDA_CHECK(cudaDeviceSynchronize()); } }

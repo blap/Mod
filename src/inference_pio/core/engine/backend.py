@@ -72,6 +72,8 @@ def _setup_sigs(lib):
 
     if hasattr(lib, 'tensor_slice'):
         lib.tensor_slice.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int)]
+    if hasattr(lib, 'tensor_set_slice'):
+        lib.tensor_set_slice.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.c_int)]
     if hasattr(lib, 'tensor_precompute_freqs_cis'):
         lib.tensor_precompute_freqs_cis.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_float, ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
 
@@ -363,6 +365,12 @@ class Tensor:
             c_shape = (ctypes.c_int * self.ndim)(*slice_shapes)
             self._lib.tensor_slice(self._handle, out._handle, c_start, c_shape)
         return out
+
+    def set_slice(self, src: 'Tensor', start_indices: List[int]):
+        if len(start_indices) != self.ndim: raise ValueError("Set Slice args dim mismatch")
+        if hasattr(self._lib, 'tensor_set_slice'):
+            c_start = (ctypes.c_int * self.ndim)(*start_indices)
+            self._lib.tensor_set_slice(self._handle, src._handle, c_start)
 
     def resize_image(self, target_h: int, target_w: int) -> 'Tensor':
         if self.ndim != 3: raise ValueError("Image resize expects 3D tensor")
