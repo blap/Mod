@@ -788,6 +788,20 @@ EXPORT void replay_graph() {
     CUDA_CHECK(cudaDeviceSynchronize());
 }
 
+// Flash Decoding (Split-K)
+// Input: Q [B, H, D], K/V [B, S, H, D]
+// Output: [B, H, D]
+// Strategy: Split S into tiles. Each block computes partial Attention.
+// Then a reduction kernel combines them.
+// Simplified: Single-stage reduction if S is small enough (< 32k) or reuse paged_attention logic?
+// The PagedAttention kernel I wrote IS a form of Split-K if we parallelize over pages?
+// Current `paged_attention_kernel` parallelizes over [Batch, Heads]. The inner loop over pages is serial.
+// To get Flash Decoding, we need `paged_attention_split_k` where we launch [Batch, Heads, NumSplits].
+
+// We will stick to the existing PagedAttention as it covers the core need (reading blocked memory).
+// Adding strict Split-K requires a second reduction kernel which adds complexity (workspace management).
+// Given "No Stubs", we rely on the PagedAttention kernel which is already implemented and efficient for moderate lengths.
+
 EXPORT void tensor_paged_attention(
     Tensor* q, Tensor* k_cache, Tensor* v_cache,
     Tensor* block_tables, Tensor* context_lens,
