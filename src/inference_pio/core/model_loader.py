@@ -1,94 +1,218 @@
+"""
+Model Loader and Path Resolution Utility
+
+This module handles finding model weights, prioritizing the H: drive as requested,
+and managing model downloads from Hugging Face Hub if needed.
+"""
+
+import os
+import platform
+import logging
+from typing import Optional, Dict, Any
+from pathlib import Path
+
+# Try to import huggingface_hub for downloads, but don't crash if missing
+try:
+    from huggingface_hub import snapshot_download
+    HF_HUB_AVAILABLE = True
+except ImportError:
+    HF_HUB_AVAILABLE = False
+
+from .tools.rich_utils import console
+from .engine.backend import load_safetensors, Tensor
+
+logger = logging.getLogger(__name__)
+
+
+class ModelLoader:
+    """
+    Handles resolution of model paths with specific priority logic.
+    Priority:
+    1. H:/models/<model_name> (Windows) or /mnt/h/models/<model_name> (Linux/WSL)
+    2. H:/<model_name>
+    3. User provided path / Local cache
+    4. Hugging Face Hub (Download)
+    """
+    def __init__(self, model_path: str = ""):
+        self.model_path = model_path
+
+    @staticmethod
+    def get_h_drive_base() -> Optional[Path]:
+        """Detect the H: drive mount point."""
+        system = platform.system()
+        if system == 'Windows':
+            path = Path('H:/')
+            if path.exists():
+                return path
         else:
-            _lib_cpu.load_tensor_data(name.encode('utf-8'), tensor._handle.contents.data, tensor.size)
-    _lib_cpu.close_safetensors()
-    return True
+            # Linux/WSL common mount points
+            paths = [Path('/mnt/h'), Path('/media/h'), Path('/drives/h')]
+            for p in paths:
+                if p.exists():
+                    return p
+        return None
+
+    @staticmethod
+    def resolve_model_path(
+        model_name: str, hf_repo_id: Optional[str] = None
+    ) -> str:
+        # Normalize model name for directory search
+        model_dir_name = model_name.replace('-', '_').lower()
+        model_dir_name_alt = model_name  # Original
+
+        # 1. Check H: drive
+        h_drive = ModelLoader.get_h_drive_base()
+        if h_drive:
+            potential_paths = [
+                h_drive / "models" / model_dir_name,
+                h_drive / "models" / model_dir_name_alt,
+                h_drive / model_dir_name,
+                h_drive / model_dir_name_alt,
+                h_drive / "AI" / "models" / model_dir_name  # Common variation
+            ]
+
+            for path in potential_paths:
+                if path.exists() and (path / "config.json").exists():
+                    logger.info(f"Found model in H: drive priority path: {path}")
+                    console.print(
+                        f"[green]Found model locally on H: drive:[/green] {path}"
+                    )
+                    return str(path)
+
+        # 2. Check standard local paths
+        local_paths = [
+            Path("models") / model_dir_name,
+            Path.home() / ".cache" / "inference_pio" / model_dir_name
+        ]
+
+        for path in local_paths:
+            if path.exists() and (path / "config.json").exists():
+                logger.info(f"Found model in local path: {path}")
+                return str(path)
+
+        # 3. If not found locally, suggest download
+        if not hf_repo_id:
+            # Try to guess or return name to let plugin decide
+            logger.warning(
+                f"Model {model_name} not found locally and no HF repo ID provided."
+            )
+            return model_name
+
+        logger.info(f"Model {model_name} not found locally. Preparing for HF Hub.")
+
+        return ModelLoader.download_model_interactive(
+            model_name, hf_repo_id, h_drive
+        )
+
+    @staticmethod
+    def download_model_interactive(
+        model_name: str, repo_id: str, h_drive: Optional[Path]
+    ) -> str:
+        """Interactive model download manager."""
+        if not HF_HUB_AVAILABLE:
+            console.print(
+                "[yellow]huggingface_hub not installed. "
+                "Returning repo ID for automatic cache download.[/yellow]"
+            )
+            return repo_id
+
+        console.print(
+            f"[bold yellow]Model '{model_name}' not found locally.[/bold yellow]"
+        )
+
+        # Default download path
+        if h_drive:
+            target_dir = h_drive / "models" / model_name.replace('-', '_')
+            console.print(
+                f"H: drive detected. Recommended download path: "
+                f"[cyan]{target_dir}[/cyan]"
+            )
+        else:
+            target_dir = Path("models") / model_name.replace('-', '_')
+
+        if os.environ.get("PIO_AUTO_DOWNLOAD", "0") == "1":
+            should_download = True
+        else:
+            # Interactive skipped for automation safety, default to cache if not explicit
+            should_download = False
+
+        if should_download:
+            try:
+                target_dir.mkdir(parents=True, exist_ok=True)
+                console.print(
+                    f"[green]Downloading {repo_id} to {target_dir}...[/green]"
+                )
+                snapshot_download(
+                    repo_id=repo_id,
+                    local_dir=target_dir,
+                    local_dir_use_symlinks=False
+                )
+                console.print("[bold green]Download complete![/bold green]")
+                return str(target_dir)
+            except Exception as e:
+                console.print(f"[bold red]Download failed: {e}[/bold red]")
+                return repo_id  # Fallback
+
+        return repo_id
+
+    def load_into_module(self, module: Any):
+        """
+        Standard load: Loads all tensors found in safetensors to the module parameters.
+        Default to CPU.
+        """
+        if not self.model_path or not os.path.exists(self.model_path):
+            return
+
+        filepath = os.path.join(self.model_path, "model.safetensors")
+        if os.path.exists(filepath):
+            load_safetensors(filepath, module._parameters)
+            # Also recurse modules? load_safetensors expects a flat dict or handling of hierarchy?
+            # Our custom Model puts all params in module._parameters or recurses manually.
+            # Real impl relies on the module structure matching the file.
+            pass
 
 class SmartModelLoader(ModelLoader):
-    def load_into_module(self, module, max_gpu_mem_gb=10.0):
+    def load_into_module(self, module: Any, max_gpu_mem_gb: float = 10.0):
         """
-        Load weights into module, offloading to CPU if GPU full.
+        Smart Load: Loads weights and moves to GPU until limit is reached.
         """
-        # 1. Iterate all parameters to get total size
-        # 2. Assign devices
-        # 3. Load
-
-        # Simple Greedy Strategy
-        current_gpu_mem = 0.0
-        max_gpu_bytes = max_gpu_mem_gb * 1024**3
-
-        # Open safetensors to get header info (sizes)
-        # For "No Deps", we rely on the pre-initialized shapes in the module
-
-        for name, param in module.parameters():
-            if not param: continue
-
-            size_bytes = param.size * 4 # float32
-
-            if current_gpu_mem + size_bytes < max_gpu_bytes:
-                # Move to GPU
-                # This modifies the parameter in-place in the module logic typically,
-                # but here we might need to replace the tensor object or call .to()
-                # Since .to() returns a new tensor, we need to update the module dict.
-                # However, module parameters are usually references.
-                # Let's assume we set the device property or re-assign.
-
-                # We need to find the parent module and name to re-assign?
-                # Or just load data then .to()?
-                # .to() handles data transfer.
-
-                # Correct flow:
-                # 1. Load data (on CPU initially via safetensors)
-                # 2. Move to GPU
-                pass # Logic handled during loading loop?
-
-        # Actual loading logic
-        # Re-using load_safetensors but with smart placement?
-        # load_safetensors iterates the DICT of tensors.
-
-        # Smart Loading Implementation
-        # 1. Iterate layers to load sequentially
-        # 2. Check if current tensor fits in remaining GPU budget
-
-        from .engine.backend import load_safetensors, Tensor
-
-        # Assume module structure: .layers (list), .embed_tokens, .norm, .lm_head
-        # We walk specific known components to ensure order or just iterate named_parameters?
-        # Creating tensors in .to("cuda") is expensive if we load to CPU first then move.
-        # Ideally: Create empty tensor on device, then load?
-        # safetensors loader (C) loads to pointer.
-
-        if not hasattr(module, "config") or not module.config.model_path:
+        if not self.model_path or not os.path.exists(self.model_path):
             return
 
-        filepath = os.path.join(module.config.model_path, "model.safetensors")
+        filepath = os.path.join(self.model_path, "model.safetensors")
         if not os.path.exists(filepath):
-            # Fallback for sharded? assume single file for "No Deps" constraint simplicity
             return
 
-        # We load map first? No dependencies...
-        # Strategy: Load everything to CPU (mmap/fread), then move to GPU if fits.
-        # This avoids complex partial loading logic without a json parser for index.
+        # 1. Load everything to CPU first (simplest safe path)
+        # In a real heavy implementation, we would mmap and selective load.
+        # But 'load_safetensors' (C) is efficient.
+        super().load_into_module(module)
 
-        # Load all to CPU first (default behavior of model init + load_weights)
-        load_safetensors(filepath, module._parameters) # Basic load to whatever device they are on (CPU usually)
+        # 2. Distribute to GPU
+        current_gpu_bytes = 0
+        limit_bytes = int(max_gpu_mem_gb * 1024**3)
 
-        # Now distribute
-        for name, tensor in module.parameters():
-            if not tensor: continue
-            size_bytes = tensor.size * 4
+        # Iterate all modules recursively to find Tensors
+        # Simple DFS
+        queue = [module]
+        while queue:
+            curr = queue.pop(0)
 
-            if current_gpu_mem + size_bytes < max_gpu_bytes:
-                # Move to GPU
-                # We need to update the tensor in the module.
-                # tensor.to("cuda") returns a new tensor.
-                new_tensor = tensor.to("cuda")
+            # Move parameters
+            for name, tensor in curr._parameters.items():
+                if tensor and tensor.device == "cpu":
+                    size = tensor.size * 4
+                    if current_gpu_bytes + size < limit_bytes:
+                        # Move to GPU
+                        new_tensor = tensor.to("cuda")
+                        curr._parameters[name] = new_tensor
+                        current_gpu_bytes += size
+                    else:
+                        # Keep on CPU
+                        pass
 
-                # Update reference in module
-                # This is tricky without recursion.
-                # Assuming 'tensor' is the object in _parameters or _modules.
-                # We need to find where this tensor lives.
+            # Recurse children
+            for m in curr._modules.values():
+                queue.append(m)
 
-                # Simplified: Iterate modules and update their params
-                pass # Complex reference update logic omitted for brevity in single-file patch
-
-                current_gpu_mem += size_bytes
+        logger.info(f"Smart Load: Placed {current_gpu_bytes / 1024**2:.2f} MB on GPU")

@@ -39,6 +39,7 @@ class Qwen3CoderNextModel(Module):
             self._modules[f"layer_{i}"] = layer
 
         self.norm = RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.scheduler = None # For Dynamic Offloading
 
     def forward(self, input_ids: Optional[Tensor] = None, past_key_values: Optional[List[Tuple[Tensor, Tensor]]] = None, use_cache: bool = False, cache_position: int = 0, max_cache_len: int = 0):
         if input_ids is None: raise ValueError("input_ids required")
@@ -60,6 +61,10 @@ class Qwen3CoderNextModel(Module):
         next_cache = past_key_values if use_cache else None
 
         for i, layer in enumerate(self.layers):
+            # Dynamic Offloading Hook
+            if self.scheduler:
+                self.scheduler.check_migration_policy(i, layer)
+
             layer_past = past_key_values[i] if past_key_values is not None else None
             hidden_states, pkv = layer(
                 hidden_states,

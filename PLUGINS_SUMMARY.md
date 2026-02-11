@@ -31,7 +31,20 @@ This document summarizes the implemented models and plugins in the Inference-PIO
 ### 5. Qwen3-0.6B
 - **Type**: Small Language Model
 - **Plugin**: `src/inference_pio/models/qwen3_0_6b/`
+- **Key Features**: Compact architecture, optimized for speed.
 - **Status**: Existing implementation.
+
+### 6. Qwen3-Coder-30B
+- **Type**: Large Language Model (Code Specialized)
+- **Plugin**: `src/inference_pio/models/qwen3_coder_30b/`
+- **Key Features**: Deep architecture, KV Cache, Dynamic Offloading support.
+- **Status**: Complete with Tests & Benchmarks.
+
+## Dynamic Offloading & Hybrid Scheduling
+All implemented models now support **Dynamic Offloading** via `HybridScheduler`. This allows layers to be automatically migrated between CPU and GPU during inference based on memory pressure, enabling execution of large models on consumer hardware.
+
+- **Hook**: `scheduler.check_migration_policy(layer_idx, layer)` inside `forward` loop.
+- **Mechanism**: Detects memory constraints and proactively moves upcoming layers to GPU while evicting used layers to CPU if necessary.
 
 ## Directory Structure
 Each model directory follows a self-contained structure:

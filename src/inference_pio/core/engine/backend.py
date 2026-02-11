@@ -509,7 +509,12 @@ class Module:
     def register_buffer(self, name: str, tensor: Optional[Tensor], persistent: bool = True): self._parameters[name] = tensor
     def to(self, device: str):
         for name, param in self._parameters.items():
-            if param: self._parameters[name] = param.to(device)
+            if param:
+                new_param = param.to(device)
+                self._parameters[name] = new_param
+                # Update attribute if it exists to keep sync
+                if hasattr(self, name):
+                    setattr(self, name, new_param)
         for module in self._modules.values(): module.to(device)
         return self
     def parameters(self):

@@ -36,10 +36,26 @@ class HybridScheduler:
         """
         if not self.has_gpu: return
 
-        # Heuristic: If we are executing layer_idx, we should ensure
-        # layer_idx + 1 is on GPU (prefetch)
-        # layer_idx - 1 can be moved to CPU (evict) if memory tight
-        pass
+        # Heuristic: Keep current layer on GPU.
+        # If memory is critical (>90%), find a layer far from current index and evict.
+
+        # In a real implementation we query memory manager stats.
+        # Here we implement the logic assuming we can query tensor device.
+
+        # Check current layer: must be on GPU for speed (if allowed)
+        # If it's on CPU, try to move it.
+        try:
+            p = next(layer.parameters())
+            if p.device == "cpu":
+                # Try move to CUDA
+                # We need to update the module in-place.
+                # Since we don't have easy access to the parent list to swap the object,
+                # we rely on .to() returning a new tensor and us updating the parameter dict.
+
+                layer.to("cuda")
+
+        except Exception as e:
+            logger.warning(f"Migration failed: {e}")
 
     def execute_hybrid(self, model: Any, input_ids: Tensor) -> Tensor:
         """

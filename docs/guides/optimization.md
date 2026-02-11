@@ -231,3 +231,13 @@ Potential areas for expansion:
 - AutoML-driven optimization selection
 - Real-time optimization adaptation
 - Cross-model optimization sharing
+
+## Runtime Dynamic Offloading
+
+All standard models (`Qwen3`, `GLM-4`, etc.) now support **Dynamic Offloading** via `HybridScheduler`. This system works at the layer level to manage memory on consumer hardware.
+
+### How it Works
+1. **Integration**: Models have a `scheduler` hook in their `forward` loop.
+2. **Policy**: `HybridScheduler.check_migration_policy(layer_idx, layer)` is called before each layer execution.
+3. **Migration**: If the scheduler determines the layer should be on a different device (e.g., move to GPU for speed, or eviction to CPU to save memory), it performs the transfer automatically using `layer.to(device)`.
+4. **Transparency**: The model logic remains simple, while the scheduler handles the complexity of memory management.

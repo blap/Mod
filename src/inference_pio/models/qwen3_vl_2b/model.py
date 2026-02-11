@@ -75,6 +75,7 @@ class Qwen3VL2BModel(Module):
 
         self.norm = RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.lm_head = Linear(config.hidden_size, config.vocab_size, bias=False)
+        self.scheduler = None
 
     def forward(self, input_ids: Tensor, pixel_values: Optional[Tensor] = None, past_key_values: Optional[List[Tuple[Tensor, Tensor]]] = None, use_cache: bool = False):
         # Embed Text
@@ -95,6 +96,9 @@ class Qwen3VL2BModel(Module):
         next_cache = [] if use_cache else None
 
         for i, layer in enumerate(self.layers):
+            if self.scheduler:
+                self.scheduler.check_migration_policy(i, layer)
+
             past = past_key_values[i] if past_key_values else None
             hidden_states, pkv = layer(hidden_states, past_key_value=past, use_cache=use_cache)
             if use_cache:

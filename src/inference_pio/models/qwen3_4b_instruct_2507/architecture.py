@@ -107,11 +107,15 @@ class Qwen3Model(Module):
              self.layers.append(l)
              self._modules[f"layer_{i}"] = l
         self.norm = RMSNorm(config.hidden_size)
+        self.scheduler = None
 
     def forward(self, input_ids, past_key_values=None, use_cache=None):
         h = self.embed_tokens(input_ids)
         next_cache = []
         for i, layer in enumerate(self.layers):
+            if self.scheduler:
+                self.scheduler.check_migration_policy(i, layer)
+
             past = past_key_values[i] if past_key_values else None
             h, pkv = layer(h, past_key_value=past, use_cache=use_cache)
             if use_cache: next_cache.append(pkv)

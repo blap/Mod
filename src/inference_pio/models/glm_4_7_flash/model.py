@@ -29,10 +29,13 @@ class GLM47FlashModel(Module):
 
         self.final_layernorm = RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.lm_head = Linear(config.hidden_size, config.vocab_size, bias=False)
+        self.scheduler = None
 
     def forward(self, input_ids: Tensor):
         h = self.embed_tokens(input_ids)
-        for layer in self.layers:
+        for i, layer in enumerate(self.layers):
+            if self.scheduler:
+                self.scheduler.check_migration_policy(i, layer)
             h = layer(h)
         h = self.final_layernorm(h)
         return h
