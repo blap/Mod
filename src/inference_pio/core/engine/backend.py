@@ -89,6 +89,8 @@ def _setup_sigs(lib):
         lib.tensor_swiglu.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
     if hasattr(lib, 'tensor_fused_gate_up_swiglu'):
         lib.tensor_fused_gate_up_swiglu.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    if hasattr(lib, 'tensor_fused_split_rope'):
+        lib.tensor_fused_split_rope.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
     if hasattr(lib, 'tensor_scaled_dot_product_attention'):
         lib.tensor_scaled_dot_product_attention.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_float]
     if hasattr(lib, 'tensor_reshape'):
@@ -344,6 +346,30 @@ class Tensor:
         out_k = Tensor(list(k.shape), device=self.device)
         self._lib.tensor_rope(self._handle, k._handle, cos._handle, sin._handle, out_q._handle, out_k._handle)
         return out_q, out_k
+
+    def fused_split_rope(self, cos: 'Tensor', sin: 'Tensor', heads: int, head_dim: int) -> Tuple['Tensor', 'Tensor', 'Tensor']:
+        # Self is [B, S, 3*H]
+        # Out shapes: [B, S, Heads, HeadDim]
+        B = self.shape[0]
+        S = self.shape[1]
+        out_shape = [B, S, heads, head_dim]
+
+        out_q = Tensor(out_shape, device=self.device)
+        out_k = Tensor(out_shape, device=self.device)
+        out_v = Tensor(out_shape, device=self.device)
+
+        if hasattr(self._lib, 'tensor_fused_split_rope'):
+            self._lib.tensor_fused_split_rope(self._handle, cos._handle, sin._handle, out_q._handle, out_k._handle, out_v._handle)
+        else:
+            # Fallback
+            H = heads * head_dim
+            q = self.slice([0, 0, 0], [B, S, H]).reshape(out_shape)
+            k = self.slice([0, 0, H], [B, S, H]).reshape(out_shape)
+            v = self.slice([0, 0, 2*H], [B, S, H]).reshape(out_shape)
+            out_q, out_k = q.rope(k, cos, sin)
+            out_v = v
+
+        return out_q, out_k, out_v
 
     def argmax(self, dim: int = -1) -> 'Tensor':
         out_shape = list(self.shape[:-1])

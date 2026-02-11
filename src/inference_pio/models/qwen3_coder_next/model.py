@@ -226,38 +226,16 @@ class Qwen3CoderNextAttention(Module):
         # Fused Projection
         qkv = self.qkv_proj(hidden_states) # [B, S, 3*H]
 
-        # Split (Slice) - Optimized backends can use strided access if supported, otherwise explicit slice
-        B = qkv.shape[0]
-        S = qkv.shape[1]
-        H = self.hidden_size
-
-        # Ideally, we should add `tensor_chunk` or `split` to backend for efficiency.
-        # But `slice` is correct. We minimize python ops.
-        # However, for RoPE, we need Q and K separated anyway.
-
-        q = qkv.slice([0, 0, 0], [B, S, H])
-        k = qkv.slice([0, 0, H], [B, S, H])
-        v = qkv.slice([0, 0, 2*H], [B, S, H])
-
-        # Reshape [B, S, Hidden] -> [B, S, Heads, HeadDim]
-        S = q.shape[1]
-        H = q.shape[2]
-        new_shape = [B, S, self.num_heads, self.head_dim]
-        q = q.reshape(new_shape)
-        k = k.reshape(new_shape)
-        v = v.reshape(new_shape)
-
-        # Apply RoPE
-        # RoPE indices: slice from cache_position to current_len
-        # If cache_position > 0 (decoding), S is 1. RoPE should align.
-
+        # Prepare RoPE Cache slice
+        S = hidden_states.shape[1]
         slice_start = [cache_position, 0]
         slice_shape = [S, self.cos_cache.shape[1]]
-
         cos = self.cos_cache.slice(slice_start, slice_shape)
         sin = self.sin_cache.slice(slice_start, slice_shape)
 
-        q, k = q.rope(k, cos, sin)
+        # Fused Split + RoPE
+        # Returns q, k, v already reshaped to [B, S, Heads, HeadDim] and with RoPE applied to q, k
+        q, k, v = qkv.fused_split_rope(cos, sin, self.num_heads, self.head_dim)
 
         # KV Cache Update (Pre-allocated logic or Cat logic fallback)
         if use_cache:
@@ -276,6 +254,8 @@ class Qwen3CoderNextAttention(Module):
         context = scaled_dot_product_attention(q, k, v, scale=self.scale)
 
         # Flatten
+        B = context.shape[0]
+        S = context.shape[1]
         context = context.reshape([B, S, self.hidden_size])
         output = self.o_proj(context)
         return output, present_key_value
