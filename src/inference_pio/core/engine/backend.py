@@ -74,6 +74,16 @@ def _setup_sigs(lib):
         lib.tensor_slice.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int)]
     if hasattr(lib, 'tensor_set_slice'):
         lib.tensor_set_slice.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.c_int)]
+    if hasattr(lib, 'begin_capture'):
+        lib.begin_capture.argtypes = []
+    if hasattr(lib, 'end_capture'):
+        lib.end_capture.argtypes = []
+    if hasattr(lib, 'replay_graph'):
+        lib.replay_graph.argtypes = []
+    if hasattr(lib, 'init_memory_pool'):
+        lib.init_memory_pool.argtypes = [ctypes.c_size_t]
+    if hasattr(lib, 'reset_memory_pool'):
+        lib.reset_memory_pool.argtypes = []
     if hasattr(lib, 'tensor_precompute_freqs_cis'):
         lib.tensor_precompute_freqs_cis.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_float, ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
 
@@ -573,6 +583,26 @@ def scaled_dot_product_attention(q: Tensor, k: Tensor, v: Tensor, scale: float =
         scores = scores * scale # Uses tensor_scale if available
         attn = scores.softmax()
         return attn.matmul(v)
+
+def init_memory_pool(size_mb: int = 1024):
+    """Initialize the static memory arena for CPU tensors."""
+    if _lib_cpu and hasattr(_lib_cpu, 'init_memory_pool'):
+        _lib_cpu.init_memory_pool(size_mb * 1024 * 1024)
+
+def reset_memory_pool():
+    if _lib_cpu and hasattr(_lib_cpu, 'reset_memory_pool'):
+        _lib_cpu.reset_memory_pool()
+
+class CUDAGraph:
+    def __init__(self):
+        self.lib = _lib_cuda
+        if not self.lib: raise RuntimeError("CUDA backend not loaded")
+    def capture_begin(self):
+        if hasattr(self.lib, 'begin_capture'): self.lib.begin_capture()
+    def capture_end(self):
+        if hasattr(self.lib, 'end_capture'): self.lib.end_capture()
+    def replay(self):
+        if hasattr(self.lib, 'replay_graph'): self.lib.replay_graph()
 
 def load_safetensors(filepath: str, model_layers: Dict[str, Tensor]):
     if not _lib_cpu or not os.path.exists(filepath): return False

@@ -22,7 +22,22 @@ void get_strides(const int* shape, int ndim, int* strides) {
     }
 }
 
-// Memory Management
+// Memory Management (Arena Allocator)
+static float* g_memory_pool = NULL;
+static size_t g_pool_size = 0;
+static size_t g_pool_offset = 0;
+
+void init_memory_pool(size_t size_bytes) {
+    if (g_memory_pool) aligned_free(g_memory_pool);
+    g_memory_pool = (float*)aligned_alloc(32, size_bytes);
+    g_pool_size = size_bytes;
+    g_pool_offset = 0;
+}
+
+void reset_memory_pool() {
+    g_pool_offset = 0;
+}
+
 Tensor* create_tensor(int* shape, int ndim, int device_id) {
     Tensor* t = (Tensor*)malloc(sizeof(Tensor));
     t->ndim = ndim;
@@ -33,14 +48,32 @@ Tensor* create_tensor(int* shape, int ndim, int device_id) {
         t->size *= shape[i];
     }
     t->device_id = device_id;
+
+    // Arena Allocation
+    size_t bytes = sizeof(float) * t->size;
+    if (g_memory_pool && device_id == -1) { // -1 for CPU
+        if (g_pool_offset + bytes <= g_pool_size) {
+            t->data = (float*)((char*)g_memory_pool + g_pool_offset);
+            g_pool_offset += bytes;
+            // Align offset to 32 bytes
+            size_t remainder = g_pool_offset % 32;
+            if (remainder != 0) g_pool_offset += (32 - remainder);
+            return t;
+        }
+    }
+
+    // Fallback or Device
     // Align to 32 bytes for AVX
-    t->data = (float*)aligned_alloc(32, sizeof(float) * t->size);
+    t->data = (float*)aligned_alloc(32, bytes);
     return t;
 }
 
 void free_tensor(Tensor* t) {
     if(t) {
-        if(t->data) aligned_free(t->data);
+        // Only free if NOT in pool
+        if (!g_memory_pool || t->data < g_memory_pool || t->data >= g_memory_pool + g_pool_size/sizeof(float)) {
+             if(t->data) aligned_free(t->data);
+        }
         if(t->shape) free(t->shape);
         free(t);
     }

@@ -767,6 +767,27 @@ EXPORT void tensor_fused_split_rope(
     }
 }
 
+// CUDA Graph Support
+cudaGraph_t g_graph;
+cudaGraphExec_t g_instance;
+cudaStream_t g_capture_stream;
+
+EXPORT void begin_capture() {
+    CUDA_CHECK(cudaStreamCreate(&g_capture_stream));
+    CUDA_CHECK(cudaStreamBeginCapture(g_capture_stream, cudaStreamCaptureModeGlobal));
+}
+
+EXPORT void end_capture() {
+    CUDA_CHECK(cudaStreamEndCapture(g_capture_stream, &g_graph));
+    CUDA_CHECK(cudaGraphInstantiate(&g_instance, g_graph, NULL, NULL, 0));
+    CUDA_CHECK(cudaStreamDestroy(g_capture_stream));
+}
+
+EXPORT void replay_graph() {
+    CUDA_CHECK(cudaGraphLaunch(g_instance, 0));
+    CUDA_CHECK(cudaDeviceSynchronize());
+}
+
 EXPORT void tensor_paged_attention(
     Tensor* q, Tensor* k_cache, Tensor* v_cache,
     Tensor* block_tables, Tensor* context_lens,
