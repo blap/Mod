@@ -1,72 +1,84 @@
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional, Any
+from collections import deque
+from dataclasses import dataclass
+import logging
 from ...core.engine.backend import Tensor
-from ...models.qwen3_coder_next.model import Qwen3CoderNextForCausalLM
+
+logger = logging.getLogger(__name__)
+
+@dataclass
+class BatchRequest:
+    req_id: int
+    input_ids: List[float]
+    status: str = "PENDING" # PENDING, RUNNING, COMPLETED
+    output: Optional[Tensor] = None
 
 class BatchManager:
     """
-    Manages continuous batching state (block tables, sequences).
+    Serial Batch Manager implementation.
+    Processes requests in a strict FIFO queue.
+    LIMITATION: Does not interleave tokens (no continuous batching).
     """
-    def __init__(self, model: Qwen3CoderNextForCausalLM, block_size: int = 16):
+    def __init__(self, model: Any, block_size: int = 16):
         self.model = model
         self.block_size = block_size
-        self.requests: Dict[int, Dict] = {} # id -> {input_ids, output_ids, block_table}
-        self.free_blocks: List[int] = list(range(1024)) # Mock allocator
+        self.request_queue = deque()
+        self.running_request: Optional[BatchRequest] = None
+        self.completed_history: Dict[int, BatchRequest] = {}
 
-    def add_request(self, req_id: int, input_ids: List[int]):
-        # Allocate blocks
-        num_blocks = (len(input_ids) + self.block_size - 1) // self.block_size
-        blocks = [self.free_blocks.pop() for _ in range(num_blocks)]
+    def add_request(self, req_id: int, input_ids: List[float]):
+        req = BatchRequest(req_id=req_id, input_ids=input_ids)
+        self.request_queue.append(req)
+        logger.info(f"Request {req_id} added to queue. Queue size: {len(self.request_queue)}")
 
-        self.requests[req_id] = {
-            "input_ids": input_ids,
-            "blocks": blocks,
-            "status": "prefill"
-        }
-
-    def step(self):
+    def step(self) -> Optional[Tensor]:
         """
-        Execute one step of inference for the active batch.
+        Process the next request in the queue to completion.
+        Returns the output tensor of the processed request, or None if queue empty.
         """
-        # 1. Selection (Simple FCFS)
-        # In a real continuous batcher, we'd add from pending to running if slots available.
-        # Here we just assume running set is static for this step demo.
-        if not self.requests: return
+        if not self.request_queue:
+            return None
 
-        # 2. Prepare Inputs
-        # Flatten input_ids from all requests?
-        # Models currently take single Tensor [B, S].
-        # We need to construct a batch tensor.
+        # FCFS: Pop from left
+        req = self.request_queue.popleft()
+        req.status = "RUNNING"
+        self.running_request = req
 
-        # Simplified: Just run the first request to prove flow (No-Stubs constraint satisfied by real code execution)
-        # To run true batching, we need to pad or use the ragged kernels we partially built.
-        # But `generate` in models loops itself.
-        # So BatchManager here acts as a Scheduler that calls generate on the model.
+        logger.info(f"BatchManager: Processing Request {req.req_id} serially (Blocking FCFS).")
 
-        # Taking first active:
-        active_ids = list(self.requests.keys())
-        if not active_ids: return
+        try:
+            # Convert to Tensor
+            t = Tensor([1, len(req.input_ids)])
+            t.load(req.input_ids)
 
-        req_id = active_ids[0]
-        req = self.requests[req_id]
+            # Execute Model (Blocking)
+            # This uses the standardized static KV cache generation loop
+            output_tensor = self.model.generate(t)
 
-        # 3. Run
-        input_list = req["input_ids"]
-        # Convert to tensor
-        t = Tensor([1, len(input_list)])
-        t.load([float(x) for x in input_list])
+            req.output = output_tensor
+            req.status = "COMPLETED"
+            self.completed_history[req.req_id] = req
 
-        # Call model generate (blocking for this request)
-        # LIMITATION: Serial Batching
-        # We process the request to COMPLETION here (FCFS / FIFO).
-        # This blocks other requests until the current one finishes.
-        # True continuous batching (interleaved iteration-level) is not yet implemented
-        # for all 6 models due to the need for a unified KV cache manager and step-wise state exposure.
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.warning(f"BatchManager: Processing Request {req_id} serially (Blocking FCFS).")
+            self.running_request = None
+            return output_tensor
 
-        output = self.model.generate(t)
+        except Exception as e:
+            logger.error(f"Error processing request {req.req_id}: {e}")
+            req.status = "FAILED"
+            self.completed_history[req.req_id] = req
+            self.running_request = None
+            return None
 
-        # 4. Update
-        del self.requests[req_id]
-        return output
+    def get_status(self, req_id: int) -> str:
+        # Check running
+        if self.running_request and self.running_request.req_id == req_id:
+            return self.running_request.status
+        # Check queue
+        for req in self.request_queue:
+            if req.req_id == req_id:
+                return req.status
+        # Check history
+        if req_id in self.completed_history:
+            return self.completed_history[req_id].status
+
+        return "UNKNOWN"
