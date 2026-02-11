@@ -27,7 +27,52 @@ class PluginManager:
         self.active_plugins: Dict[str, ModelPluginInterface] = {}
         self.plugin_paths: List[Path] = []
         self.security_enabled = True
-        self.hardware_backend: Optional[GPUHardwareInterface] = None
+        self.hardware_backend: Optional[Union[GPUHardwareInterface, Any]] = None # Any for CPU Interface
+
+    def load_cpu_backend(self) -> bool:
+        """
+        Detect CPU and load appropriate plugin.
+        """
+        analyzer = HardwareAnalyzer()
+        info = analyzer.get_hardware_info()
+        cpu_info = info.get("cpu", {})
+        vendor = cpu_info.get("vendor_id", "").lower()
+        model = cpu_info.get("brand_raw", "").lower() # Example key
+
+        # Fallback detection if HardwareAnalyzer is basic
+        import platform
+        if not vendor:
+            p = platform.processor().lower()
+            if "intel" in p: vendor = "intel"
+            elif "amd" in p: vendor = "amd"
+
+        logger.info(f"Detecting CPU backend for: {vendor} {model}")
+
+        try:
+            if "intel" in vendor:
+                if "10210u" in model:
+                    from .cpu.intel.i5_10210u.plugin import Intel_i5_10210U_Plugin
+                    self.hardware_backend = Intel_i5_10210U_Plugin()
+                    logger.info("Loaded Intel i5-10210U Plugin")
+                else:
+                    from .cpu.intel.base import IntelCPUBasePlugin
+                    self.hardware_backend = IntelCPUBasePlugin()
+                    logger.info("Loaded Generic Intel CPU Plugin")
+            elif "amd" in vendor:
+                if "5700" in model:
+                    from .cpu.amd.ryzen7_5700.plugin import AMD_Ryzen7_5700_Plugin
+                    self.hardware_backend = AMD_Ryzen7_5700_Plugin()
+                    logger.info("Loaded AMD Ryzen 7 5700 Plugin")
+                else:
+                    from .cpu.amd.base import AMDCPUBasePlugin
+                    self.hardware_backend = AMDCPUBasePlugin()
+                    logger.info("Loaded Generic AMD CPU Plugin")
+
+            if self.hardware_backend and self.hardware_backend.initialize():
+                return True
+        except Exception as e:
+            logger.error(f"Failed to load CPU backend: {e}")
+        return False
 
     def load_hardware_backend(self) -> bool:
         """

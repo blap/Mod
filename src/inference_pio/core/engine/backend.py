@@ -137,10 +137,15 @@ _setup_sigs(_lib_cuda)
 class Tensor:
     __slots__ = ['device', '_lib', '_handle']
 
-    def __init__(self, shape: List[int], data: List[float] = None, device: str = "cpu", _handle=None):
-        if not HAS_CPU: raise RuntimeError("CPU Engine library not loaded. Build failed?")
+    def __init__(self, shape: List[int], data: List[float] = None, device: str = "cpu", _handle=None, backend_lib=None):
+        # Allow injecting custom backend lib (e.g. from CPU plugin)
+        if backend_lib:
+            self._lib = backend_lib
+        else:
+            if not HAS_CPU: raise RuntimeError("CPU Engine library not loaded. Build failed?")
+            self._lib = _lib_cpu
+
         self.device = device
-        self._lib = _lib_cpu
         dev_id = -1
         if "cuda" in device:
             if not HAS_CUDA:
