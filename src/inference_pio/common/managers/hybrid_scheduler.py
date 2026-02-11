@@ -30,32 +30,49 @@ class HybridScheduler:
 
         return "cuda"
 
-    def check_migration_policy(self, layer_idx, layer):
+    def check_migration_policy(self, layer_idx, layer, all_layers=None):
         """
-        Dynamic Offloading: Check if we should move this layer to/from GPU.
+        Dynamic Offloading: Intelligent Lookahead Prefetching.
         """
         if not self.has_gpu: return
 
-        # Heuristic: Keep current layer on GPU.
-        # If memory is critical (>90%), find a layer far from current index and evict.
-
-        # In a real implementation we query memory manager stats.
-        # Here we implement the logic assuming we can query tensor device.
-
-        # Check current layer: must be on GPU for speed (if allowed)
-        # If it's on CPU, try to move it.
+        # 1. Ensure current layer is on GPU (Blocking)
         try:
             p = next(layer.parameters())
-            if p.device == "cpu":
-                # Try move to CUDA
-                # We need to update the module in-place.
-                # Since we don't have easy access to the parent list to swap the object,
-                # we rely on .to() returning a new tensor and us updating the parameter dict.
-
-                layer.to("cuda")
-
+            if p.device != "cuda":
+                layer.to("cuda") # Must be blocking to execute now
         except Exception as e:
-            logger.warning(f"Migration failed: {e}")
+            logger.warning(f"Migration (Current) failed: {e}")
+
+        if not all_layers: return
+
+        # 2. Prefetch Next Layers (Non-Blocking)
+        # We try to keep upcoming layers in GPU memory to hide transfer latency.
+        PREFETCH_WINDOW = 2
+
+        for offset in range(1, PREFETCH_WINDOW + 1):
+            if layer_idx + offset < len(all_layers):
+                next_layer = all_layers[layer_idx + offset]
+                try:
+                    p = next(next_layer.parameters())
+                    if p.device != "cuda":
+                        # Async transfer to overlap with current computation
+                        next_layer.to("cuda", non_blocking=True)
+                except Exception as e:
+                    logger.warning(f"Prefetch failed for layer {layer_idx+offset}: {e}")
+
+        # 3. Eviction (Non-Blocking)
+        # Move old layers back to CPU to save VRAM.
+        # We keep immediately previous layer just in case, but evict layer_idx - 2.
+        if layer_idx >= 2:
+            evict_idx = layer_idx - 2
+            prev_layer = all_layers[evict_idx]
+            try:
+                p = next(prev_layer.parameters())
+                if p.device == "cuda":
+                    prev_layer.to("cpu", non_blocking=True)
+            except Exception as e:
+                logger.warning(f"Eviction failed for layer {evict_idx}: {e}")
 
     def execute_hybrid(self, model: Any, input_ids: Tensor) -> Tensor:
         """

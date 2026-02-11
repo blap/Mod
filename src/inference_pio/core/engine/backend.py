@@ -507,15 +507,15 @@ class Module:
     def forward(self, *args, **kwargs): raise NotImplementedError
     def register_parameter(self, name: str, param: Optional[Tensor]): self._parameters[name] = param
     def register_buffer(self, name: str, tensor: Optional[Tensor], persistent: bool = True): self._parameters[name] = tensor
-    def to(self, device: str):
+    def to(self, device: str, non_blocking: bool = False):
         for name, param in self._parameters.items():
             if param:
-                new_param = param.to(device)
+                new_param = param.to(device, non_blocking=non_blocking)
                 self._parameters[name] = new_param
                 # Update attribute if it exists to keep sync
                 if hasattr(self, name):
                     setattr(self, name, new_param)
-        for module in self._modules.values(): module.to(device)
+        for module in self._modules.values(): module.to(device, non_blocking=non_blocking)
         return self
     def parameters(self):
         for p in self._parameters.values():

@@ -35,13 +35,49 @@ class NativeCPUPlugin(BasePluginInterface):
 
     def initialize(self, config: Dict[str, Any] = None) -> bool:
         self._config = config or {}
-        # In a real C-engine, thread management would be via OMP_NUM_THREADS env var or C-api
-        # For now, we assume environment setup
-        import os
-        if "num_threads" in self._config:
-            os.environ["OMP_NUM_THREADS"] = str(self._config["num_threads"])
 
-        logger.info("NativeCPUPlugin initialized (C-Engine Backend).")
+        # Determine optimal thread count (physical cores)
+        from ...common.hardware.hardware_analyzer import get_system_profile
+        try:
+            profile = get_system_profile()
+            physical_cores = profile.cpu_cores if profile.cpu_cores else 1
+        except:
+            physical_cores = 1
+
+        target_threads = self._config.get("num_threads", physical_cores)
+        self._num_threads = target_threads
+
+        # Try to set threads dynamically via backend handle
+        # Note: Environment variable OMP_NUM_THREADS must be set BEFORE importing if dynamic setting fails.
+        try:
+            # We need to access the underlying C library handle
+            # It is not directly exposed but we can try to find it via Tensor class or module
+            from ...core.engine.backend import _lib_cpu
+            import ctypes
+
+            if _lib_cpu:
+                # Assuming standard OpenMP runtime symbols might be linked
+                # Or a wrapper function 'omp_set_num_threads' exposed by libtensor_ops
+                # Standard name is usually omp_set_num_threads but often mangled or hidden.
+                # If libtensor_ops wraps it, good. If not, we might not be able to change it.
+                if hasattr(_lib_cpu, 'omp_set_num_threads'):
+                    _lib_cpu.omp_set_num_threads(ctypes.c_int(target_threads))
+                    logger.info(f"Set OpenMP threads to {target_threads}")
+                else:
+                    # Fallback: Try to find symbol by name if ctypes allows
+                    try:
+                        func = _lib_cpu['omp_set_num_threads']
+                        func.argtypes = [ctypes.c_int]
+                        func(target_threads)
+                        logger.info(f"Set OpenMP threads to {target_threads} (via symbol lookup)")
+                    except:
+                        logger.info(f"Dynamic thread setting not available. Using default env OMP_NUM_THREADS. (Target: {target_threads})")
+        except ImportError:
+            pass
+        except Exception as e:
+            logger.warning(f"Failed to set CPU threads: {e}")
+
+        logger.info(f"NativeCPUPlugin initialized (Threads: {self._num_threads})")
         return True
 
     def cleanup(self) -> bool:

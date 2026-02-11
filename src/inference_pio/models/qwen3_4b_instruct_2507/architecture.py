@@ -114,7 +114,7 @@ class Qwen3Model(Module):
         next_cache = []
         for i, layer in enumerate(self.layers):
             if self.scheduler:
-                self.scheduler.check_migration_policy(i, layer)
+                self.scheduler.check_migration_policy(i, layer, self.layers)
 
             past = past_key_values[i] if past_key_values else None
             h, pkv = layer(h, past_key_value=past, use_cache=use_cache)

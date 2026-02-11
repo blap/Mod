@@ -35,7 +35,7 @@ class GLM47FlashModel(Module):
         h = self.embed_tokens(input_ids)
         for i, layer in enumerate(self.layers):
             if self.scheduler:
-                self.scheduler.check_migration_policy(i, layer)
+                self.scheduler.check_migration_policy(i, layer, self.layers)
             h = layer(h)
         h = self.final_layernorm(h)
         return h

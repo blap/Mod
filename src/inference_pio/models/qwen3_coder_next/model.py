@@ -63,7 +63,7 @@ class Qwen3CoderNextModel(Module):
         for i, layer in enumerate(self.layers):
             # Dynamic Offloading Hook
             if self.scheduler:
-                self.scheduler.check_migration_policy(i, layer)
+                self.scheduler.check_migration_policy(i, layer, self.layers)
 
             layer_past = past_key_values[i] if past_key_values is not None else None
             hidden_states, pkv = layer(
@@ -82,6 +82,7 @@ class Qwen3CoderNextModel(Module):
 class Qwen3CoderNextForCausalLM(Module):
     def __init__(self, config: Any):
         super().__init__()
+        self.config = config
         self.model = Qwen3CoderNextModel(config)
         self.lm_head = Linear(config.hidden_size, config.vocab_size, bias=False)
 
@@ -92,33 +93,66 @@ class Qwen3CoderNextForCausalLM(Module):
 
     def generate(self, input_ids: Tensor, max_new_tokens: int = 10, ngram_speculate: bool = False, **kwargs) -> Tensor:
         batch_size = input_ids.shape[0]
+        seq_len = input_ids.shape[1]
+        max_seq_len = seq_len + max_new_tokens
 
-        # Simple Greedy loop (Baseline for stability/verification)
-        # N-Gram Speculation would require CPU syncing to read token history
-        # which breaks the "Dynamic Overlap" goal if done naively.
-        # Given "No External Dependencies", implementing a robust N-Gram matcher on CPU
-        # without slowing down GPU is hard without a custom kernel.
-        # We will implement the Optimized Greedy logic strictly.
+        # Optimized: Allocate Static KV Cache for max usage (GPU/CPU)
+        # We pre-allocate the full buffer to avoid reallocations during generation.
+        # [Layers, 2(K,V), B, MaxSeq, Heads, HeadDim]
+
+        past_key_values = []
+        head_dim = self.config.hidden_size // self.config.num_attention_heads
+
+        # Note: self.layers might be on mixed devices due to offloading.
+        # Ideally we allocate cache on the same device as the layer.
+        # But layer device might change.
+        # Strategy: Allocate on input_ids.device (likely 'cuda' or 'cpu').
+        # If layer is offloaded, the attention module handles transfer?
+        # No, attention expects cache to be local.
+        # Given scheduler moves layers, cache should probably move or stay?
+        # Current scheduler moves WEIGHTS. Cache is usually separate.
+        # For simplicity in this optimization step, we allocate on input device.
+
+        device = input_ids.device
+        pattern = self.config.hybrid_block_pattern
+
+        for i in range(self.config.num_hidden_layers):
+            layer_type = pattern[i % len(pattern)]
+
+            if layer_type == "deltanet":
+                 # DeltaNet State: [B, Heads, HeadDim, HeadDim]
+                 d_head_dim = self.config.deltanet_head_dim
+                 d_heads = self.config.deltanet_query_key_heads
+
+                 state = Tensor([batch_size, d_heads, d_head_dim, d_head_dim], device=device)
+                 state.fill(0.0)
+                 past_key_values.append(state)
+            else:
+                 # Attention: [2, B, MaxSeq, Heads, HeadDim]
+                 k_cache = Tensor([batch_size, max_seq_len, self.config.num_attention_heads, head_dim], device=device)
+                 v_cache = Tensor([batch_size, max_seq_len, self.config.num_attention_heads, head_dim], device=device)
+                 k_cache.fill(0.0)
+                 v_cache.fill(0.0)
+                 past_key_values.append((k_cache, v_cache))
 
         current_ids = input_ids
-        past_key_values = None
 
         for step in range(max_new_tokens):
-            seq_len = current_ids.shape[1]
+            curr_seq_len = current_ids.shape[1]
 
             if step == 0:
                 model_input = current_ids
                 cache_position = 0
             else:
-                model_input = current_ids.slice([0, seq_len-1], [batch_size, 1])
-                cache_position = seq_len - 1
+                model_input = current_ids.slice([0, curr_seq_len-1], [batch_size, 1])
+                cache_position = curr_seq_len - 1
 
-            logits, past_key_values = self.forward(
+            logits, _ = self.forward(
                 model_input,
                 past_key_values=past_key_values,
                 use_cache=True,
                 cache_position=cache_position,
-                max_cache_len=seq_len + max_new_tokens
+                max_cache_len=max_seq_len
             )
 
             vocab_size = logits.shape[2]
@@ -249,14 +283,38 @@ class Qwen3CoderNextAttention(Module):
 
         # KV Cache Update (Pre-allocated logic or Cat logic fallback)
         if use_cache:
-            if past_key_value is not None:
-                # Fallback to cat for now as we didn't implement pre-allocated buffer passing yet in generate
-                # But we can use set_slice if we had the buffer.
-                # Currently using cat for robust "no stubs" until refactor is deeper.
-                k = cat([past_key_value[0], k], axis=1)
-                v = cat([past_key_value[1], v], axis=1)
+            if past_key_value is not None and isinstance(past_key_value[0], Tensor) and past_key_value[0].shape[1] > k.shape[1]:
+                # Optimized Path: Pre-allocated buffer (Static KV Cache)
+                # k, v are [B, S, H, D]
+                # cache is [B, MaxSeq, H, D]
+                # cache_position is integer offset
 
-            present_key_value = (k, v)
+                # Check dimensions
+                B, S, H, D = k.shape
+                # If cache is larger than current seq, it's a ring/static buffer
+                start_indices = [0, cache_position, 0, 0]
+
+                # Use backend primitive to write in-place without reallocation
+                past_key_value[0].set_slice(k, start_indices)
+                past_key_value[1].set_slice(v, start_indices)
+
+                # For attention, we need a view of valid tokens: [0 : cache_position+S]
+                valid_len = cache_position + S
+
+                # Note: creating a slice view.
+                # If backend slice creates a copy, this is still O(S) copy, but avoids O(S^2) accumulation?
+                # No, slicing is usually O(S). Cat is O(S).
+                # But set_slice avoids reallocating the big buffer.
+                k = past_key_value[0].slice([0,0,0,0], [B, valid_len, H, D])
+                v = past_key_value[1].slice([0,0,0,0], [B, valid_len, H, D])
+
+                present_key_value = past_key_value # Pass the container back
+            else:
+                # Fallback to dynamic cat
+                if past_key_value is not None:
+                    k = cat([past_key_value[0], k], axis=1)
+                    v = cat([past_key_value[1], v], axis=1)
+                present_key_value = (k, v)
         else:
             present_key_value = None
 

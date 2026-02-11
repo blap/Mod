@@ -97,7 +97,7 @@ class Qwen3VL2BModel(Module):
 
         for i, layer in enumerate(self.layers):
             if self.scheduler:
-                self.scheduler.check_migration_policy(i, layer)
+                self.scheduler.check_migration_policy(i, layer, self.layers)
 
             past = past_key_values[i] if past_key_values else None
             hidden_states, pkv = layer(hidden_states, past_key_value=past, use_cache=use_cache)
