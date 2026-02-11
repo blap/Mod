@@ -16,6 +16,8 @@ from typing import Any, Dict, List, Optional, Type, Union
 from ..common.interfaces.improved_base_plugin_interface import ModelPluginInterface
 from ..common.security.security_manager import ResourceLimits, SecurityLevel
 from ..core.engine.backend import HAS_CUDA
+from .base.gpu_interface import GPUHardwareInterface
+from ..common.hardware.hardware_analyzer import HardwareAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +27,55 @@ class PluginManager:
         self.active_plugins: Dict[str, ModelPluginInterface] = {}
         self.plugin_paths: List[Path] = []
         self.security_enabled = True
+        self.hardware_backend: Optional[GPUHardwareInterface] = None
+
+    def load_hardware_backend(self) -> bool:
+        """
+        Detect hardware and load the appropriate self-contained plugin.
+        """
+        analyzer = HardwareAnalyzer()
+        info = analyzer.get_hardware_info()
+        gpu_info = info.get("gpu", [{}])[0] # Primary GPU
+        vendor = gpu_info.get("vendor", "unknown").lower()
+        model = gpu_info.get("name", "").lower()
+
+        logger.info(f"Detecting hardware backend for: {vendor} {model}")
+
+        try:
+            if "nvidia" in vendor:
+                # Check specific architectures
+                if "10" in model or "gtx" in model: # Crude check for Pascal/SM61 example
+                    from .cuda.sm61.plugin import CUDASM61Plugin
+                    self.hardware_backend = CUDASM61Plugin()
+                    logger.info("Loaded CUDA SM61 Plugin")
+                else:
+                    # Fallback to generic CUDA
+                    from .cuda.base import CUDABasePlugin
+                    self.hardware_backend = CUDABasePlugin()
+                    logger.info("Loaded Generic CUDA Plugin")
+
+            elif "amd" in vendor or "advanced micro devices" in vendor:
+                if "rx 550" in model or "rx550" in model:
+                    from .amd.rx550.plugin import AMDRX550Plugin
+                    self.hardware_backend = AMDRX550Plugin()
+                    logger.info("Loaded AMD RX550 Plugin")
+                else:
+                    from .amd.base import AMDBasePlugin
+                    self.hardware_backend = AMDBasePlugin()
+                    logger.info("Loaded Generic AMD Plugin")
+
+            elif "intel" in vendor:
+                from .intel.base import IntelBasePlugin
+                self.hardware_backend = IntelBasePlugin()
+                logger.info("Loaded Intel Plugin")
+
+            if self.hardware_backend and self.hardware_backend.initialize():
+                return True
+
+        except Exception as e:
+            logger.error(f"Failed to load hardware backend: {e}")
+
+        return False
 
     def register_plugin(self, plugin: ModelPluginInterface, name: Optional[str] = None) -> bool:
         try:
