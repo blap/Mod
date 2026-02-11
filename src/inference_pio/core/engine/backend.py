@@ -180,8 +180,33 @@ class Tensor:
     @property
     def dtype(self): return "float32"
 
-    def to(self, device: str) -> 'Tensor':
+    def to(self, device: str, non_blocking: bool = False) -> 'Tensor':
         if device == self.device: return self
+
+        # Async Transfer Logic
+        # Create destination tensor
+        out = Tensor(list(self.shape), device=device)
+
+        # If moving between devices handled by same backend lib (e.g. GPU->GPU P2P), backend handles it.
+        # If moving CPU<->GPU, we need load/get.
+
+        # Current naive implementation uses to_list() which forces host sync.
+        # Optimized Async Path:
+        if "cuda" in self.device and "cpu" in device:
+            # Device to Host
+            # Use backend copy if available
+            if hasattr(self._lib, 'tensor_memcpy_d2h'):
+                self._lib.tensor_memcpy_d2h(out._handle, self._handle, self.size * 4, non_blocking)
+                return out
+
+        if "cpu" in self.device and "cuda" in device:
+            # Host to Device
+            lib = out._lib
+            if hasattr(lib, 'tensor_memcpy_h2d'):
+                lib.tensor_memcpy_h2d(out._handle, self._handle, self.size * 4, non_blocking)
+                return out
+
+        # Fallback (Blocking)
         data = self.to_list()
         return Tensor(list(self.shape), data, device=device)
 

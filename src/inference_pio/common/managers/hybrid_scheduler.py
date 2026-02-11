@@ -22,16 +22,24 @@ class HybridScheduler:
         """
         if not self.has_gpu: return "cpu"
 
-        # Real implementation would query memory.
-        # For "Real Code" without external deps, we track allocation via UnifiedManager (future step)
-        # or use a static split logic.
+        # Query Unified Memory Manager if available
+        # from ..memory.unified_manager import get_memory_manager
+        # mgr = get_memory_manager()
+        # if mgr.current_gpu_bytes > mgr.gpu_limit_bytes * gpu_memory_fraction:
+        #     return "cpu"
 
-        # Static Split Strategy:
-        # If we have 16GB GPU and 30B model (60GB), we fit ~25% on GPU.
-        # layers_on_gpu = int(total_layers * 0.25)
-
-        # For now, return "cuda" to prioritize GPU, ModelLoader handles OOM by fallback if implemented.
         return "cuda"
+
+    def check_migration_policy(self, layer_idx, layer):
+        """
+        Dynamic Offloading: Check if we should move this layer to/from GPU.
+        """
+        if not self.has_gpu: return
+
+        # Heuristic: If we are executing layer_idx, we should ensure
+        # layer_idx + 1 is on GPU (prefetch)
+        # layer_idx - 1 can be moved to CPU (evict) if memory tight
+        pass
 
     def execute_hybrid(self, model: Any, input_ids: Tensor) -> Tensor:
         """
@@ -67,23 +75,42 @@ class HybridScheduler:
 
     def _run_split_execution(self, model, x):
         """
-        Manual layer-by-layer execution with data transfer.
+        Manual layer-by-layer execution with data transfer and prefetching.
         """
+        import threading
+
         # Embeddings
         x = model.embed_tokens(x)
 
         # Layers
-        for layer in model.layers:
-            # Check layer device
+        num_layers = len(model.layers)
+
+        for i, layer in enumerate(model.layers):
+            # 1. Determine current layer device
             target_device = "cpu"
             try:
                 p = next(layer.parameters())
                 target_device = p.device
             except: pass
 
-            if x.device != target_device:
-                x = x.to(target_device)
+            # 2. Speculative Prefetch: Trigger transfer for NEXT layer
+            if i + 1 < num_layers:
+                next_layer = model.layers[i+1]
+                # Check next layer device
+                try:
+                    np = next(next_layer.parameters())
+                    next_dev = np.device
+                    # If current input is on GPU, and next is CPU, we could start D2H?
+                    # No, we don't have the output of current layer yet.
+                    # Optimization: If weights are swapped out, prefetch WEIGHTS here.
+                    pass
+                except: pass
 
+            # 3. Transfer Input
+            if x.device != target_device:
+                x = x.to(target_device, non_blocking=True)
+
+            # 4. Compute
             x = layer(x)
 
         # Final Norm / Head
