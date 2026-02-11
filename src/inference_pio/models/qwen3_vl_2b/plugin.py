@@ -46,13 +46,26 @@ class Qwen3_VL_2B_Plugin(TextModelPluginInterface):
         # Simplified text-only generation wrapper
         if not self._model: self.load_model()
 
-        # Tokenize (Mock)
-        ids = [1.0] * 5
-        t = Tensor([1, len(ids)])
-        t.load(ids)
+        try:
+            # Tokenize (Mock if missing, but support real flow)
+            if hasattr(self._model, '_tokenizer') and self._model._tokenizer:
+                ids = self._model._tokenizer.encode(prompt)
+            else:
+                ids = [1.0] * 5
 
-        out = self._model.generate(t, max_new_tokens=max_new_tokens)
-        return f"Generated {out.shape[1]} tokens"
+            t = Tensor([1, len(ids)])
+            t.load([float(x) for x in ids])
+
+            out = self._model.generate(t, max_new_tokens=max_new_tokens)
+
+            if hasattr(self._model, '_tokenizer') and self._model._tokenizer:
+                return self._model._tokenizer.decode(out.to_list())
+
+            return f"Generated {out.shape[1]} tokens"
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"VL Generation failed: {e}")
+            return "Error during generation"
 
     def cleanup(self) -> bool:
         self._model = None

@@ -49,12 +49,33 @@ class GLM_4_7_Flash_Plugin(TextModelPluginInterface):
 
     def generate_text(self, prompt: str, max_new_tokens: int = 512, **kwargs) -> str:
         if not self._model: self.load_model()
-        # Mock tokenization for standard interface
-        ids = [1.0] * 5
-        t = Tensor([1, len(ids)])
-        t.load(ids)
-        out = self._model.generate(t, max_new_tokens=max_new_tokens)
-        return f"GLM Generated {out.shape[1]} tokens"
+
+        # Standardized generation flow
+        try:
+            # 1. Tokenize (Mock if missing, but support real flow)
+            # Assuming model has _tokenizer or we use a fallback
+            if hasattr(self._model, '_tokenizer') and self._model._tokenizer:
+                ids = self._model._tokenizer.encode(prompt)
+            else:
+                # Fallback / Mock
+                ids = [1.0] * 5
+
+            # 2. Tensor
+            t = Tensor([1, len(ids)])
+            t.load([float(x) for x in ids])
+
+            # 3. Generate
+            out = self._model.generate(t, max_new_tokens=max_new_tokens)
+
+            # 4. Decode
+            if hasattr(self._model, '_tokenizer') and self._model._tokenizer:
+                return self._model._tokenizer.decode(out.to_list())
+
+            return f"Generated {out.shape[1]} tokens (Raw)"
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Generation failed: {e}")
+            return "Error during generation"
 
     def cleanup(self) -> bool:
         self._model = None
