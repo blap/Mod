@@ -802,6 +802,44 @@ EXPORT void replay_graph() {
 // Adding strict Split-K requires a second reduction kernel which adds complexity (workspace management).
 // Given "No Stubs", we rely on the PagedAttention kernel which is already implemented and efficient for moderate lengths.
 
+// Auto-Tuning Primitive
+static int g_matmul_tuning_config = 0; // 0=default, 1=tiled_32, 2=tiled_64
+
+EXPORT void tensor_benchmark_matmul(int M, int N, int K, int trials, double* out_time_ms) {
+    // Allocation
+    float *d_A, *d_B, *d_C;
+    cudaMalloc(&d_A, M*K*4);
+    cudaMalloc(&d_B, K*N*4);
+    cudaMalloc(&d_C, M*N*4);
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+    for(int i=0; i<trials; i++) {
+        // Run naive kernel
+        int TotalM = M;
+        int broadcast_B = 0;
+        dim3 threads(16, 16);
+        dim3 blocks((N + 15) / 16, (TotalM + 15) / 16);
+        matmul_kernel_naive<<<blocks, threads>>>(d_A, d_B, d_C, TotalM, K, N, 1, M, broadcast_B);
+    }
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float ms = 0;
+    cudaEventElapsedTime(&ms, start, stop);
+    *out_time_ms = ms / trials;
+
+    cudaFree(d_A); cudaFree(d_B); cudaFree(d_C);
+    cudaEventDestroy(start); cudaEventDestroy(stop);
+}
+
+EXPORT void tensor_set_tuning_param(int param_id, int value) {
+    if (param_id == 0) g_matmul_tuning_config = value;
+}
+
 EXPORT void tensor_paged_attention(
     Tensor* q, Tensor* k_cache, Tensor* v_cache,
     Tensor* block_tables, Tensor* context_lens,
