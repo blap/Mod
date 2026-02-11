@@ -56,9 +56,15 @@ class BatchManager:
         t.load([float(x) for x in input_list])
 
         # Call model generate (blocking for this request)
-        # In true continuous batching, we would call `model.forward` for one step.
-        # But refactoring 6 models to expose step-wise generation state is out of scope.
-        # We process request to completion here (FCFS Queue).
+        # LIMITATION: Serial Batching
+        # We process the request to COMPLETION here (FCFS / FIFO).
+        # This blocks other requests until the current one finishes.
+        # True continuous batching (interleaved iteration-level) is not yet implemented
+        # for all 6 models due to the need for a unified KV cache manager and step-wise state exposure.
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"BatchManager: Processing Request {req_id} serially (Blocking FCFS).")
+
         output = self.model.generate(t)
 
         # 4. Update

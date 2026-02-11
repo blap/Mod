@@ -31,25 +31,56 @@ class GLM47FlashModel(Module):
         self.lm_head = Linear(config.hidden_size, config.vocab_size, bias=False)
         self.scheduler = None
 
-    def forward(self, input_ids: Tensor):
+    def forward(self, input_ids: Tensor, past_key_values: Optional[List[Tensor]] = None, use_cache: bool = False, cache_position: int = 0):
         h = self.embed_tokens(input_ids)
+
+        # Initialize empty cache if needed but usually passed from generate
+        if use_cache and past_key_values is None:
+             # Just a safety check, generate handles alloc
+             past_key_values = [None] * len(self.layers)
+
         for i, layer in enumerate(self.layers):
             if self.scheduler:
                 self.scheduler.check_migration_policy(i, layer, self.layers)
-            h = layer(h)
+
+            pkv = past_key_values[i] if past_key_values else None
+            h = layer(h, past_key_value=pkv, use_cache=use_cache, cache_position=cache_position)
+
         h = self.final_layernorm(h)
         return h
 
     def generate(self, input_ids: Tensor, max_new_tokens: int = 10):
+        batch_size = input_ids.shape[0]
+        seq_len = input_ids.shape[1]
+        max_seq_len = seq_len + max_new_tokens
+
+        # 1. Pre-allocate Static KV Cache: [Layers, 2(K,V), B, MaxSeq, Heads, HeadDim]
+        device = input_ids.device
+        head_dim = self.config.hidden_size // self.config.num_attention_heads
+        past_key_values = []
+
+        for _ in range(len(self.layers)):
+             k_cache = Tensor([batch_size, max_seq_len, self.config.num_attention_heads, head_dim], device=device)
+             v_cache = Tensor([batch_size, max_seq_len, self.config.num_attention_heads, head_dim], device=device)
+             k_cache.fill(0.0)
+             v_cache.fill(0.0)
+             past_key_values.append((k_cache, v_cache))
+
         current_ids = input_ids
-        for _ in range(max_new_tokens):
-            h = self.forward(current_ids)
+        for step in range(max_new_tokens):
+            curr_seq_len = current_ids.shape[1]
+            if step == 0:
+                model_input = current_ids
+                cache_position = 0
+            else:
+                model_input = current_ids.slice([0, curr_seq_len-1], [batch_size, 1])
+                cache_position = curr_seq_len - 1
+
+            h = self.forward(model_input, past_key_values=past_key_values, use_cache=True, cache_position=cache_position)
             logits = self.lm_head(h)
 
-            # Greedy decode last token
-            # logits: [B, S, Vocab]
             vocab_size = logits.shape[2]
-            last_logits = logits.slice([0, logits.shape[1]-1, 0], [1, 1, vocab_size])
+            last_logits = logits.slice([0, logits.shape[1]-1, 0], [batch_size, 1, vocab_size])
             next_token = last_logits.argmax()
 
             current_ids = cat([current_ids, next_token], axis=1)
@@ -63,9 +94,9 @@ class GLM47FlashLayer(Module):
         self.post_attention_layernorm = RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.mlp = GLM47FlashMLP(config)
 
-    def forward(self, x):
+    def forward(self, x, past_key_value=None, use_cache=False, cache_position=0):
         h = self.input_layernorm(x)
-        h = self.self_attention(h)
+        h = self.self_attention(h, past_key_value=past_key_value, use_cache=use_cache, cache_position=cache_position)
         x = x + h
         h = self.post_attention_layernorm(x)
         h = self.mlp(h)
@@ -83,12 +114,11 @@ class GLM47FlashAttention(Module):
         self.sin = sin
         self.scale = self.head_dim ** -0.5
 
-    def forward(self, x):
+    def forward(self, x, past_key_value=None, use_cache=False, cache_position=0):
         # QKV Proj
         qkv = self.query_key_value(x)
 
         # Split using backend slice logic
-        # qkv: [B, Seq, 3*H]
         B, Seq, _ = qkv.shape
         H = self.hidden_size
 
@@ -96,26 +126,36 @@ class GLM47FlashAttention(Module):
         k = qkv.slice([0, 0, H], [B, Seq, H])
         v = qkv.slice([0, 0, 2*H], [B, Seq, H])
 
-        # Reshape to 4D for Multi-Head Attention: [B, S, Heads, HeadDim]
+        # Reshape: [B, S, Heads, HeadDim]
         new_shape = [B, Seq, self.num_heads, self.head_dim]
         q = q.reshape(new_shape)
         k = k.reshape(new_shape)
         v = v.reshape(new_shape)
 
         # RoPE
-        start = [0, 0]
+        # Use cache_position for correct offset
+        start = [cache_position, 0]
         shape = [Seq, self.cos.shape[1]]
         c = self.cos.slice(start, shape)
         s = self.sin.slice(start, shape)
 
-        # Apply RoPE (works on last dim HeadDim)
         q, k = q.rope(k, c, s)
 
-        # Attention (Scaled Dot Product)
-        # Handles correct batching over heads
-        out = scaled_dot_product_attention(q, k, v, scale=self.scale)
+        # KV Cache Update (In-Place Static)
+        if use_cache and past_key_value is not None:
+             k_cache, v_cache = past_key_value
+             # Write to static buffer
+             start_indices = [0, cache_position, 0, 0]
+             k_cache.set_slice(k, start_indices)
+             v_cache.set_slice(v, start_indices)
 
-        # Reshape back to [B, Seq, Hidden]
+             # View valid context
+             valid_len = cache_position + Seq
+             k = k_cache.slice([0,0,0,0], [B, valid_len, self.num_heads, self.head_dim])
+             v = v_cache.slice([0,0,0,0], [B, valid_len, self.num_heads, self.head_dim])
+
+        # Attention
+        out = scaled_dot_product_attention(q, k, v, scale=self.scale)
         out = out.reshape([B, Seq, H])
 
         return self.dense(out)

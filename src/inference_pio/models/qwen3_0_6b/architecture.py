@@ -36,7 +36,7 @@ class Qwen3Attention(Module):
         self.o_proj = Linear(config.hidden_size, config.hidden_size, bias=False)
         self.rotary_emb = Qwen3RotaryEmbedding(self.head_dim)
 
-    def forward(self, hidden_states, attention_mask=None, position_ids=None, past_key_value=None, use_cache=False):
+    def forward(self, hidden_states, attention_mask=None, position_ids=None, past_key_value=None, use_cache=False, cache_position=0):
         q = self.q_proj(hidden_states)
         k = self.k_proj(hidden_states)
         v = self.v_proj(hidden_states)
@@ -52,20 +52,24 @@ class Qwen3Attention(Module):
         v = v.reshape(new_shape)
 
         # RoPE with correct offset
-        past_len = past_key_value[0].shape[1] if past_key_value is not None else 0
-
-        start = [past_len, 0]
+        start = [cache_position, 0]
         shape = [S, self.rotary_emb.cos.shape[1]]
         cos = self.rotary_emb.cos.slice(start, shape)
         sin = self.rotary_emb.sin.slice(start, shape)
 
         q, k = q.rope(k, cos, sin)
 
-        if past_key_value is not None:
-            k = cat([past_key_value[0], k], axis=1)
-            v = cat([past_key_value[1], v], axis=1)
+        if use_cache and past_key_value is not None:
+             k_cache, v_cache = past_key_value
+             start_indices = [0, cache_position, 0, 0]
+             k_cache.set_slice(k, start_indices)
+             v_cache.set_slice(v, start_indices)
 
-        current_cache = (k, v) if use_cache else None
+             valid_len = cache_position + S
+             k = k_cache.slice([0,0,0,0], [B, valid_len, heads, self.head_dim])
+             v = v_cache.slice([0,0,0,0], [B, valid_len, heads, self.head_dim])
+
+        current_cache = past_key_value if use_cache else None
 
         out = scaled_dot_product_attention(q, k, v)
 
@@ -82,10 +86,10 @@ class Qwen3DecoderLayer(Module):
         self.input_layernorm = RMSNorm(config.hidden_size)
         self.post_attention_layernorm = RMSNorm(config.hidden_size)
 
-    def forward(self, hidden_states, attention_mask=None, position_ids=None, past_key_value=None, use_cache=False):
+    def forward(self, hidden_states, attention_mask=None, position_ids=None, past_key_value=None, use_cache=False, cache_position=0):
         residual = hidden_states
         h = self.input_layernorm(hidden_states)
-        h, _, pkv = self.self_attn(h, attention_mask, position_ids, past_key_value, use_cache)
+        h, _, pkv = self.self_attn(h, attention_mask, position_ids, past_key_value, use_cache, cache_position)
         hidden_states = residual.add(h)
 
         residual = hidden_states
@@ -98,6 +102,7 @@ class Qwen3DecoderLayer(Module):
 class Qwen3Model(Module):
     def __init__(self, config):
         super().__init__()
+        self.config = config
         self.embed_tokens = Embedding(config.vocab_size, config.hidden_size)
         self.layers = []
         for i in range(config.num_hidden_layers):
@@ -107,53 +112,65 @@ class Qwen3Model(Module):
         self.norm = RMSNorm(config.hidden_size)
         self.scheduler = None
 
-    def forward(self, input_ids, past_key_values=None, use_cache=None):
+    def forward(self, input_ids, past_key_values=None, use_cache=None, cache_position=0):
         h = self.embed_tokens(input_ids)
-        next_cache = []
+
+        if use_cache and past_key_values is None:
+             past_key_values = [None] * len(self.layers)
+
+        next_cache = past_key_values if use_cache else None
+
         for i, layer in enumerate(self.layers):
             if self.scheduler:
                 self.scheduler.check_migration_policy(i, layer, self.layers)
 
             past = past_key_values[i] if past_key_values else None
-            h, pkv = layer(h, past_key_value=past, use_cache=use_cache)
-            if use_cache: next_cache.append(pkv)
+            h, pkv = layer(h, past_key_value=past, use_cache=use_cache, cache_position=cache_position)
+            if use_cache: next_cache[i] = pkv
         return self.norm(h), next_cache
 
 class Qwen3ForCausalLM(Module):
     def __init__(self, config):
         super().__init__()
+        self.config = config
         self.model = Qwen3Model(config)
         self.lm_head = Linear(config.hidden_size, config.vocab_size, bias=False)
 
-    def forward(self, input_ids, past_key_values=None, use_cache=None, **kwargs):
-        h, pkv = self.model(input_ids, past_key_values, use_cache)
+    def forward(self, input_ids, past_key_values=None, use_cache=None, cache_position=0, **kwargs):
+        h, pkv = self.model(input_ids, past_key_values, use_cache, cache_position)
         logits = self.lm_head(h)
         return logits, pkv
 
     def generate(self, input_ids, max_new_tokens=10, **kwargs):
+        batch_size = input_ids.shape[0]
+        seq_len = input_ids.shape[1]
+        max_seq_len = seq_len + max_new_tokens
+
+        # Static KV Cache Pre-allocation
+        device = input_ids.device
+        head_dim = self.config.hidden_size // self.config.num_attention_heads
+        past_key_values = []
+        for _ in range(self.config.num_hidden_layers):
+             k_cache = Tensor([batch_size, max_seq_len, self.config.num_attention_heads, head_dim], device=device)
+             v_cache = Tensor([batch_size, max_seq_len, self.config.num_attention_heads, head_dim], device=device)
+             k_cache.fill(0.0)
+             v_cache.fill(0.0)
+             past_key_values.append((k_cache, v_cache))
+
         current_ids = input_ids
-        past_key_values = None
-
-        for _ in range(max_new_tokens):
-            if past_key_values:
-                # Use slice to get last token
-                # current_ids shape [1, Seq]
-                seq_len = current_ids.shape[1]
-                start = [0, seq_len-1]
-                shape = [1, 1]
-                model_input = current_ids.slice(start, shape)
-            else:
+        for step in range(max_new_tokens):
+            curr_seq_len = current_ids.shape[1]
+            if step == 0:
                 model_input = current_ids
+                cache_position = 0
+            else:
+                model_input = current_ids.slice([0, curr_seq_len-1], [batch_size, 1])
+                cache_position = curr_seq_len - 1
 
-            logits, pkv = self.forward(model_input, past_key_values=past_key_values, use_cache=True)
-            past_key_values = pkv
+            logits, _ = self.forward(model_input, past_key_values=past_key_values, use_cache=True, cache_position=cache_position)
 
-            # Efficiently slice logits to get last token prediction only
-            # logits: [1, Seq, Vocab]
             vocab_size = logits.shape[2]
-            last_token_logits = logits.slice([0, logits.shape[1]-1, 0], [1, 1, vocab_size])
-
-            # Argmax returns [1, 1]
+            last_token_logits = logits.slice([0, logits.shape[1]-1, 0], [batch_size, 1, vocab_size])
             next_token_tensor = last_token_logits.argmax()
 
             current_ids = cat([current_ids, next_token_tensor], axis=1)
