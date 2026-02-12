@@ -80,6 +80,24 @@ class Qwen3_4B_Instruct_2507_Plugin(TextModelPluginInterface):
             return self.generate_text(data)
         return ""
 
+    def tokenize(self, text: str, **kwargs) -> List[float]:
+        tokenizer = getattr(self._model, '_tokenizer', None)
+        if tokenizer:
+            try:
+                return [float(x) for x in tokenizer.encode(text)]
+            except Exception:
+                pass
+        return [1.0] * 5
+
+    def detokenize(self, token_ids: List[int], **kwargs) -> str:
+        tokenizer = getattr(self._model, '_tokenizer', None)
+        if tokenizer:
+            try:
+                return tokenizer.decode(token_ids)
+            except Exception:
+                pass
+        return f"Generated {len(token_ids)} tokens"
+
     def infer_batch(self, requests: List[Any]) -> List[Any]:
         results = []
         if not self.batch_manager: return super().infer_batch(requests)
@@ -87,61 +105,34 @@ class Qwen3_4B_Instruct_2507_Plugin(TextModelPluginInterface):
         start_id = 4000
         req_ids = []
         for i, prompt in enumerate(requests):
-            tokenizer = getattr(self._model, '_tokenizer', None)
-            if tokenizer: ids = tokenizer.encode(prompt)
-            else: ids = [1.0]*5
-
+            ids = self.tokenize(prompt)
             rid = start_id + i
-            self.batch_manager.add_request(rid, [float(x) for x in ids])
+            self.batch_manager.add_request(rid, ids)
             req_ids.append(rid)
 
         for _ in req_ids:
             out = self.batch_manager.step()
             if out:
-                tokenizer = getattr(self._model, '_tokenizer', None)
-                if tokenizer: res = tokenizer.decode(out.to_list())
-                else: res = f"Generated {out.shape[1]} tokens"
+                res = self.detokenize([int(x) for x in out.to_list()])
                 results.append(res)
             else:
                 results.append("Error")
         return results
 
     def generate_text(self, prompt: str, max_new_tokens: int = 512, **kwargs) -> str:
-        if not self._model:
-            self.load_model()
+        if not self._model: self.load_model()
 
-        # Tokenize
-        if not self._model._tokenizer:
-             # Basic fallback if tokenizer missing
-             logger.warning("Tokenizer missing")
-             return "Error: Tokenizer not available."
-
-        # Encode
         try:
-            inputs = self._model._tokenizer.encode(prompt)
-        except Exception as e:
-            logger.error(f"Tokenization failed: {e}")
-            return "Error during tokenization."
+            ids = self.tokenize(prompt)
+            from ...core.engine.backend import Tensor
+            t = Tensor([1, len(ids)])
+            t.load(ids)
 
-        # Pass to C Engine (requires simple list or pointer wrapper)
-        from ...core.engine.backend import Tensor
-        # Create tensor from list
-        # Assuming batch size 1
-        try:
-            data = [float(x) for x in inputs]
-            input_ids = Tensor([1, len(inputs)], data)
-
-            # Generate
-            output_ids_tensor = self._model.generate(input_ids, max_new_tokens=max_new_tokens, **kwargs)
-
-            # Decode (Tensor -> List)
-            output_ids_list = [int(x) for x in output_ids_tensor.to_list()]
-
-            output_text = self._model._tokenizer.decode(output_ids_list)
-            return output_text
+            out = self._model.generate(t, max_new_tokens=max_new_tokens, **kwargs)
+            return self.detokenize([int(x) for x in out.to_list()])
         except Exception as e:
             logger.error(f"Generation failed: {e}")
-            return "Error during text generation."
+            return "Error during text generation"
 
     def get_model_info(self) -> Dict[str, Any]:
         return {
@@ -163,15 +154,16 @@ class Qwen3_4B_Instruct_2507_Plugin(TextModelPluginInterface):
         return isinstance(config, Qwen3_4B_Instruct_2507_Config)
 
     # Implement required abstract methods
-    def tokenize(self, text: str, **kwargs) -> Any:
-        if self._model and self._model._tokenizer:
+    def tokenize(self, text: str, **kwargs) -> List[float]:
+        tokenizer = getattr(self._model, '_tokenizer', None)
+        if tokenizer:
             try:
-                return self._model._tokenizer.encode(text)
+                return [float(x) for x in tokenizer.encode(text)]
             except Exception:
-                return []
-        return []
+                pass
+        return [1.0] * 5
 
-    def detokenize(self, token_ids: Any, **kwargs) -> str:
+    def detokenize(self, token_ids: List[int], **kwargs) -> str:
         if self._model and self._model._tokenizer:
             try:
                 return self._model._tokenizer.decode(token_ids)

@@ -51,6 +51,24 @@ class Qwen3_Coder_30B_Plugin(TextModelPluginInterface):
             return self._model.generate(data)
         return None
 
+    def tokenize(self, text: str, **kwargs) -> List[float]:
+        tokenizer = getattr(self._model, '_tokenizer', None)
+        if tokenizer:
+            try:
+                return [float(x) for x in tokenizer.encode(text)]
+            except Exception:
+                pass
+        return [1.0] * 5
+
+    def detokenize(self, token_ids: List[int], **kwargs) -> str:
+        tokenizer = getattr(self._model, '_tokenizer', None)
+        if tokenizer:
+            try:
+                return tokenizer.decode(token_ids)
+            except Exception:
+                pass
+        return f"Generated {len(token_ids)} tokens"
+
     def infer_batch(self, requests: List[Any]) -> List[Any]:
         results = []
         if not self.batch_manager: return super().infer_batch(requests)
@@ -58,20 +76,15 @@ class Qwen3_Coder_30B_Plugin(TextModelPluginInterface):
         start_id = 6000
         req_ids = []
         for i, prompt in enumerate(requests):
-            tokenizer = getattr(self._model, '_tokenizer', None)
-            if tokenizer: ids = tokenizer.encode(prompt)
-            else: ids = [1.0]*5
-
+            ids = self.tokenize(prompt)
             rid = start_id + i
-            self.batch_manager.add_request(rid, [float(x) for x in ids])
+            self.batch_manager.add_request(rid, ids)
             req_ids.append(rid)
 
         for _ in req_ids:
             out = self.batch_manager.step()
             if out:
-                tokenizer = getattr(self._model, '_tokenizer', None)
-                if tokenizer: res = tokenizer.decode(out.to_list())
-                else: res = f"Generated {out.shape[1]} tokens"
+                res = self.detokenize([int(x) for x in out.to_list()])
                 results.append(res)
             else:
                 results.append("Error")

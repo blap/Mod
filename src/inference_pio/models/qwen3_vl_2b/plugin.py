@@ -46,6 +46,24 @@ class Qwen3_VL_2B_Plugin(TextModelPluginInterface):
             return self._model.generate(data)
         return None
 
+    def tokenize(self, text: str, **kwargs) -> List[float]:
+        tokenizer = getattr(self._model, '_tokenizer', None)
+        if tokenizer:
+            try:
+                return [float(x) for x in tokenizer.encode(text)]
+            except Exception:
+                pass
+        return [1.0] * 5
+
+    def detokenize(self, token_ids: List[int], **kwargs) -> str:
+        tokenizer = getattr(self._model, '_tokenizer', None)
+        if tokenizer:
+            try:
+                return tokenizer.decode(token_ids)
+            except Exception:
+                pass
+        return f"Generated {len(token_ids)} tokens"
+
     def infer_batch(self, requests: List[Any]) -> List[Any]:
         results = []
         if not self.batch_manager: return super().infer_batch(requests)
@@ -53,47 +71,30 @@ class Qwen3_VL_2B_Plugin(TextModelPluginInterface):
         start_id = 3000
         req_ids = []
         for i, prompt in enumerate(requests):
-            # VL Model only supports text batching here via this interface
-            # Image batching would require tuple inputs in requests list
-            tokenizer = getattr(self._model, '_tokenizer', None)
-            if tokenizer: ids = tokenizer.encode(prompt)
-            else: ids = [1.0]*5
-
+            ids = self.tokenize(prompt)
             rid = start_id + i
-            self.batch_manager.add_request(rid, [float(x) for x in ids])
+            self.batch_manager.add_request(rid, ids)
             req_ids.append(rid)
 
         for _ in req_ids:
             out = self.batch_manager.step()
             if out:
-                tokenizer = getattr(self._model, '_tokenizer', None)
-                if tokenizer: res = tokenizer.decode(out.to_list())
-                else: res = f"Generated {out.shape[1]} tokens"
+                res = self.detokenize([int(x) for x in out.to_list()])
                 results.append(res)
             else:
                 results.append("Error")
         return results
 
     def generate_text(self, prompt: str, max_new_tokens: int = 512, **kwargs) -> str:
-        # Simplified text-only generation wrapper
         if not self._model: self.load_model()
 
         try:
-            # Tokenize (Mock if missing, but support real flow)
-            if hasattr(self._model, '_tokenizer') and self._model._tokenizer:
-                ids = self._model._tokenizer.encode(prompt)
-            else:
-                ids = [1.0] * 5
-
+            ids = self.tokenize(prompt)
             t = Tensor([1, len(ids)])
-            t.load([float(x) for x in ids])
+            t.load(ids)
 
             out = self._model.generate(t, max_new_tokens=max_new_tokens)
-
-            if hasattr(self._model, '_tokenizer') and self._model._tokenizer:
-                return self._model._tokenizer.decode(out.to_list())
-
-            return f"Generated {out.shape[1]} tokens"
+            return self.detokenize([int(x) for x in out.to_list()])
         except Exception as e:
             import logging
             logging.getLogger(__name__).error(f"VL Generation failed: {e}")

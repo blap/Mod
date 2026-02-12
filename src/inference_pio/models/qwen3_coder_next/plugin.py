@@ -73,39 +73,47 @@ class Qwen3CoderNextPlugin(TextModelPluginInterface):
             return self._model.generate(input_data)
         return None
 
+    def tokenize(self, text: str, **kwargs) -> List[float]:
+        tokenizer = self.tokenizer if self.tokenizer else getattr(self._model, '_tokenizer', None)
+        if tokenizer:
+            try:
+                return [float(x) for x in tokenizer.encode(text)]
+            except Exception as e:
+                logger.error(f"Tokenization error: {e}")
+
+        logger.warning("Tokenizer missing or failed, using dummy input")
+        return [1.0] * 5
+
+    def detokenize(self, token_ids: List[int], **kwargs) -> str:
+        tokenizer = self.tokenizer if self.tokenizer else getattr(self._model, '_tokenizer', None)
+        if tokenizer:
+            try:
+                return tokenizer.decode(token_ids)
+            except Exception as e:
+                logger.error(f"Detokenization error: {e}")
+
+        return f"Generated {len(token_ids)} tokens (Raw)"
+
     def infer_batch(self, requests: List[Any]) -> List[Any]:
         """
         Process batch using Serial Batch Manager.
         """
         results = []
         if not self.batch_manager:
-            # Fallback
             return super().infer_batch(requests)
 
-        # Add all to queue
         start_id = 1000
         req_ids = []
         for i, prompt in enumerate(requests):
-            # Tokenize first
-            if self.tokenizer:
-                ids = self.tokenizer.encode(prompt)
-            else:
-                ids = [1.0] * 5
-
+            ids = self.tokenize(prompt)
             rid = start_id + i
-            self.batch_manager.add_request(rid, [float(x) for x in ids])
+            self.batch_manager.add_request(rid, ids)
             req_ids.append(rid)
 
-        # Process queue
-        # Since step() processes one, we loop
         for _ in req_ids:
             out_tensor = self.batch_manager.step()
             if out_tensor:
-                # Detokenize
-                if self.tokenizer:
-                    res = self.tokenizer.decode(out_tensor.to_list())
-                else:
-                    res = f"Generated {out_tensor.shape[1]} tokens"
+                res = self.detokenize([int(x) for x in out_tensor.to_list()])
                 results.append(res)
             else:
                 results.append("Error in batch processing")
@@ -115,27 +123,23 @@ class Qwen3CoderNextPlugin(TextModelPluginInterface):
     def generate_text(self, prompt: str, max_new_tokens: int = 512, **kwargs) -> str:
         if not self._model: self.load_model()
 
-        # Standardized generation flow
-        # 1. Tokenize (Mock if missing)
-        if self.tokenizer:
-            ids = self.tokenizer.encode(prompt)
-        else:
-            # Fallback
-            ids = [1.0] * 5 # Dummy
-            logger.warning("Tokenizer missing, using dummy input")
+        try:
+            # 1. Tokenize
+            ids = self.tokenize(prompt)
 
-        # 2. Tensor
-        t = Tensor([1, len(ids)])
-        t.load([float(x) for x in ids])
+            # 2. Tensor
+            t = Tensor([1, len(ids)])
+            t.load(ids)
 
-        # 3. Generate
-        out = self._model.generate(t, max_new_tokens=max_new_tokens)
+            # 3. Generate
+            out = self._model.generate(t, max_new_tokens=max_new_tokens, **kwargs)
 
-        # 4. Decode
-        out_list = out.to_list()
-        if self.tokenizer:
-            return self.tokenizer.decode([int(x) for x in out_list])
-        return f"Generated {len(out_list)} tokens (Raw)"
+            # 4. Decode
+            return self.detokenize([int(x) for x in out.to_list()])
+
+        except Exception as e:
+            logger.error(f"Generation failed: {e}")
+            return "Error during generation"
 
     def cleanup(self) -> bool:
         self._model = None
