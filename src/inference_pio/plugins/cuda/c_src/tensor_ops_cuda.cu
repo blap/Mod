@@ -465,6 +465,42 @@ EXPORT void tensor_deltanet_recurrence(Tensor* q, Tensor* k, Tensor* v, Tensor* 
 __global__ void slice_kernel(float* in, float* out, int size, int* start, int* h_in, int* h_out, int ndim) { int idx = blockIdx.x*blockDim.x + threadIdx.x; if(idx<size) { int temp=idx; int offset=0; for(int i=0; i<ndim; i++) { int c=temp/h_out[i]; temp%=h_out[i]; offset+=(start[i]+c)*h_in[i]; } out[idx]=in[offset]; } }
 EXPORT void tensor_slice(Tensor* input, Tensor* out, int* start_indices, int* slice_shapes) { if (out->device_id >= 0) { int ndim = input->ndim; int* h_in = (int*)malloc(ndim*4); int* h_out = h_in + ndim; h_in[ndim-1]=1; h_out[ndim-1]=1; for(int i=ndim-2; i>=0; i--) { h_in[i] = h_in[i+1]*input->shape[i+1]; h_out[i] = h_out[i+1]*out->shape[i+1]; } int* d_params; CUDA_CHECK(cudaMalloc((void**)&d_params, 3*ndim*4)); CUDA_CHECK(cudaMemcpy(d_params, start_indices, ndim*4, cudaMemcpyHostToDevice)); CUDA_CHECK(cudaMemcpy(d_params+ndim, h_in, ndim*4, cudaMemcpyHostToDevice)); CUDA_CHECK(cudaMemcpy(d_params+2*ndim, h_out, ndim*4, cudaMemcpyHostToDevice)); int size = out->size; int threads=256; int blocks=(size+255)/256; slice_kernel<<<blocks, threads>>>(input->data, out->data, size, d_params, d_params+ndim, d_params+2*ndim, ndim); CUDA_CHECK(cudaDeviceSynchronize()); CUDA_CHECK(cudaFree(d_params)); free(h_in); } }
 
+__global__ void slice_kernel_device(float* in, float* out, int size, float* start, int* h_in, int* h_out, int ndim) {
+    int idx = blockIdx.x*blockDim.x + threadIdx.x;
+    if(idx<size) {
+        int temp=idx; int offset=0;
+        for(int i=0; i<ndim; i++) {
+            int c=temp/h_out[i]; temp%=h_out[i];
+            offset+=((int)start[i]+c)*h_in[i];
+        }
+        out[idx]=in[offset];
+    }
+}
+EXPORT void tensor_slice_device(Tensor* input, Tensor* out, Tensor* start_indices) {
+    if (out->device_id >= 0) {
+        int ndim = input->ndim;
+        int* h_in = (int*)malloc(ndim*4);
+        int* h_out = h_in + ndim;
+        h_in[ndim-1]=1; h_out[ndim-1]=1;
+        for(int i=ndim-2; i>=0; i--) {
+            h_in[i] = h_in[i+1]*input->shape[i+1];
+            h_out[i] = h_out[i+1]*out->shape[i+1];
+        }
+        int* d_strides;
+        CUDA_CHECK(cudaMalloc((void**)&d_strides, 2*ndim*4));
+        CUDA_CHECK(cudaMemcpy(d_strides, h_in, ndim*4, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(d_strides+ndim, h_out, ndim*4, cudaMemcpyHostToDevice));
+
+        int size = out->size;
+        int threads=256;
+        int blocks=(size+255)/256;
+        slice_kernel_device<<<blocks, threads>>>(input->data, out->data, size, start_indices->data, d_strides, d_strides+ndim, ndim);
+        CUDA_CHECK(cudaDeviceSynchronize());
+        CUDA_CHECK(cudaFree(d_strides));
+        free(h_in);
+    }
+}
+
 __global__ void set_slice_kernel(float* dst, float* src, int size, int* start, int* h_dst, int* h_src, int ndim) {
     int idx = blockIdx.x*blockDim.x + threadIdx.x;
     if(idx<size) {
@@ -501,6 +537,45 @@ EXPORT void tensor_set_slice(Tensor* dst, Tensor* src, int* start_indices) {
         set_slice_kernel<<<blocks, threads>>>(dst->data, src->data, size, d_params, d_params+ndim, d_params+2*ndim, ndim);
         CUDA_CHECK(cudaDeviceSynchronize());
         CUDA_CHECK(cudaFree(d_params));
+        free(strides);
+    }
+}
+
+__global__ void set_slice_kernel_device(float* dst, float* src, int size, float* start, int* h_dst, int* h_src, int ndim) {
+    int idx = blockIdx.x*blockDim.x + threadIdx.x;
+    if(idx<size) {
+        int temp=idx; int offset=0;
+        for(int i=0; i<ndim; i++) {
+            int c=temp/h_src[i]; temp%=h_src[i];
+            offset+=((int)start[i]+c)*h_dst[i];
+        }
+        dst[offset]=src[idx];
+    }
+}
+EXPORT void tensor_set_slice_device(Tensor* dst, Tensor* src, Tensor* start_indices) {
+    if (dst->device_id >= 0) {
+        int ndim = dst->ndim;
+        int* strides = (int*)malloc(ndim * 2 * sizeof(int));
+        int* s_dst = strides;
+        int* s_src = strides + ndim;
+
+        s_dst[ndim-1] = 1; s_src[ndim-1] = 1;
+        for(int i=ndim-2; i>=0; i--) {
+            s_dst[i] = s_dst[i+1]*dst->shape[i+1];
+            s_src[i] = s_src[i+1]*src->shape[i+1];
+        }
+
+        int* d_strides;
+        CUDA_CHECK(cudaMalloc((void**)&d_strides, 2*ndim*4));
+        CUDA_CHECK(cudaMemcpy(d_strides, s_dst, ndim*4, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(d_strides+ndim, s_src, ndim*4, cudaMemcpyHostToDevice));
+
+        int size = src->size;
+        int threads=256;
+        int blocks=(size+255)/256;
+        set_slice_kernel_device<<<blocks, threads>>>(dst->data, src->data, size, start_indices->data, d_strides, d_strides+ndim, ndim);
+        CUDA_CHECK(cudaDeviceSynchronize());
+        CUDA_CHECK(cudaFree(d_strides));
         free(strides);
     }
 }

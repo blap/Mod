@@ -72,8 +72,12 @@ def _setup_sigs(lib):
 
     if hasattr(lib, 'tensor_slice'):
         lib.tensor_slice.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int)]
+    if hasattr(lib, 'tensor_slice_device'):
+        lib.tensor_slice_device.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
     if hasattr(lib, 'tensor_set_slice'):
         lib.tensor_set_slice.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.c_int)]
+    if hasattr(lib, 'tensor_set_slice_device'):
+        lib.tensor_set_slice_device.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
     if hasattr(lib, 'begin_capture'):
         lib.begin_capture.argtypes = []
     if hasattr(lib, 'end_capture'):
@@ -500,7 +504,24 @@ class Tensor:
         if hasattr(self._lib, 'tensor_embed'): self._lib.tensor_embed(self._handle, indices._handle, out._handle)
         return out
 
-    def slice(self, start_indices: List[int], slice_shapes: List[int]) -> 'Tensor':
+    def slice(self, start_indices: Union[List[int], 'Tensor'], slice_shapes: List[int]) -> 'Tensor':
+        if isinstance(start_indices, Tensor):
+             if start_indices.ndim != 1 or start_indices.size != self.ndim: raise ValueError(f"Slice Tensor indices must be 1D size={self.ndim}")
+             out = Tensor(slice_shapes, device=self.device)
+             if hasattr(self._lib, 'tensor_slice_device'):
+                 self._lib.tensor_slice_device(self._handle, out._handle, start_indices._handle)
+             else:
+                 # Fallback: Read to host if needed, but defeats purpose of graph.
+                 # For correctness if lib missing:
+                 if self.device == 'cpu':
+                     h_start = [int(x) for x in start_indices.to_list()]
+                     c_start = (ctypes.c_int * self.ndim)(*h_start)
+                     c_shape = (ctypes.c_int * self.ndim)(*slice_shapes)
+                     if hasattr(self._lib, 'tensor_slice'): self._lib.tensor_slice(self._handle, out._handle, c_start, c_shape)
+                 else:
+                     raise NotImplementedError("tensor_slice_device not available in backend lib")
+             return out
+
         if len(start_indices) != self.ndim or len(slice_shapes) != self.ndim: raise ValueError("Slice args dim mismatch")
         out = Tensor(slice_shapes, device=self.device)
         if hasattr(self._lib, 'tensor_slice'):
@@ -509,7 +530,20 @@ class Tensor:
             self._lib.tensor_slice(self._handle, out._handle, c_start, c_shape)
         return out
 
-    def set_slice(self, src: 'Tensor', start_indices: List[int]):
+    def set_slice(self, src: 'Tensor', start_indices: Union[List[int], 'Tensor']):
+        if isinstance(start_indices, Tensor):
+             if start_indices.ndim != 1 or start_indices.size != self.ndim: raise ValueError(f"SetSlice Tensor indices must be 1D size={self.ndim}")
+             if hasattr(self._lib, 'tensor_set_slice_device'):
+                 self._lib.tensor_set_slice_device(self._handle, src._handle, start_indices._handle)
+             else:
+                 if self.device == 'cpu':
+                     h_start = [int(x) for x in start_indices.to_list()]
+                     c_start = (ctypes.c_int * self.ndim)(*h_start)
+                     if hasattr(self._lib, 'tensor_set_slice'): self._lib.tensor_set_slice(self._handle, src._handle, c_start)
+                 else:
+                     raise NotImplementedError("tensor_set_slice_device not available in backend lib")
+             return
+
         if len(start_indices) != self.ndim: raise ValueError("Set Slice args dim mismatch")
         if hasattr(self._lib, 'tensor_set_slice'):
             c_start = (ctypes.c_int * self.ndim)(*start_indices)
