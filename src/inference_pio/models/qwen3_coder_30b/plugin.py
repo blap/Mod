@@ -52,21 +52,29 @@ class Qwen3_Coder_30B_Plugin(TextModelPluginInterface):
         return None
 
     def tokenize(self, text: str, **kwargs) -> List[float]:
-        tokenizer = getattr(self._model, '_tokenizer', None)
+        tokenizer = getattr(self, 'tokenizer', None)
+        if not tokenizer and self._model:
+            tokenizer = getattr(self._model, 'tokenizer', getattr(self._model, '_tokenizer', None))
+
         if tokenizer:
             try:
-                return [float(x) for x in tokenizer.encode(text)]
-            except Exception:
-                pass
+                if hasattr(tokenizer, 'encode'):
+                    return [float(x) for x in tokenizer.encode(text)]
+            except Exception as e:
+                logger.warning(f"Tokenization error: {e}")
         return [1.0] * 5
 
     def detokenize(self, token_ids: List[int], **kwargs) -> str:
-        tokenizer = getattr(self._model, '_tokenizer', None)
+        tokenizer = getattr(self, 'tokenizer', None)
+        if not tokenizer and self._model:
+            tokenizer = getattr(self._model, 'tokenizer', getattr(self._model, '_tokenizer', None))
+
         if tokenizer:
             try:
-                return tokenizer.decode(token_ids)
-            except Exception:
-                pass
+                if hasattr(tokenizer, 'decode'):
+                    return tokenizer.decode(token_ids)
+            except Exception as e:
+                logger.warning(f"Detokenization error: {e}")
         return f"Generated {len(token_ids)} tokens"
 
     def infer_batch(self, requests: List[Any]) -> List[Any]:
@@ -82,12 +90,16 @@ class Qwen3_Coder_30B_Plugin(TextModelPluginInterface):
             req_ids.append(rid)
 
         for _ in req_ids:
-            out = self.batch_manager.step()
-            if out:
-                res = self.detokenize([int(x) for x in out.to_list()])
-                results.append(res)
+            out_tensor = self.batch_manager.step()
+            if out_tensor:
+                try:
+                    res = self.detokenize([int(x) for x in out_tensor.to_list()])
+                    results.append(res)
+                except Exception as e:
+                    logger.error(f"Batch decoding error: {e}")
+                    results.append("Error decoding")
             else:
-                results.append("Error")
+                results.append("Error in batch processing")
         return results
 
     def generate_text(self, prompt: str, max_new_tokens: int = 512, **kwargs) -> str:

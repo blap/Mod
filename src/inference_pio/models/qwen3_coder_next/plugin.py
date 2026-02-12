@@ -74,33 +74,36 @@ class Qwen3CoderNextPlugin(TextModelPluginInterface):
         return None
 
     def tokenize(self, text: str, **kwargs) -> List[float]:
-        tokenizer = self.tokenizer if self.tokenizer else getattr(self._model, '_tokenizer', None)
+        tokenizer = getattr(self, 'tokenizer', None)
+        if not tokenizer and self._model:
+            tokenizer = getattr(self._model, 'tokenizer', getattr(self._model, '_tokenizer', None))
+
         if tokenizer:
             try:
-                return [float(x) for x in tokenizer.encode(text)]
+                if hasattr(tokenizer, 'encode'):
+                    return [float(x) for x in tokenizer.encode(text)]
             except Exception as e:
-                logger.error(f"Tokenization error: {e}")
+                logger.warning(f"Tokenization error: {e}")
 
-        logger.warning("Tokenizer missing or failed, using dummy input")
         return [1.0] * 5
 
     def detokenize(self, token_ids: List[int], **kwargs) -> str:
-        tokenizer = self.tokenizer if self.tokenizer else getattr(self._model, '_tokenizer', None)
+        tokenizer = getattr(self, 'tokenizer', None)
+        if not tokenizer and self._model:
+            tokenizer = getattr(self._model, 'tokenizer', getattr(self._model, '_tokenizer', None))
+
         if tokenizer:
             try:
-                return tokenizer.decode(token_ids)
+                if hasattr(tokenizer, 'decode'):
+                    return tokenizer.decode(token_ids)
             except Exception as e:
-                logger.error(f"Detokenization error: {e}")
+                logger.warning(f"Detokenization error: {e}")
 
         return f"Generated {len(token_ids)} tokens (Raw)"
 
     def infer_batch(self, requests: List[Any]) -> List[Any]:
-        """
-        Process batch using Serial Batch Manager.
-        """
         results = []
-        if not self.batch_manager:
-            return super().infer_batch(requests)
+        if not self.batch_manager: return super().infer_batch(requests)
 
         start_id = 1000
         req_ids = []
@@ -113,8 +116,12 @@ class Qwen3CoderNextPlugin(TextModelPluginInterface):
         for _ in req_ids:
             out_tensor = self.batch_manager.step()
             if out_tensor:
-                res = self.detokenize([int(x) for x in out_tensor.to_list()])
-                results.append(res)
+                try:
+                    res = self.detokenize([int(x) for x in out_tensor.to_list()])
+                    results.append(res)
+                except Exception as e:
+                    logger.error(f"Batch decoding error: {e}")
+                    results.append("Error decoding")
             else:
                 results.append("Error in batch processing")
 
@@ -124,19 +131,13 @@ class Qwen3CoderNextPlugin(TextModelPluginInterface):
         if not self._model: self.load_model()
 
         try:
-            # 1. Tokenize
             ids = self.tokenize(prompt)
-
-            # 2. Tensor
+            from ...core.engine.backend import Tensor
             t = Tensor([1, len(ids)])
             t.load(ids)
 
-            # 3. Generate
             out = self._model.generate(t, max_new_tokens=max_new_tokens, **kwargs)
-
-            # 4. Decode
             return self.detokenize([int(x) for x in out.to_list()])
-
         except Exception as e:
             logger.error(f"Generation failed: {e}")
             return "Error during generation"

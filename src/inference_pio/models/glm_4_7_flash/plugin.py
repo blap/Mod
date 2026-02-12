@@ -1,10 +1,13 @@
 """
 GLM-4.7-Flash Plugin
 """
+import logging
 from typing import Any, List
 from ...common.interfaces.improved_base_plugin_interface import TextModelPluginInterface, PluginMetadata, PluginType
 from ...core.engine.backend import Tensor
 from .model import GLM47FlashModel, GLM47FlashConfig
+
+logger = logging.getLogger(__name__)
 
 class GLM_4_7_Flash_Plugin(TextModelPluginInterface):
     def __init__(self):
@@ -52,21 +55,29 @@ class GLM_4_7_Flash_Plugin(TextModelPluginInterface):
         return "GLM Output"
 
     def tokenize(self, text: str, **kwargs) -> List[float]:
-        tokenizer = getattr(self._model, '_tokenizer', None)
+        tokenizer = getattr(self, 'tokenizer', None)
+        if not tokenizer and self._model:
+            tokenizer = getattr(self._model, 'tokenizer', getattr(self._model, '_tokenizer', None))
+
         if tokenizer:
             try:
-                return [float(x) for x in tokenizer.encode(text)]
-            except Exception:
-                pass
+                if hasattr(tokenizer, 'encode'):
+                    return [float(x) for x in tokenizer.encode(text)]
+            except Exception as e:
+                logger.warning(f"Tokenization error: {e}")
         return [1.0] * 5
 
     def detokenize(self, token_ids: List[int], **kwargs) -> str:
-        tokenizer = getattr(self._model, '_tokenizer', None)
+        tokenizer = getattr(self, 'tokenizer', None)
+        if not tokenizer and self._model:
+            tokenizer = getattr(self._model, 'tokenizer', getattr(self._model, '_tokenizer', None))
+
         if tokenizer:
             try:
-                return tokenizer.decode(token_ids)
-            except Exception:
-                pass
+                if hasattr(tokenizer, 'decode'):
+                    return tokenizer.decode(token_ids)
+            except Exception as e:
+                logger.warning(f"Detokenization error: {e}")
         return f"Generated {len(token_ids)} tokens (Raw)"
 
     def infer_batch(self, requests: List[Any]) -> List[Any]:
@@ -82,12 +93,16 @@ class GLM_4_7_Flash_Plugin(TextModelPluginInterface):
             req_ids.append(rid)
 
         for _ in req_ids:
-            out = self.batch_manager.step()
-            if out:
-                res = self.detokenize([int(x) for x in out.to_list()])
-                results.append(res)
+            out_tensor = self.batch_manager.step()
+            if out_tensor:
+                try:
+                    res = self.detokenize([int(x) for x in out_tensor.to_list()])
+                    results.append(res)
+                except Exception as e:
+                    logger.error(f"Batch decoding error: {e}")
+                    results.append("Error decoding")
             else:
-                results.append("Error")
+                results.append("Error in batch processing")
         return results
 
     def generate_text(self, prompt: str, max_new_tokens: int = 512, **kwargs) -> str:
@@ -99,11 +114,9 @@ class GLM_4_7_Flash_Plugin(TextModelPluginInterface):
             t.load(ids)
 
             out = self._model.generate(t, max_new_tokens=max_new_tokens)
-
             return self.detokenize([int(x) for x in out.to_list()])
         except Exception as e:
-            import logging
-            logging.getLogger(__name__).error(f"Generation failed: {e}")
+            logger.error(f"Generation failed: {e}")
             return "Error during generation"
 
     def cleanup(self) -> bool:
