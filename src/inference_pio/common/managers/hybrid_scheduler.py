@@ -5,15 +5,22 @@ from ...plugins.manager import get_plugin_manager
 
 logger = logging.getLogger(__name__)
 
+from ...core.engine.backend import CUDAStream
+
 class HybridScheduler:
     """
     Manages execution across CPU and GPU backends.
+    Supports Async Execution (Overlap).
     """
     def __init__(self):
         self.plugin_manager = get_plugin_manager()
         self.gpu_backend = self.plugin_manager.hardware_backend
         # Assuming cpu_backend is accessible or we use default libtensor_ops
         self.has_gpu = HAS_CUDA and self.gpu_backend is not None
+
+        # Async Streams
+        self.compute_stream = CUDAStream() if self.has_gpu else None
+        self.transfer_stream = CUDAStream() if self.has_gpu else None
 
     def device_for_layer(self, layer_idx: int, total_layers: int, gpu_memory_fraction: float = 0.8) -> str:
         """
@@ -32,34 +39,46 @@ class HybridScheduler:
 
     def check_migration_policy(self, layer_idx, layer, all_layers=None):
         """
-        Dynamic Offloading: Intelligent Lookahead Prefetching.
+        Dynamic Offloading: Intelligent Lookahead Prefetching with Streams.
         """
         if not self.has_gpu: return
 
-        # 1. Ensure current layer is on GPU (Blocking)
+        # 1. Ensure current layer is on GPU (Blocking wait for transfer if needed)
         try:
             p = next(layer.parameters())
             if p.device != "cuda":
-                layer.to("cuda") # Must be blocking to execute now
+                layer.to("cuda") # Blocking
+            elif self.transfer_stream:
+                # If we prefetched it in transfer stream, we must sync before compute
+                # Optimization: Ideally record events. Simplified: Synchronize transfer stream.
+                # In strict async, we would insert a wait_event in compute_stream.
+                # Here we conservatively sync.
+                self.transfer_stream.synchronize()
+
         except Exception as e:
             logger.warning(f"Migration (Current) failed: {e}")
 
+        # 2. Set Compute Stream Context
+        if self.compute_stream:
+            self.compute_stream.__enter__()
+
         if not all_layers: return
 
-        # 2. Prefetch Next Layers (Non-Blocking)
-        # We try to keep upcoming layers in GPU memory to hide transfer latency.
+        # 3. Prefetch Next Layers (Async in Transfer Stream)
         PREFETCH_WINDOW = 2
 
-        for offset in range(1, PREFETCH_WINDOW + 1):
-            if layer_idx + offset < len(all_layers):
-                next_layer = all_layers[layer_idx + offset]
-                try:
-                    p = next(next_layer.parameters())
-                    if p.device != "cuda":
-                        # Async transfer to overlap with current computation
-                        next_layer.to("cuda", non_blocking=True)
-                except Exception as e:
-                    logger.warning(f"Prefetch failed for layer {layer_idx+offset}: {e}")
+        if self.transfer_stream:
+            with self.transfer_stream:
+                for offset in range(1, PREFETCH_WINDOW + 1):
+                    if layer_idx + offset < len(all_layers):
+                        next_layer = all_layers[layer_idx + offset]
+                        try:
+                            p = next(next_layer.parameters())
+                            if p.device != "cuda":
+                                # Async transfer
+                                next_layer.to("cuda", non_blocking=True)
+                        except Exception as e:
+                            logger.warning(f"Prefetch failed for layer {layer_idx+offset}: {e}")
 
         # 3. Eviction (Non-Blocking)
         # Move old layers back to CPU to save VRAM.

@@ -90,12 +90,16 @@ class Qwen3DecoderLayer(Module):
         residual = hidden_states
         h = self.input_layernorm(hidden_states)
         h, _, pkv = self.self_attn(h, attention_mask, position_ids, past_key_value, use_cache, cache_position)
-        hidden_states = residual.add(h)
 
-        residual = hidden_states
-        h = self.post_attention_layernorm(hidden_states)
-        h = self.mlp(h)
-        hidden_states = residual.add(h)
+        if hasattr(residual, 'fused_add_rms_norm'):
+            h_norm = residual.fused_add_rms_norm(h, self.post_attention_layernorm.weight, self.post_attention_layernorm.eps)
+            hidden_states = residual
+        else:
+            hidden_states = residual.add(h)
+            h_norm = self.post_attention_layernorm(hidden_states)
+
+        mlp_out = self.mlp(h_norm)
+        hidden_states = hidden_states + mlp_out
 
         return hidden_states, pkv
 
