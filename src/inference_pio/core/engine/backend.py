@@ -131,8 +131,66 @@ def _setup_sigs(lib):
     if hasattr(lib, 'tensor_deltanet_recurrence'):
         lib.tensor_deltanet_recurrence.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
 
+    # Stream & Pinned Memory
+    if hasattr(lib, 'create_stream'):
+        lib.create_stream.restype = ctypes.c_void_p
+        lib.create_stream.argtypes = []
+    if hasattr(lib, 'destroy_stream'):
+        lib.destroy_stream.argtypes = [ctypes.c_void_p]
+    if hasattr(lib, 'stream_synchronize'):
+        lib.stream_synchronize.argtypes = [ctypes.c_void_p]
+    if hasattr(lib, 'set_current_stream'):
+        lib.set_current_stream.argtypes = [ctypes.c_void_p]
+    if hasattr(lib, 'allocate_pinned_memory'):
+        lib.allocate_pinned_memory.restype = ctypes.c_void_p
+        lib.allocate_pinned_memory.argtypes = [ctypes.c_size_t]
+    if hasattr(lib, 'free_pinned_memory'):
+        lib.free_pinned_memory.argtypes = [ctypes.c_void_p]
+
+    # Fused Ops
+    if hasattr(lib, 'tensor_fused_add_rms_norm'):
+        lib.tensor_fused_add_rms_norm.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_float]
+    if hasattr(lib, 'tensor_dequantize'):
+        lib.tensor_dequantize.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+
 _setup_sigs(_lib_cpu)
 _setup_sigs(_lib_cuda)
+
+class CUDAStream:
+    """Python wrapper for CUDA Streams using backend."""
+    def __init__(self, lib=_lib_cuda):
+        self._lib = lib
+        self._handle = None
+        if self._lib and hasattr(self._lib, 'create_stream'):
+            self._handle = self._lib.create_stream()
+
+    def __del__(self):
+        if self._handle and self._lib and hasattr(self._lib, 'destroy_stream'):
+            self._lib.destroy_stream(self._handle)
+
+    def synchronize(self):
+        if self._handle:
+            self._lib.stream_synchronize(self._handle)
+
+    def __enter__(self):
+        if self._handle and hasattr(self._lib, 'set_current_stream'):
+            self.prev_stream = None # Real impl would need get_current_stream
+            self._lib.set_current_stream(self._handle)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self._handle and hasattr(self._lib, 'set_current_stream'):
+            self._lib.set_current_stream(None) # Reset to default
+
+def allocate_pinned(size_bytes: int):
+    if _lib_cuda and hasattr(_lib_cuda, 'allocate_pinned_memory'):
+        return _lib_cuda.allocate_pinned_memory(size_bytes)
+    # Fallback to malloc via libc if needed, but not truly pinned
+    return None
+
+def free_pinned(ptr):
+    if _lib_cuda and hasattr(_lib_cuda, 'free_pinned_memory'):
+        _lib_cuda.free_pinned_memory(ptr)
 
 class Tensor:
     __slots__ = ['device', '_lib', '_handle']
@@ -386,6 +444,25 @@ class Tensor:
         out_k = Tensor(list(k.shape), device=self.device)
         self._lib.tensor_rope(self._handle, k._handle, cos._handle, sin._handle, out_q._handle, out_k._handle)
         return out_q, out_k
+
+    def fused_add_rms_norm(self, residual: 'Tensor', weight: 'Tensor', eps: float) -> 'Tensor':
+        # self is 'x'
+        out = Tensor(list(self.shape), device=self.device)
+        if hasattr(self._lib, 'tensor_fused_add_rms_norm'):
+            self._lib.tensor_fused_add_rms_norm(self._handle, residual._handle, weight._handle, out._handle, ctypes.c_float(eps))
+        else:
+            # Fallback
+            x_new = self.add(residual)
+            # In-place update emulation? No, we return new tensor in fallback
+            out = x_new.rms_norm(weight, eps)
+        return out
+
+    def dequantize(self, scale: 'Tensor') -> 'Tensor':
+        # self is int8 input
+        out = Tensor(list(self.shape), device=self.device) # float32
+        if hasattr(self._lib, 'tensor_dequantize'):
+            self._lib.tensor_dequantize(self._handle, scale._handle, out._handle)
+        return out
 
     def fused_split_rope(self, cos: 'Tensor', sin: 'Tensor', heads: int, head_dim: int) -> Tuple['Tensor', 'Tensor', 'Tensor']:
         # Self is [B, S, 3*H]

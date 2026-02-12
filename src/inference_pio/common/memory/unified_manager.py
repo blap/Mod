@@ -1,17 +1,31 @@
 from typing import Dict, List, Optional
 import time
-from ...core.engine.backend import Tensor, HAS_CUDA
+from ...core.engine.backend import Tensor, HAS_CUDA, allocate_pinned, free_pinned
 
 class UnifiedMemoryManager:
     """
     Manages Tensor lifecycle across CPU and GPU.
-    Implements simple LRU eviction.
+    Implements simple LRU eviction and Pinned Memory Allocation.
     """
     def __init__(self, gpu_limit_mb: int = 4096):
         self.gpu_limit_bytes = gpu_limit_mb * 1024 * 1024
         self.current_gpu_bytes = 0
         self.tensors: Dict[int, Tensor] = {} # handle_addr -> Tensor
         self.lru_list: List[int] = [] # List of handle_addr
+
+    def malloc_pinned(self, size_bytes: int):
+        """Allocate pinned memory on host."""
+        ptr = allocate_pinned(size_bytes)
+        if not ptr:
+            # Fallback
+            import ctypes
+            buffer = (ctypes.c_byte * size_bytes)()
+            return ctypes.cast(buffer, ctypes.c_void_p)
+        return ptr
+
+    def free_pinned(self, ptr):
+        """Free pinned memory."""
+        free_pinned(ptr)
 
     def register(self, tensor: Tensor):
         if "cuda" in tensor.device:

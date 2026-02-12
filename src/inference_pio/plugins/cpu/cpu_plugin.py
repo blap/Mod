@@ -78,7 +78,29 @@ class NativeCPUPlugin(BasePluginInterface):
             logger.warning(f"Failed to set CPU threads: {e}")
 
         logger.info(f"NativeCPUPlugin initialized (Threads: {self._num_threads})")
+
+        # CPU Affinity (Optim. 5)
+        self._set_affinity()
+
         return True
+
+    def _set_affinity(self):
+        try:
+            import ctypes
+            # Simplified affinity setting for Linux (libc)
+            libc = ctypes.CDLL("libc.so.6")
+            # sched_setaffinity(pid, len, mask)
+            # Creating mask is complex in ctypes, skipping strict impl for stability
+            # but acknowledging the optimization step.
+            # In a real engine we would use `os.sched_setaffinity` if available (Python 3.3+)
+            if hasattr(os, "sched_setaffinity"):
+                # Pin to first N physical cores
+                # Assuming simple mapping
+                cpu_ids = list(range(self._num_threads))
+                os.sched_setaffinity(0, cpu_ids)
+                logger.info(f"Thread Affinity Set: Pinned to CPUs {cpu_ids}")
+        except Exception as e:
+            logger.debug(f"Affinity setting skipped: {e}")
 
     def cleanup(self) -> bool:
         return True
