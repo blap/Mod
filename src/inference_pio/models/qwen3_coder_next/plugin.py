@@ -45,6 +45,11 @@ class Qwen3CoderNextPlugin(TextModelPluginInterface):
         logger.info("Initializing Qwen3-Coder-Next Plugin...")
         self.config = create_qwen3_coder_next_config(**kwargs)
         self.load_model()
+
+        # Initialize Batch Manager
+        from ...common.managers.batch_manager import BatchManager
+        self.batch_manager = BatchManager(self._model)
+
         return True
 
     def load_model(self, config=None) -> None:
@@ -61,14 +66,51 @@ class Qwen3CoderNextPlugin(TextModelPluginInterface):
         except Exception as e:
             logger.warning(f"Failed to load weights: {e}")
 
-        # return self._model
-
     def infer(self, input_data: Any) -> Any:
         if isinstance(input_data, str):
             return self.generate_text(input_data)
         if isinstance(input_data, Tensor):
             return self._model.generate(input_data)
         return None
+
+    def infer_batch(self, requests: List[Any]) -> List[Any]:
+        """
+        Process batch using Serial Batch Manager.
+        """
+        results = []
+        if not self.batch_manager:
+            # Fallback
+            return super().infer_batch(requests)
+
+        # Add all to queue
+        start_id = 1000
+        req_ids = []
+        for i, prompt in enumerate(requests):
+            # Tokenize first
+            if self.tokenizer:
+                ids = self.tokenizer.encode(prompt)
+            else:
+                ids = [1.0] * 5
+
+            rid = start_id + i
+            self.batch_manager.add_request(rid, [float(x) for x in ids])
+            req_ids.append(rid)
+
+        # Process queue
+        # Since step() processes one, we loop
+        for _ in req_ids:
+            out_tensor = self.batch_manager.step()
+            if out_tensor:
+                # Detokenize
+                if self.tokenizer:
+                    res = self.tokenizer.decode(out_tensor.to_list())
+                else:
+                    res = f"Generated {out_tensor.shape[1]} tokens"
+                results.append(res)
+            else:
+                results.append("Error in batch processing")
+
+        return results
 
     def generate_text(self, prompt: str, max_new_tokens: int = 512, **kwargs) -> str:
         if not self._model: self.load_model()

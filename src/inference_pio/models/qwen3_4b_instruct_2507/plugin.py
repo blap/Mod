@@ -59,6 +59,10 @@ class Qwen3_4B_Instruct_2507_Plugin(TextModelPluginInterface):
 
             logger.info("Initializing Qwen3-4B-Instruct-2507 Plugin")
             self.load_model()
+
+            from ...common.managers.batch_manager import BatchManager
+            self.batch_manager = BatchManager(self._model)
+
             return True
         except Exception as e:
             logger.error(f"Initialization failed: {e}")
@@ -75,6 +79,32 @@ class Qwen3_4B_Instruct_2507_Plugin(TextModelPluginInterface):
         if isinstance(data, str):
             return self.generate_text(data)
         return ""
+
+    def infer_batch(self, requests: List[Any]) -> List[Any]:
+        results = []
+        if not self.batch_manager: return super().infer_batch(requests)
+
+        start_id = 4000
+        req_ids = []
+        for i, prompt in enumerate(requests):
+            tokenizer = getattr(self._model, '_tokenizer', None)
+            if tokenizer: ids = tokenizer.encode(prompt)
+            else: ids = [1.0]*5
+
+            rid = start_id + i
+            self.batch_manager.add_request(rid, [float(x) for x in ids])
+            req_ids.append(rid)
+
+        for _ in req_ids:
+            out = self.batch_manager.step()
+            if out:
+                tokenizer = getattr(self._model, '_tokenizer', None)
+                if tokenizer: res = tokenizer.decode(out.to_list())
+                else: res = f"Generated {out.shape[1]} tokens"
+                results.append(res)
+            else:
+                results.append("Error")
+        return results
 
     def generate_text(self, prompt: str, max_new_tokens: int = 512, **kwargs) -> str:
         if not self._model:
