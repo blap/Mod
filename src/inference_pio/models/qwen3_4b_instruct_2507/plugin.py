@@ -153,24 +153,6 @@ class Qwen3_4B_Instruct_2507_Plugin(TextModelPluginInterface):
     def validate_model_compatibility(self, config: Any) -> bool:
         return isinstance(config, Qwen3_4B_Instruct_2507_Config)
 
-    # Implement required abstract methods
-    def tokenize(self, text: str, **kwargs) -> List[float]:
-        tokenizer = getattr(self._model, '_tokenizer', None)
-        if tokenizer:
-            try:
-                return [float(x) for x in tokenizer.encode(text)]
-            except Exception:
-                pass
-        return [1.0] * 5
-
-    def detokenize(self, token_ids: List[int], **kwargs) -> str:
-        if self._model and self._model._tokenizer:
-            try:
-                return self._model._tokenizer.decode(token_ids)
-            except Exception:
-                return ""
-        return ""
-
     def cleanup(self) -> bool:
         self._model = None
         return True

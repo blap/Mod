@@ -93,25 +93,17 @@ class Qwen3_Coder_30B_Plugin(TextModelPluginInterface):
     def generate_text(self, prompt: str, max_new_tokens: int = 512, **kwargs) -> str:
         if not self._model: self.load_model()
 
-        # Real generation flow
-        # 1. Tokenize (Mock if missing, but path is real)
-        if self._model._tokenizer:
-             ids = self._model._tokenizer.encode(prompt)
-        else:
-             ids = [1.0] * 5 # Fallback
+        try:
+            ids = self.tokenize(prompt)
+            from ...core.engine.backend import Tensor
+            t = Tensor([1, len(ids)])
+            t.load(ids)
 
-        # 2. Tensor
-        t = Tensor([1, len(ids)])
-        t.load([float(x) for x in ids])
-
-        # 3. Generate (Real C/CUDA execution)
-        out = self._model.generate(t, max_new_tokens=max_new_tokens)
-
-        # 4. Decode
-        if self._model._tokenizer:
-             return self._model._tokenizer.decode(out.to_list())
-
-        return f"Generated {out.shape[1]} tokens"
+            out = self._model.generate(t, max_new_tokens=max_new_tokens)
+            return self.detokenize([int(x) for x in out.to_list()])
+        except Exception as e:
+            logger.error(f"Generation failed: {e}")
+            return "Error during text generation"
 
     def cleanup(self) -> bool:
         self._model = None

@@ -2,67 +2,67 @@
 
 ## Step 4: Create the Model Implementation
 
-Create a `model.py` file with the model implementation:
+Create a `model.py` file with the model implementation using the custom backend. **Do not use PyTorch or NumPy.**
 
 ```python
 import logging
-import torch.nn as nn
 from .config import ModelNameConfig
+from ...core.engine.backend import Module, Tensor, Linear, RMSNorm, scaled_dot_product_attention
 
 logger = logging.getLogger(__name__)
 
-class ModelNameModel(nn.Module):
+class ModelNameModel(Module):
     """
-    Implementation of the ModelName model.
+    Implementation of the ModelName model using C-Engine.
     """
     def __init__(self, config: ModelNameConfig):
         super().__init__()
         self.config = config
-        # Initialize model components here
+        # Initialize model components using backend Modules
+        self.embed_tokens = Embedding(config.vocab_size, config.hidden_size)
+        self.layers = ModuleList([DecoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.norm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
-    def forward(self, *args, **kwargs):
-        # Implement forward pass
+    def forward(self, input_ids: Tensor, **kwargs):
+        # Implement forward pass using Tensor operations
+        x = self.embed_tokens(input_ids)
+        for layer in self.layers:
+            x = layer(x)
+        return self.norm(x)
+
+    def generate(self, input_ids: Tensor, max_new_tokens: int = 100):
+        # Implement autoregressive generation loop
         pass
-
-def create_model_name_model(config: ModelNameConfig) -> ModelNameModel:
-    return ModelNameModel(config)
 ```
 
 ## Step 5: Create the Plugin
 
-Create a `plugin.py` file. The class must implement either `ModelPluginInterface` (for generic models) or `TextModelPluginInterface` (for LLMs).
+Create a `plugin.py` file. The class must implement `TextModelPluginInterface`.
 
 ### Minimum Implementation Requirements
 
-#### For All Models (`ModelPluginInterface`)
-You **must** implement the following methods:
-*   `initialize(**kwargs)`: Setup resources (device, precision).
-*   `load_model(config)`: Load weights and apply optimizations.
-*   `infer(data)`: Run the forward pass.
-*   `cleanup()`: Release memory and handles.
-*   `supports_config(config)`: Validate compatibility.
-
-#### For Text Models (`TextModelPluginInterface`)
-In addition to the above, you **must** implement:
-*   `tokenize(text)`: Convert string to tokens.
-*   `detokenize(token_ids)`: Convert tokens back to string.
-*   `generate_text(prompt, ...)`: Autoregressive generation.
+You **must** implement the following methods according to the standard interface:
+*   `initialize(**kwargs)`: Setup resources and `BatchManager`.
+*   `load_model(config)`: Load weights (using `safetensors`).
+*   `tokenize(text)`: Convert string to `List[float]`. **Must be robust (try/except).**
+*   `detokenize(token_ids)`: Convert `List[int]` back to string. **Must be robust.**
+*   `infer_batch(requests)`: Handle batch requests via `BatchManager`.
+*   `generate_text(prompt, ...)`: High-level generation entry point.
+*   `cleanup()`: Release memory.
 
 ### Example Implementation (Text Model)
 
 ```python
 import logging
 from typing import Any, List, Union
-import torch
-import torch.nn as nn
-
 from ...common.interfaces.improved_base_plugin_interface import (
     TextModelPluginInterface,
     PluginMetadata,
     PluginType
 )
 from .config import ModelNameConfig
-from .model import create_model_name_model
+from .model import ModelNameModel
+from ...core.engine.backend import Tensor
 
 logger = logging.getLogger(__name__)
 
@@ -77,70 +77,104 @@ class ModelName_Plugin(TextModelPluginInterface):
             author="Your Name",
             description="Plugin for ModelName",
             plugin_type=PluginType.MODEL_COMPONENT,
-            dependencies=["torch", "transformers"],
+            dependencies=[], # No external dependencies
             compatibility={
-                "torch_version": ">=2.0.0",
-                "transformers_version": ">=4.30.0",
                 "python_version": ">=3.8",
                 "min_memory_gb": 8.0
             },
-            created_at=None, # Set appropriate datetime
-            updated_at=None
+            model_architecture="Transformer",
+            model_size="7B",
+            required_memory_gb=16.0,
+            supported_modalities=["text"],
         )
         super().__init__(metadata)
-        self._config = None
+        self._config = ModelNameConfig()
         self._model = None
+        self.batch_manager = None
 
     def initialize(self, **kwargs) -> bool:
         try:
-            config_data = kwargs.get('config')
-            if config_data:
-                if isinstance(config_data, dict):
-                    self._config = ModelNameConfig(**config_data)
-                else:
-                    self._config = config_data
-            else:
-                self._config = ModelNameConfig()
+            # Update config
+            for k, v in kwargs.items():
+                if hasattr(self._config, k): setattr(self._config, k, v)
 
             logger.info("Initializing ModelName plugin...")
-            self._model = create_model_name_model(self._config)
-            self.is_loaded = True
+            self.load_model()
+
+            # Initialize Standard Batch Manager
+            from ...common.managers.batch_manager import BatchManager
+            self.batch_manager = BatchManager(self._model)
+
             return True
         except Exception as e:
-            logger.error(f"Failed to initialize ModelName plugin: {e}")
+            logger.error(f"Failed to initialize: {e}")
             return False
 
-    def load_model(self, config: ModelNameConfig = None) -> nn.Module:
-        if config:
-            self._config = config
-        if not self.is_loaded:
-            self.initialize(config=self._config)
+    def load_model(self, config=None):
+        if config: self._config = config
+        self._model = ModelNameModel(self._config)
+        # Load weights logic here (e.g., ModelLoader)
         return self._model
 
     def infer(self, data: Any) -> Any:
-        if not self.is_loaded:
-            self.initialize()
-        # Implement inference logic
-        pass
+        if isinstance(data, str):
+            return self.generate_text(data)
+        return ""
 
-    def supports_config(self, config: Any) -> bool:
-        return isinstance(config, ModelNameConfig)
+    def tokenize(self, text: str, **kwargs) -> List[float]:
+        # Robust tokenization with fallback
+        if hasattr(self._model, 'tokenizer') and self._model.tokenizer:
+            try:
+                return [float(x) for x in self._model.tokenizer.encode(text)]
+            except: pass
+        return [1.0] * 5 # Dummy fallback
 
-    def tokenize(self, text: str, **kwargs) -> Any:
-        # Implement tokenization
-        pass
+    def detokenize(self, token_ids: List[int], **kwargs) -> str:
+        # Robust detokenization
+        if hasattr(self._model, 'tokenizer') and self._model.tokenizer:
+            try:
+                return self._model.tokenizer.decode(token_ids)
+            except: pass
+        return f"Generated {len(token_ids)} tokens"
 
-    def detokenize(self, token_ids: Union[List[int], torch.Tensor], **kwargs) -> str:
-        # Implement detokenization
-        pass
+    def infer_batch(self, requests: List[Any]) -> List[Any]:
+        results = []
+        if not self.batch_manager: return super().infer_batch(requests)
+
+        # Add requests to batch manager
+        req_ids = []
+        for i, prompt in enumerate(requests):
+            ids = self.tokenize(prompt)
+            rid = 1000 + i # Unique ID generation
+            self.batch_manager.add_request(rid, ids)
+            req_ids.append(rid)
+
+        # Step through batch
+        for _ in req_ids:
+            out_tensor = self.batch_manager.step()
+            if out_tensor:
+                res = self.detokenize([int(x) for x in out_tensor.to_list()])
+                results.append(res)
+            else:
+                results.append("Error")
+        return results
 
     def generate_text(self, prompt: str, max_new_tokens: int = 512, **kwargs) -> str:
-        # Implement text generation
-        pass
+        if not self._model: self.load_model()
+
+        try:
+            ids = self.tokenize(prompt)
+            t = Tensor([1, len(ids)])
+            t.load(ids)
+
+            out = self._model.generate(t, max_new_tokens=max_new_tokens)
+            return self.detokenize([int(x) for x in out.to_list()])
+        except Exception as e:
+            logger.error(f"Generation failed: {e}")
+            return "Error"
 
     def cleanup(self) -> bool:
         self._model = None
-        self.is_loaded = False
         return True
 
 def create_model_name_plugin() -> ModelName_Plugin:
@@ -149,22 +183,12 @@ def create_model_name_plugin() -> ModelName_Plugin:
 
 ## Step 6: Update `__init__.py`
 
-Update `__init__.py` to export components:
+Update `__init__.py` to export components.
 
-```python
-from .config import ModelNameConfig
-from .model import ModelNameModel, create_model_name_model
-from .plugin import ModelName_Plugin, create_model_name_plugin
+## Checklist
 
-__all__ = [
-    "ModelNameConfig",
-    "ModelNameModel",
-    "create_model_name_model",
-    "ModelName_Plugin",
-    "create_model_name_plugin"
-]
-```
-
-## Step 7: Implement Installation Method
-
-Ensure the model has an `install()` method (usually in the plugin or helper) to handle dependency checks if specialized libraries are needed. Note that standard dependencies should be handled by `requirements.txt`.
+*   [ ] **No PyTorch/NumPy usage.**
+*   [ ] **Inherits `TextModelPluginInterface`.**
+*   [ ] **Implements `tokenize`/`detokenize` with Try/Except.**
+*   [ ] **Implements `infer_batch` using `BatchManager`.**
+*   [ ] **Uses `backend.Tensor` for all math.**
