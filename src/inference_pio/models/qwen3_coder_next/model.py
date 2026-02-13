@@ -65,7 +65,19 @@ class Qwen3CoderNextModel(Module):
             if self.scheduler:
                 self.scheduler.check_migration_policy(i, layer, self.layers)
 
+            # Explicit Pipeline Parallelism: Check device placement
+            # We assume layer.input_layernorm.weight represents the layer's device
+            target_device = layer.input_layernorm.weight.device
+            if hidden_states.device != target_device:
+                hidden_states = hidden_states.to(target_device)
+
             layer_past = past_key_values[i] if past_key_values is not None else None
+
+            # Ensure cache is on target device if using simple tuple cache
+            # If using Static KV Cache (Tensor), it should already be allocated on correct device by generate()
+            # But if it's dynamic, we might need to move it.
+            # Assuming generate() handles allocation correctly for now.
+
             hidden_states, pkv = layer(
                 hidden_states,
                 past_key_value=layer_past,

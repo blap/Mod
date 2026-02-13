@@ -43,6 +43,12 @@ class GLM47FlashModel(Module):
             if self.scheduler:
                 self.scheduler.check_migration_policy(i, layer, self.layers)
 
+            # Explicit Pipeline Parallelism (Sequential Model Sharding)
+            # Ensure input 'h' is on the same device as the layer weights.
+            target_device = layer.input_layernorm.weight.device
+            if h.device != target_device:
+                h = h.to(target_device)
+
             pkv = past_key_values[i] if past_key_values else None
             h = layer(h, past_key_value=pkv, use_cache=use_cache, cache_position=cache_position)
 
