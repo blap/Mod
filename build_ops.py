@@ -58,7 +58,6 @@ def compile_cuda():
     print("\n[Build] Compiling CUDA Backend...")
     src_dir = PLUGINS_DIR / "cuda" / "c_src"
     src = src_dir / "tensor_ops_cuda.cu"
-    fused_src = src_dir / "fused_ops.cu"
 
     if not src.exists():
         print(f"Skipping CUDA: {src} not found")
@@ -84,10 +83,8 @@ def compile_cuda():
         if os.name == "nt":
             nvcc_flags = ["-O3", "--shared", "-Xcompiler", "/LD"] + target["flags"]
 
-        # Compile both main ops and fused ops together
+        # Compile consolidated source
         sources = [str(src)]
-        if fused_src.exists():
-            sources.append(str(fused_src))
 
         print(f"Building {out_name}...")
         cmd = ["nvcc"] + sources + nvcc_flags + ["-o", str(out_path)]
