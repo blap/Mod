@@ -16,7 +16,11 @@
         } \
     } while (0)
 
-#define EXPORT
+#ifdef _WIN32
+#define EXPORT extern "C" __declspec(dllexport)
+#else
+#define EXPORT extern "C"
+#endif
 
 // Kernels
 __global__ void fill_kernel(float* data, float value, int size) {
