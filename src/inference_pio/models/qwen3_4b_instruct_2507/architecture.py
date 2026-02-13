@@ -12,6 +12,7 @@ class Qwen3RotaryEmbedding(Module):
         self.register_buffer("cos", self.cos)
         self.register_buffer("sin", self.sin)
 
+    # Note: forward is unused if Attention manages slicing directly, keeping for API compatibility if needed
     def forward(self, x, seq_len):
         start = [0, 0]
         shape = [seq_len, self.cos.shape[1]]
@@ -20,14 +21,12 @@ class Qwen3RotaryEmbedding(Module):
 class Qwen3MLP(Module):
     def __init__(self, config):
         super().__init__()
-        self.gate_proj = Linear(config.hidden_size, config.intermediate_size, bias=False)
-        self.up_proj = Linear(config.hidden_size, config.intermediate_size, bias=False)
+        self.gate_up_proj = Linear(config.hidden_size, config.intermediate_size * 2, bias=False)
         self.down_proj = Linear(config.intermediate_size, config.hidden_size, bias=False)
         
     def forward(self, x):
-        gate = self.gate_proj(x)
-        up = self.up_proj(x)
-        return self.down_proj(gate.swiglu(up))
+        fused = self.gate_up_proj(x)
+        return self.down_proj(fused.fused_swiglu())
 
 class Qwen3Attention(Module):
     def __init__(self, config):
@@ -39,7 +38,7 @@ class Qwen3Attention(Module):
         self.o_proj = Linear(config.hidden_size, config.hidden_size, bias=False)
         self.rotary_emb = Qwen3RotaryEmbedding(self.head_dim)
 
-    def forward(self, hidden_states, attention_mask=None, position_ids=None, past_key_value=None, use_cache=False):
+    def forward(self, hidden_states, attention_mask=None, position_ids=None, past_key_value=None, use_cache=False, cache_position=0):
         q = self.q_proj(hidden_states)
         k = self.k_proj(hidden_states)
         v = self.v_proj(hidden_states)
@@ -55,20 +54,24 @@ class Qwen3Attention(Module):
         v = v.reshape(new_shape)
 
         # RoPE with correct offset
-        past_len = past_key_value[0].shape[1] if past_key_value is not None else 0
-
-        start = [past_len, 0]
+        start = [cache_position, 0]
         shape = [S, self.rotary_emb.cos.shape[1]]
         cos = self.rotary_emb.cos.slice(start, shape)
         sin = self.rotary_emb.sin.slice(start, shape)
 
         q, k = q.rope(k, cos, sin)
 
-        if past_key_value is not None:
-            k = cat([past_key_value[0], k], axis=1)
-            v = cat([past_key_value[1], v], axis=1)
+        if use_cache and past_key_value is not None:
+             k_cache, v_cache = past_key_value
+             start_indices = [0, cache_position, 0, 0]
+             k_cache.set_slice(k, start_indices)
+             v_cache.set_slice(v, start_indices)
 
-        current_cache = (k, v) if use_cache else None
+             valid_len = cache_position + S
+             k = k_cache.slice([0,0,0,0], [B, valid_len, heads, self.head_dim])
+             v = v_cache.slice([0,0,0,0], [B, valid_len, heads, self.head_dim])
+
+        current_cache = past_key_value if use_cache else None
 
         out = scaled_dot_product_attention(q, k, v)
 
@@ -85,22 +88,37 @@ class Qwen3DecoderLayer(Module):
         self.input_layernorm = RMSNorm(config.hidden_size)
         self.post_attention_layernorm = RMSNorm(config.hidden_size)
 
-    def forward(self, hidden_states, attention_mask=None, position_ids=None, past_key_value=None, use_cache=False):
+    def forward(self, hidden_states, attention_mask=None, position_ids=None, past_key_value=None, use_cache=False, cache_position=0):
+        # Optimization: Fused Add-RMSNorm
         residual = hidden_states
         h = self.input_layernorm(hidden_states)
-        h, _, pkv = self.self_attn(h, attention_mask, position_ids, past_key_value, use_cache)
-        hidden_states = residual.add(h)
+        h, _, pkv = self.self_attn(h, attention_mask, position_ids, past_key_value, use_cache, cache_position)
 
-        residual = hidden_states
-        h = self.post_attention_layernorm(hidden_states)
-        h = self.mlp(h)
-        hidden_states = residual.add(h)
+        # Fuse 1: x = x + attn
+        # Note: Pre-norm, so residual = x_old.
+        # hidden_states (new) = x_old + h
+        # We need to norm this for the next block (MLP)
+
+        if hasattr(residual, 'fused_add_rms_norm'):
+            # x = x + h; y = norm(x)
+            # fused op updates x in-place (residual) and returns y
+            h_norm = residual.fused_add_rms_norm(h, self.post_attention_layernorm.weight, self.post_attention_layernorm.eps)
+            hidden_states = residual # updated
+        else:
+            hidden_states = residual.add(h)
+            h_norm = self.post_attention_layernorm(hidden_states)
+
+        mlp_out = self.mlp(h_norm)
+
+        # Final Add
+        hidden_states = hidden_states + mlp_out
 
         return hidden_states, pkv
 
 class Qwen3Model(Module):
     def __init__(self, config):
         super().__init__()
+        self.config = config
         self.embed_tokens = Embedding(config.vocab_size, config.hidden_size)
         self.layers = []
         for i in range(config.num_hidden_layers):
@@ -108,11 +126,15 @@ class Qwen3Model(Module):
              self.layers.append(l)
              self._modules[f"layer_{i}"] = l
         self.norm = RMSNorm(config.hidden_size)
+        self.scheduler = None
 
     def forward(self, input_ids, past_key_values=None, use_cache=None):
         h = self.embed_tokens(input_ids)
         next_cache = []
         for i, layer in enumerate(self.layers):
+            if self.scheduler:
+                self.scheduler.check_migration_policy(i, layer, self.layers)
+
             past = past_key_values[i] if past_key_values else None
             h, pkv = layer(h, past_key_value=past, use_cache=use_cache)
             if use_cache: next_cache.append(pkv)
@@ -147,14 +169,13 @@ class Qwen3ForCausalLM(Module):
             logits, pkv = self.forward(model_input, past_key_values=past_key_values, use_cache=True)
             past_key_values = pkv
 
-            next_token_ids = logits.argmax()
+            # Efficiently slice logits to get last token prediction only
+            # logits: [1, Seq, Vocab]
+            vocab_size = logits.shape[2]
+            last_token_logits = logits.slice([0, logits.shape[1]-1, 0], [1, 1, vocab_size])
 
-            if next_token_ids.shape[1] > 1:
-                 start = [0, next_token_ids.shape[1]-1]
-                 shape = [1, 1]
-                 next_token_tensor = next_token_ids.slice(start, shape)
-            else:
-                 next_token_tensor = next_token_ids
+            # Argmax returns [1, 1]
+            next_token_tensor = last_token_logits.argmax()
 
             current_ids = cat([current_ids, next_token_tensor], axis=1)
 

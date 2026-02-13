@@ -16,6 +16,8 @@ from typing import Any, Dict, List, Optional, Type, Union
 from ..common.interfaces.improved_base_plugin_interface import ModelPluginInterface
 from ..common.security.security_manager import ResourceLimits, SecurityLevel
 from ..core.engine.backend import HAS_CUDA
+from .base.gpu_interface import GPUHardwareInterface
+from ..common.hardware.hardware_analyzer import HardwareAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +28,94 @@ class PluginManager:
         self.plugin_paths: List[Path] = []
         self.security_enabled = True
 
+        # New Multi-Backend Registry
+        # Stores multiple active backend instances simultaneously
+        # Key: device_id (e.g., 'cuda:0', 'opencl:intel:0', 'cpu')
+        self.active_backends: Dict[str, Union[GPUHardwareInterface, Any]] = {}
+
+    def load_hardware_backends(self) -> int:
+        """
+        Detect hardware and load ALL appropriate self-contained plugins.
+        This enables heterogeneous compute (NVIDIA + Intel + AMD + CPU).
+        """
+        analyzer = HardwareAnalyzer()
+        info = analyzer.get_hardware_info()
+        gpu_list = info.get("gpu", [])
+
+        loaded_count = 0
+
+        # 1. Load CPU Backend (Always available)
+        self._load_cpu_backend(info.get("cpu", {}))
+
+        # 2. Load GPU Backends
+        for i, gpu_info in enumerate(gpu_list):
+            vendor = gpu_info.get("vendor", "unknown").lower()
+            model = gpu_info.get("name", "").lower()
+
+            logger.info(f"Detecting hardware backend for GPU {i}: {vendor} {model}")
+
+            backend_instance = None
+            device_key = f"gpu:{i}" # Temporary key, refined by backend type later
+
+            try:
+                if "nvidia" in vendor:
+                    if "10" in model or "gtx" in model:
+                        from .cuda.sm61.plugin import CUDASM61Plugin
+                        backend_instance = CUDASM61Plugin()
+                    else:
+                        from .cuda.base import CUDABasePlugin
+                        backend_instance = CUDABasePlugin()
+                    device_key = f"cuda:{i}"
+
+                elif "amd" in vendor or "advanced micro devices" in vendor:
+                    from .amd.base import AMDBasePlugin
+                    backend_instance = AMDBasePlugin()
+                    device_key = f"opencl:amd:{i}"
+
+                elif "intel" in vendor:
+                    from .intel.base import IntelBasePlugin
+                    backend_instance = IntelBasePlugin()
+                    device_key = f"opencl:intel:{i}"
+
+                if backend_instance and backend_instance.initialize():
+                    self.active_backends[device_key] = backend_instance
+                    logger.info(f"Loaded backend {device_key}: {backend_instance.get_device_info()}")
+                    loaded_count += 1
+
+            except Exception as e:
+                logger.error(f"Failed to load backend for {vendor} GPU {i}: {e}")
+
+        return loaded_count
+
+    def _load_cpu_backend(self, cpu_info):
+        vendor = cpu_info.get("vendor_id", "").lower()
+        model = cpu_info.get("brand_raw", "").lower()
+
+        import platform
+        if not vendor:
+            p = platform.processor().lower()
+            if "intel" in p: vendor = "intel"
+            elif "amd" in p: vendor = "amd"
+
+        backend = None
+        try:
+            if "intel" in vendor:
+                from .cpu.intel.base import IntelCPUBasePlugin
+                backend = IntelCPUBasePlugin()
+            elif "amd" in vendor:
+                from .cpu.amd.base import AMDCPUBasePlugin
+                backend = AMDCPUBasePlugin()
+            else:
+                # Generic fallback?
+                pass
+
+            if backend and backend.initialize():
+                self.active_backends["cpu"] = backend
+                logger.info("Loaded CPU Backend")
+        except Exception as e:
+            logger.error(f"Failed to load CPU backend: {e}")
+
+    # ... (Rest of the class methods remain largely unchanged, preserving existing logic) ...
     def register_plugin(self, plugin: ModelPluginInterface, name: Optional[str] = None) -> bool:
         try:
             plugin_name = name or plugin.metadata.name
@@ -116,7 +206,6 @@ class PluginManager:
             return None
         except Exception: return None
 
-    # ... (Other discovery methods simplified for brevity but functional logic retained) ...
     def discover_and_load_plugins(self, models_directory=None):
         if not models_directory:
             models_directory = Path(__file__).parent.parent / "models"
@@ -126,7 +215,6 @@ class PluginManager:
         count = 0
         for model_dir in models_directory.iterdir():
             if model_dir.is_dir():
-                # Scan subdirs if type dir
                 if model_dir.name in ["language", "vision_language", "coding", "specialized"]:
                     for sub in model_dir.iterdir():
                         if sub.is_dir(): count += self._load_model_from_directory(sub)

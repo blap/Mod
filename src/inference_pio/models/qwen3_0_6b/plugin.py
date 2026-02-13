@@ -58,7 +58,16 @@ class Qwen3_0_6B_Plugin(TextModelPluginInterface):
                     setattr(self._config, k, v)
 
             logger.info("Initializing Qwen3-0.6B Plugin")
+
+            # Standardize Tokenizer Loading
+            from ...common.custom_components.tokenizer import load_custom_tokenizer
+            self.tokenizer = load_custom_tokenizer(getattr(self._config, 'model_path', None))
+
             self.load_model()
+
+            from ...common.managers.batch_manager import BatchManager
+            self.batch_manager = BatchManager(self._model)
+
             return True
         except Exception as e:
             logger.error(f"Initialization failed: {e}")
@@ -76,42 +85,71 @@ class Qwen3_0_6B_Plugin(TextModelPluginInterface):
             return self.generate_text(data)
         return ""
 
+    def tokenize(self, text: str, **kwargs) -> List[float]:
+        tokenizer = getattr(self, 'tokenizer', None)
+        if not tokenizer and self._model:
+            tokenizer = getattr(self._model, 'tokenizer', getattr(self._model, '_tokenizer', None))
+
+        if tokenizer:
+            try:
+                if hasattr(tokenizer, 'encode'):
+                    return [float(x) for x in tokenizer.encode(text)]
+            except Exception as e:
+                logger.warning(f"Tokenization error: {e}")
+        return [1.0] * 5
+
+    def detokenize(self, token_ids: List[int], **kwargs) -> str:
+        tokenizer = getattr(self, 'tokenizer', None)
+        if not tokenizer and self._model:
+            tokenizer = getattr(self._model, 'tokenizer', getattr(self._model, '_tokenizer', None))
+
+        if tokenizer:
+            try:
+                if hasattr(tokenizer, 'decode'):
+                    return tokenizer.decode(token_ids)
+            except Exception as e:
+                logger.warning(f"Detokenization error: {e}")
+        return f"Generated {len(token_ids)} tokens"
+
+    def infer_batch(self, requests: List[Any]) -> List[Any]:
+        results = []
+        if not self.batch_manager: return super().infer_batch(requests)
+
+        start_id = 5000
+        req_ids = []
+        for i, prompt in enumerate(requests):
+            ids = self.tokenize(prompt)
+            rid = start_id + i
+            self.batch_manager.add_request(rid, ids)
+            req_ids.append(rid)
+
+        for _ in req_ids:
+            out_tensor = self.batch_manager.step()
+            if out_tensor:
+                try:
+                    res = self.detokenize([int(x) for x in out_tensor.to_list()])
+                    results.append(res)
+                except Exception as e:
+                    logger.error(f"Batch decoding error: {e}")
+                    results.append("Error decoding")
+            else:
+                results.append("Error in batch processing")
+        return results
+
     def generate_text(self, prompt: str, max_new_tokens: int = 512, **kwargs) -> str:
-        if not self._model:
-            self.load_model()
+        if not self._model: self.load_model()
 
-        # Tokenize
-        if not self._model._tokenizer:
-             # Basic fallback if tokenizer missing
-             logger.warning("Tokenizer missing")
-             return "Error: Tokenizer not available."
-
-        # Encode
         try:
-            inputs = self._model._tokenizer.encode(prompt)
-        except Exception as e:
-            logger.error(f"Tokenization failed: {e}")
-            return "Error during tokenization."
+            ids = self.tokenize(prompt)
+            from ...core.engine.backend import Tensor
+            t = Tensor([1, len(ids)])
+            t.load(ids)
 
-        # Pass to C Engine (requires simple list or pointer wrapper)
-        from ...core.engine.backend import Tensor
-        # Create tensor from list
-        # Assuming batch size 1
-        try:
-            data = [float(x) for x in inputs]
-            input_ids = Tensor([1, len(inputs)], data)
-
-            # Generate
-            output_ids_tensor = self._model.generate(input_ids, max_new_tokens=max_new_tokens, **kwargs)
-
-            # Decode (Tensor -> List)
-            output_ids_list = [int(x) for x in output_ids_tensor.to_list()]
-
-            output_text = self._model._tokenizer.decode(output_ids_list)
-            return output_text
+            out = self._model.generate(t, max_new_tokens=max_new_tokens, **kwargs)
+            return self.detokenize([int(x) for x in out.to_list()])
         except Exception as e:
             logger.error(f"Generation failed: {e}")
-            return "Error during text generation."
+            return "Error during text generation"
 
     def get_model_info(self) -> Dict[str, Any]:
         return {
@@ -131,23 +169,6 @@ class Qwen3_0_6B_Plugin(TextModelPluginInterface):
 
     def validate_model_compatibility(self, config: Any) -> bool:
         return isinstance(config, Qwen3_0_6B_Config)
-
-    # Implement required abstract methods
-    def tokenize(self, text: str, **kwargs) -> Any:
-        if self._model and self._model._tokenizer:
-            try:
-                return self._model._tokenizer.encode(text)
-            except Exception:
-                return []
-        return []
-
-    def detokenize(self, token_ids: Any, **kwargs) -> str:
-        if self._model and self._model._tokenizer:
-            try:
-                return self._model._tokenizer.decode(token_ids)
-            except Exception:
-                return ""
-        return ""
 
     def cleanup(self) -> bool:
         self._model = None

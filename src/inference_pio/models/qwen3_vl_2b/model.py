@@ -5,8 +5,7 @@ Qwen3-VL-2B Model Implementation - Self-Contained
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
-from ...core.engine.backend import Module, Tensor, Linear, Embedding, RMSNorm, Conv2d, precompute_freqs_cis, cat, GELU, scaled_dot_product_attention
-from ...common.custom_components.tokenizer import CustomBPETokenizer
+from ...core.engine.backend import Module, Tensor, Linear, Embedding, RMSNorm, precompute_freqs_cis, cat, GELU, scaled_dot_product_attention
 from .vision_transformer_kernels import Qwen3VL2BVisionEncoderKernel, VisionTransformerConfig
 
 logger = logging.getLogger(__name__)
@@ -76,8 +75,9 @@ class Qwen3VL2BModel(Module):
 
         self.norm = RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.lm_head = Linear(config.hidden_size, config.vocab_size, bias=False)
+        self.scheduler = None
 
-    def forward(self, input_ids: Tensor, pixel_values: Optional[Tensor] = None, past_key_values: Optional[List[Tuple[Tensor, Tensor]]] = None, use_cache: bool = False):
+    def forward(self, input_ids: Tensor, pixel_values: Optional[Tensor] = None, past_key_values: Optional[List[Tuple[Tensor, Tensor]]] = None, use_cache: bool = False, cache_position: int = 0):
         # Embed Text
         hidden_states = self.embed_tokens(input_ids)
 
@@ -93,41 +93,60 @@ class Qwen3VL2BModel(Module):
             # cat([vis, text], axis=1)
             hidden_states = cat([vis_projected, hidden_states], axis=1)
 
-        next_cache = [] if use_cache else None
+        if use_cache and past_key_values is None:
+            past_key_values = [None] * len(self.layers)
+
+        next_cache = past_key_values if use_cache else None
 
         for i, layer in enumerate(self.layers):
+            if self.scheduler:
+                self.scheduler.check_migration_policy(i, layer, self.layers)
+
             past = past_key_values[i] if past_key_values else None
-            hidden_states, pkv = layer(hidden_states, past_key_value=past, use_cache=use_cache)
-            if use_cache:
-                next_cache.append(pkv)
+            hidden_states, pkv = layer(hidden_states, past_key_value=past, use_cache=use_cache, cache_position=cache_position)
+            if use_cache and next_cache is not None:
+                next_cache[i] = pkv
 
         hidden_states = self.norm(hidden_states)
         return hidden_states, next_cache
 
     def generate(self, input_ids: Tensor, pixel_values: Optional[Tensor] = None, max_new_tokens: int = 10):
+        batch_size = input_ids.shape[0]
+        seq_len = input_ids.shape[1]
+        max_seq_len = seq_len + max_new_tokens
+
+        # Static KV Cache Pre-allocation
+        device = input_ids.device
+        head_dim = self.config.hidden_size // self.config.num_attention_heads
+        past_key_values = []
+        for _ in range(self.config.num_hidden_layers):
+             k_cache = Tensor([batch_size, max_seq_len, self.config.num_attention_heads, head_dim], device=device)
+             v_cache = Tensor([batch_size, max_seq_len, self.config.num_attention_heads, head_dim], device=device)
+             k_cache.fill(0.0)
+             v_cache.fill(0.0)
+             past_key_values.append((k_cache, v_cache))
+
         current_ids = input_ids
-        past_key_values = None
 
         # First step might involve vision
-        for _ in range(max_new_tokens):
-            if past_key_values:
-                # Slice input to last token
-                seq_len = current_ids.shape[1]
-                model_input = current_ids.slice([0, seq_len-1], [1, 1])
-                # Pixel values not needed for subsequent steps
-                step_pixels = None
-            else:
+        for step in range(max_new_tokens):
+            curr_seq_len = current_ids.shape[1]
+            if step == 0:
                 model_input = current_ids
-                step_pixels = pixel_values
+                cache_position = 0
+                step_pixels = pixel_values # Only used in first step for prefill
+            else:
+                model_input = current_ids.slice([0, curr_seq_len-1], [batch_size, 1])
+                cache_position = curr_seq_len - 1
+                step_pixels = None
 
-            h, pkv = self.forward(model_input, pixel_values=step_pixels, past_key_values=past_key_values, use_cache=True)
-            past_key_values = pkv
+            h, pkv = self.forward(model_input, pixel_values=step_pixels, past_key_values=past_key_values, use_cache=True, cache_position=cache_position)
+            past_key_values = pkv # Technically redundant as it's modified in place or same list
 
-            # Logits via lm_head (attached to model in this impl for convenience or need separate class)
             logits = self.lm_head(h)
 
-            # Greedy
-            next_token_logits = logits.slice([0, logits.shape[1]-1, 0], [1, 1, logits.shape[2]])
+            vocab_size = logits.shape[2]
+            next_token_logits = logits.slice([0, logits.shape[1]-1, 0], [batch_size, 1, vocab_size])
             next_token = next_token_logits.argmax()
 
             current_ids = cat([current_ids, next_token], axis=1)
@@ -142,9 +161,9 @@ class Qwen3VL2BDecoderLayer(Module):
         self.post_attention_layernorm = RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.mlp = Qwen3VL2BMLP(config)
 
-    def forward(self, x, past_key_value=None, use_cache=False):
+    def forward(self, x, past_key_value=None, use_cache=False, cache_position=0):
         h = self.input_layernorm(x)
-        h, pkv = self.self_attn(h, past_key_value=past_key_value, use_cache=use_cache)
+        h, pkv = self.self_attn(h, past_key_value=past_key_value, use_cache=use_cache, cache_position=cache_position)
         x = x + h
         h = self.post_attention_layernorm(x)
         h = self.mlp(h)
@@ -164,7 +183,7 @@ class Qwen3VL2BAttention(Module):
         self.sin = sin
         self.scale = self.head_dim ** -0.5
 
-    def forward(self, x, past_key_value=None, use_cache=False):
+    def forward(self, x, past_key_value=None, use_cache=False, cache_position=0):
         q = self.q_proj(x)
         k = self.k_proj(x)
         v = self.v_proj(x)
@@ -178,10 +197,7 @@ class Qwen3VL2BAttention(Module):
         v = v.reshape(new_shape)
 
         # RoPE
-        past_len = past_key_value[0].shape[1] if past_key_value is not None else 0
-        total_len = S + past_len
-
-        start = [past_len, 0]
+        start = [cache_position, 0]
         shape = [S, self.cos.shape[1]]
         c = self.cos.slice(start, shape)
         s = self.sin.slice(start, shape)
@@ -189,11 +205,17 @@ class Qwen3VL2BAttention(Module):
         q, k = q.rope(k, c, s)
 
         # Cache
-        if past_key_value is not None:
-            k = cat([past_key_value[0], k], axis=1)
-            v = cat([past_key_value[1], v], axis=1)
+        if use_cache and past_key_value is not None:
+             k_cache, v_cache = past_key_value
+             start_indices = [0, cache_position, 0, 0]
+             k_cache.set_slice(k, start_indices)
+             v_cache.set_slice(v, start_indices)
 
-        present_key_value = (k, v) if use_cache else None
+             valid_len = cache_position + S
+             k = k_cache.slice([0,0,0,0], [B, valid_len, self.num_heads, self.head_dim])
+             v = v_cache.slice([0,0,0,0], [B, valid_len, self.num_heads, self.head_dim])
+
+        present_key_value = past_key_value if use_cache else None
 
         out = scaled_dot_product_attention(q, k, v, scale=self.scale)
 
@@ -205,14 +227,12 @@ class Qwen3VL2BAttention(Module):
 class Qwen3VL2BMLP(Module):
     def __init__(self, config):
         super().__init__()
-        self.gate_proj = Linear(config.hidden_size, config.intermediate_size, bias=False)
-        self.up_proj = Linear(config.hidden_size, config.intermediate_size, bias=False)
+        self.gate_up_proj = Linear(config.hidden_size, config.intermediate_size * 2, bias=False)
         self.down_proj = Linear(config.intermediate_size, config.hidden_size, bias=False)
 
     def forward(self, x):
-        gate = self.gate_proj(x)
-        up = self.up_proj(x)
-        return self.down_proj(gate.swiglu(up))
+        fused = self.gate_up_proj(x)
+        return self.down_proj(fused.fused_swiglu())
 
 def create_qwen3_vl_2b_model(config): return Qwen3VL2BModel(config)
 __all__ = ["Qwen3VL2BModel", "create_qwen3_vl_2b_model"]

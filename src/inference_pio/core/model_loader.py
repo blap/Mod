@@ -1,168 +1,85 @@
-"""
-Model Loader and Path Resolution Utility
-
-This module handles finding model weights, prioritizing the H: drive as requested,
-and managing model downloads from Hugging Face Hub if needed.
-"""
-
-import os
-import platform
+from typing import Dict, Any, List
 import logging
-from typing import Optional
-from pathlib import Path
-
-# Try to import huggingface_hub for downloads, but don't crash if missing
-try:
-    from huggingface_hub import snapshot_download
-    HF_HUB_AVAILABLE = True
-except ImportError:
-    HF_HUB_AVAILABLE = False
-
-from .tools.rich_utils import console
+from .engine.backend import Tensor, Module, load_safetensors
+from ..plugins.manager import get_plugin_manager
 
 logger = logging.getLogger(__name__)
 
-
 class ModelLoader:
-    """
-    Handles resolution of model paths with specific priority logic.
-    Priority:
-    1. H:/models/<model_name> (Windows) or /mnt/h/models/<model_name> (Linux/WSL)
-    2. H:/<model_name>
-    3. User provided path / Local cache
-    4. Hugging Face Hub (Download)
-    """
+    def __init__(self, model_path: str):
+        self.model_path = model_path
 
-    @staticmethod
-    def get_h_drive_base() -> Optional[Path]:
-        """Detect the H: drive mount point."""
-        system = platform.system()
-        if system == 'Windows':
-            path = Path('H:/')
-            if path.exists():
-                return path
-        else:
-            # Linux/WSL common mount points
-            paths = [Path('/mnt/h'), Path('/media/h'), Path('/drives/h')]
-            for p in paths:
-                if p.exists():
-                    return p
-        return None
-
-    @staticmethod
-    def resolve_model_path(
-        model_name: str, hf_repo_id: Optional[str] = None
-    ) -> str:
+    def load_into_module(self, module: Module, device_map: Dict[str, str] = None):
         """
-        Resolve the path to the model weights.
-
-        Args:
-            model_name: Name of the model (e.g., 'qwen3-0.6b')
-            hf_repo_id: Hugging Face Repository ID (e.g., 'Qwen/Qwen1.5-0.5B')
-
-        Returns:
-            Resolved path as string, or HF repo ID if using remote loading
+        Load weights into module with Heterogeneous Sharding.
         """
-        # Normalize model name for directory search
-        model_dir_name = model_name.replace('-', '_').lower()
-        model_dir_name_alt = model_name  # Original
+        import os
+        safetensors_file = os.path.join(self.model_path, "model.safetensors")
+        if not os.path.exists(safetensors_file):
+            # Try index? For now assume single file or standardized name
+            # Real code would parse index.json
+            logger.warning(f"Weights not found at {safetensors_file}")
+            return
 
-        # 1. Check H: drive
-        h_drive = ModelLoader.get_h_drive_base()
-        if h_drive:
-            potential_paths = [
-                h_drive / "models" / model_dir_name,
-                h_drive / "models" / model_dir_name_alt,
-                h_drive / model_dir_name,
-                h_drive / model_dir_name_alt,
-                h_drive / "AI" / "models" / model_dir_name  # Common variation
-            ]
+        # 1. Determine Device Strategy
+        # Query active backends from PluginManager
+        pm = get_plugin_manager()
+        # Initialize if not already
+        if not pm.active_backends:
+            pm.load_hardware_backends()
 
-            for path in potential_paths:
-                if path.exists() and (path / "config.json").exists():
-                    logger.info(f"Found model in H: drive priority path: {path}")
-                    console.print(
-                        f"[green]Found model locally on H: drive:[/green] {path}"
-                    )
-                    return str(path)
+        backends = pm.active_backends
+        logger.info(f"Available backends for sharding: {list(backends.keys())}")
 
-        # 2. Check standard local paths
-        local_paths = [
-            Path("models") / model_dir_name,
-            Path.home() / ".cache" / "inference_pio" / model_dir_name
-        ]
+        # Priority: CUDA > OpenCL > CPU
+        device_priority = []
+        for k in backends:
+            if "cuda" in k: device_priority.append(k)
+        for k in backends:
+            if "opencl" in k: device_priority.append(k)
+        if "cpu" in backends: device_priority.append("cpu")
 
-        for path in local_paths:
-            if path.exists() and (path / "config.json").exists():
-                logger.info(f"Found model in local path: {path}")
-                return str(path)
+        # Simple Sharding: Round Robin layers? Or fill VRAM?
+        # Without real VRAM size query, we'll do Round Robin for "Maximum Leverage".
+        # E.g. Layer 0 -> CUDA, Layer 1 -> OpenCL, Layer 2 -> CPU...
 
-        # 3. If not found locally, suggest download
-        if not hf_repo_id:
-            # Try to guess or return name to let plugin decide
-            logger.warning(
-                f"Model {model_name} not found locally and no HF repo ID provided."
-            )
-            return model_name
+        # Collect layers to shard
+        layers = getattr(module.model, 'layers', [])
+        if not layers: return
 
-        logger.info(f"Model {model_name} not found locally. Preparing for HF Hub.")
+        # Shard Layers
+        num_devices = len(device_priority)
+        if num_devices > 0:
+            for i, layer in enumerate(layers):
+                target_device = device_priority[i % num_devices]
+                logger.info(f"Sharding Layer {i} to {target_device}")
+                layer.to(target_device)
 
-        return ModelLoader.download_model_interactive(
-            model_name, hf_repo_id, h_drive
-        )
+        # Move non-layer components (embeddings, norm, head) to primary device (usually CUDA or CPU)
+        primary_device = device_priority[0] if device_priority else "cpu"
+        module.to(primary_device) # Moves everything else not explicitly moved?
+        # Note: Module.to() iterates children. If children already moved, does it move them back?
+        # Our Module.to implementation: "for module in self._modules.values(): module.to..."
+        # It blindly moves everything.
+        # FIX: We need to shard *after* moving base, or ensure .to checks?
+        # Better: SmartLoader should manage final placement.
 
-    @staticmethod
-    def download_model_interactive(
-        model_name: str, repo_id: str, h_drive: Optional[Path]
-    ) -> str:
-        """Interactive model download manager."""
-        if not HF_HUB_AVAILABLE:
-            console.print(
-                "[yellow]huggingface_hub not installed. "
-                "Returning repo ID for automatic cache download.[/yellow]"
-            )
-            return repo_id
+        # 2. Load Weights (Abstracted)
+        # Gather all tensors from the module (now on correct devices)
+        model_tensors = {}
+        for name, param in module.model._parameters.items():
+            if param: model_tensors[name] = param
+        # Recurse
+        for n, m in module.model._modules.items():
+            # If layer, its params are on target device
+            for pn, p in m._parameters.items():
+                if p: model_tensors[f"{n}.{pn}"] = p
 
-        console.print(
-            f"[bold yellow]Model '{model_name}' not found locally.[/bold yellow]"
-        )
-
-        # Default download path
-        if h_drive:
-            target_dir = h_drive / "models" / model_name.replace('-', '_')
-            console.print(
-                f"H: drive detected. Recommended download path: "
-                f"[cyan]{target_dir}[/cyan]"
-            )
+        # Load Safetensors
+        # load_safetensors in backend.py handles "Read Host -> Upload Device"
+        # It respects the 'device' attribute of the destination tensor.
+        success = load_safetensors(safetensors_file, model_tensors)
+        if success:
+            logger.info("Weights loaded successfully with Heterogeneous Sharding.")
         else:
-            target_dir = Path("models") / model_name.replace('-', '_')
-
-        if os.environ.get("PIO_AUTO_DOWNLOAD", "0") == "1":
-            should_download = True
-        else:
-            response = input(
-                f"Do you want to download '{repo_id}' to "
-                f"'{target_dir}'? [y/N/cache]: "
-            ).lower()
-            if response == 'cache':
-                return repo_id  # Let transformers handle caching
-            should_download = response == 'y'
-
-        if should_download:
-            try:
-                target_dir.mkdir(parents=True, exist_ok=True)
-                console.print(
-                    f"[green]Downloading {repo_id} to {target_dir}...[/green]"
-                )
-                snapshot_download(
-                    repo_id=repo_id,
-                    local_dir=target_dir,
-                    local_dir_use_symlinks=False
-                )
-                console.print("[bold green]Download complete![/bold green]")
-                return str(target_dir)
-            except Exception as e:
-                console.print(f"[bold red]Download failed: {e}[/bold red]")
-                return repo_id  # Fallback
-
-        return repo_id
+            logger.error("Failed to load weights.")

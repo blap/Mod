@@ -37,7 +37,7 @@ class Qwen3VL2BConfig(BaseConfig):
     def __post_init__(self):
         if not self.model_path:
             self.model_path = get_default_model_path(self.model_name)
-        super().__post_init__()
+        # super().__post_init__()
 
 def create_qwen3_vl_2b_config(**kwargs):
     config = Qwen3VL2BConfig()

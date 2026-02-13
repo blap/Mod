@@ -40,3 +40,23 @@ class TextModelPluginInterface(ModelPluginInterface):
     def infer(self, data): raise NotImplementedError
     def generate_text(self, prompt, **kwargs): raise NotImplementedError
     def load_model(self, config=None): raise NotImplementedError
+
+    def tokenize(self, text: str, **kwargs) -> List[float]:
+        """Convert text to list of token IDs (floats)."""
+        raise NotImplementedError
+
+    def detokenize(self, token_ids: List[int], **kwargs) -> str:
+        """Convert list of token IDs back to text."""
+        raise NotImplementedError
+
+    # Optional Batching Interface
+    def infer_batch(self, requests: List[Any]) -> List[Any]:
+        """
+        Process a batch of requests.
+        Default implementation iterates serially.
+        Plugins can override this to use BatchManager if configured.
+        """
+        results = []
+        for req in requests:
+            results.append(self.generate_text(req))
+        return results

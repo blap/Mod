@@ -156,9 +156,43 @@ class CustomBPETokenizer:
     @property
     def vocab_size(self): return len(self.encoder)
 
-def load_custom_tokenizer(model_path: str) -> CustomBPETokenizer:
-    vocab_file = os.path.join(model_path, "vocab.json")
-    merges_file = os.path.join(model_path, "merges.txt")
-    if not os.path.exists(vocab_file): raise FileNotFoundError(f"Missing {vocab_file}")
-    if not os.path.exists(merges_file): raise FileNotFoundError(f"Missing {merges_file}")
-    return CustomBPETokenizer(vocab_file, merges_file)
+class SimpleTokenizer:
+    """
+    Fallback Tokenizer for when BPE files are missing.
+    Maps characters to IDs and splits by whitespace.
+    """
+    def __init__(self):
+        self.vocab = {chr(i): i for i in range(256)}
+        self.decoder = {i: chr(i) for i in range(256)}
+        self.unk_token = "<unk>"
+        self.unk_id = 0
+
+    def encode(self, text: str) -> List[int]:
+        # Simple char/byte encoding fallback
+        return [ord(c) % 256 for c in text]
+
+    def decode(self, tokens: List[int]) -> str:
+        return "".join([self.decoder.get(t, "?") for t in tokens])
+
+    def __call__(self, text: str, **kwargs):
+        return {"input_ids": self.encode(text)}
+
+    @property
+    def pad_token_id(self): return 0
+    @property
+    def eos_token_id(self): return 0
+    @property
+    def vocab_size(self): return 256
+
+def load_custom_tokenizer(model_path: Optional[str]) -> Union[CustomBPETokenizer, SimpleTokenizer]:
+    try:
+        if model_path:
+            vocab_file = os.path.join(model_path, "vocab.json")
+            merges_file = os.path.join(model_path, "merges.txt")
+            if os.path.exists(vocab_file) and os.path.exists(merges_file):
+                return CustomBPETokenizer(vocab_file, merges_file)
+    except Exception as e:
+        logger.warning(f"Failed to load custom BPE tokenizer from {model_path}: {e}")
+
+    logger.warning(f"Using SimpleTokenizer fallback for {model_path}")
+    return SimpleTokenizer()

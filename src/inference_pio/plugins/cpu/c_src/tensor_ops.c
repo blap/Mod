@@ -3,7 +3,15 @@
 #include <math.h>
 #include <string.h>
 #include <omp.h>
+#ifdef _WIN32
+#include <malloc.h>
+#define aligned_alloc(alignment, size) _aligned_malloc(size, alignment)
+#define aligned_free(ptr) _aligned_free(ptr)
+#else
 #include <mm_malloc.h>
+#define aligned_alloc(alignment, size) _mm_malloc(size, alignment)
+#define aligned_free(ptr) _mm_free(ptr)
+#endif
 #include "../../common/tensor.h"
 
 // Helper for tensor strides
@@ -14,7 +22,22 @@ void get_strides(const int* shape, int ndim, int* strides) {
     }
 }
 
-// Memory Management
+// Memory Management (Arena Allocator)
+static float* g_memory_pool = NULL;
+static size_t g_pool_size = 0;
+static size_t g_pool_offset = 0;
+
+void init_memory_pool(size_t size_bytes) {
+    if (g_memory_pool) aligned_free(g_memory_pool);
+    g_memory_pool = (float*)aligned_alloc(32, size_bytes);
+    g_pool_size = size_bytes;
+    g_pool_offset = 0;
+}
+
+void reset_memory_pool() {
+    g_pool_offset = 0;
+}
+
 Tensor* create_tensor(int* shape, int ndim, int device_id) {
     Tensor* t = (Tensor*)malloc(sizeof(Tensor));
     t->ndim = ndim;
@@ -25,14 +48,32 @@ Tensor* create_tensor(int* shape, int ndim, int device_id) {
         t->size *= shape[i];
     }
     t->device_id = device_id;
+
+    // Arena Allocation
+    size_t bytes = sizeof(float) * t->size;
+    if (g_memory_pool && device_id == -1) { // -1 for CPU
+        if (g_pool_offset + bytes <= g_pool_size) {
+            t->data = (float*)((char*)g_memory_pool + g_pool_offset);
+            g_pool_offset += bytes;
+            // Align offset to 32 bytes
+            size_t remainder = g_pool_offset % 32;
+            if (remainder != 0) g_pool_offset += (32 - remainder);
+            return t;
+        }
+    }
+
+    // Fallback or Device
     // Align to 32 bytes for AVX
-    t->data = (float*)_mm_malloc(sizeof(float) * t->size, 32);
+    t->data = (float*)aligned_alloc(32, bytes);
     return t;
 }
 
 void free_tensor(Tensor* t) {
     if(t) {
-        if(t->data) _mm_free(t->data);
+        // Only free if NOT in pool
+        if (!g_memory_pool || t->data < g_memory_pool || t->data >= g_memory_pool + g_pool_size/sizeof(float)) {
+             if(t->data) aligned_free(t->data);
+        }
         if(t->shape) free(t->shape);
         free(t);
     }
@@ -331,6 +372,29 @@ void tensor_permute(Tensor* input, Tensor* out, int* dims) {
     free(out_strides);
 }
 
+void tensor_set_slice(Tensor* dst, Tensor* src, int* start_indices) {
+    // Inverse of slice: copy src into dst at offsets
+    int ndim = dst->ndim;
+    int* dst_strides = (int*)malloc(sizeof(int) * ndim);
+    int* src_strides = (int*)malloc(sizeof(int) * ndim);
+    get_strides(dst->shape, ndim, dst_strides);
+    get_strides(src->shape, ndim, src_strides);
+
+    #pragma omp parallel for
+    for(int i=0; i<src->size; i++) {
+        int temp = i;
+        int dst_offset = 0;
+        for(int d=0; d<ndim; d++) {
+            int coord = temp / src_strides[d];
+            temp %= src_strides[d];
+            dst_offset += (start_indices[d] + coord) * dst_strides[d];
+        }
+        dst->data[dst_offset] = src->data[i];
+    }
+    free(dst_strides);
+    free(src_strides);
+}
+
 // Scaled Dot Product Attention (Fused)
 void tensor_scaled_dot_product_attention(Tensor* q, Tensor* k, Tensor* v, Tensor* out, float scale) {
     int batch = q->shape[0];
@@ -395,6 +459,28 @@ void tensor_swiglu(Tensor* gate, Tensor* up, Tensor* out) {
         float u = up->data[i];
         float silu_g = g * (1.0f / (1.0f + expf(-g)));
         out->data[i] = silu_g * u;
+    }
+}
+
+void tensor_fused_gate_up_swiglu(Tensor* gate_up, Tensor* out) {
+    // Input: [..., 2*Hidden]
+    // Output: [..., Hidden]
+    int hidden = out->shape[out->ndim-1];
+    int rows = out->size / hidden;
+    int input_stride = hidden * 2;
+
+    #pragma omp parallel for
+    for(int i=0; i<rows; i++) {
+        float* in_ptr = gate_up->data + i * input_stride;
+        float* out_ptr = out->data + i * hidden;
+
+        #pragma omp simd
+        for(int j=0; j<hidden; j++) {
+            float g = in_ptr[j]; // First half is gate (usually)
+            float u = in_ptr[j + hidden]; // Second half is up
+            float silu_g = g * (1.0f / (1.0f + expf(-g)));
+            out_ptr[j] = silu_g * u;
+        }
     }
 }
 
