@@ -98,6 +98,10 @@ static PTR_clEnqueueCopyBuffer p_clEnqueueCopyBuffer = NULL;
 static PTR_clGetProgramInfo p_clGetProgramInfo = NULL;
 static PTR_clCreateProgramWithBinary p_clCreateProgramWithBinary = NULL;
 static PTR_clReleaseProgram p_clReleaseProgram = NULL;
+static PTR_clWaitForEvents p_clWaitForEvents = NULL;
+static PTR_clReleaseEvent p_clReleaseEvent = NULL;
+static PTR_clGetEventProfilingInfo p_clGetEventProfilingInfo = NULL;
+static PTR_clEnqueueFillBuffer p_clEnqueueFillBuffer = NULL;
 
 // --- 2. Kernel Source Code ---
 
@@ -927,6 +931,10 @@ int init_opencl() {
     LOAD_SYM(clGetProgramInfo);
     LOAD_SYM(clCreateProgramWithBinary);
     LOAD_SYM(clReleaseProgram);
+    LOAD_SYM(clWaitForEvents);
+    LOAD_SYM(clReleaseEvent);
+    LOAD_SYM(clGetEventProfilingInfo);
+    LOAD_SYM(clEnqueueFillBuffer);
 
     // 3. Select Platform
     cl_uint num_platforms = 0;
@@ -971,7 +979,8 @@ int init_opencl() {
     // For simplicity assuming 1.2+ is fine with basic CreateCommandQueue (deprecated in 2.0 but still works often, or use WithProperties)
     // Actually clCreateCommandQueue is deprecated in 2.0, should use clCreateCommandQueueWithProperties.
     // But dlsym loading usually maps to the available one. Let's try basic.
-    g_queue = p_clCreateCommandQueue(g_ctx, device, 0, &err);
+    // Enable Profiling for benchmarking
+    g_queue = p_clCreateCommandQueue(g_ctx, device, CL_QUEUE_PROFILING_ENABLE, &err);
     if (err != CL_SUCCESS) {
          // Try finding WithProperties if this failed? For now assume 1.2 compat.
          printf("[OpenCL] Failed to create queue: %d\n", err);
@@ -1860,10 +1869,90 @@ EXPORT void tensor_copy_offset(Tensor* src, int src_offset, Tensor* dst, int dst
 
 // Exports for benchmarking and tuning (matching CUDA backend)
 EXPORT void tensor_benchmark_matmul(int M, int N, int K, int trials, double* out_time_ms) {
-    // Basic OpenCL benchmarking
-    if (!g_queue) return;
-    // ... setup events ...
-    *out_time_ms = 0.0; // Placeholder
+    if (!g_queue || !k_matmul) return;
+
+    // 1. Allocate Temp Buffers
+    cl_int err;
+    size_t size_A = M * K * sizeof(float);
+    size_t size_B = K * N * sizeof(float);
+    size_t size_C = M * N * sizeof(float);
+
+    cl_mem d_A = p_clCreateBuffer(g_ctx, CL_MEM_READ_WRITE, size_A, NULL, &err);
+    cl_mem d_B = p_clCreateBuffer(g_ctx, CL_MEM_READ_WRITE, size_B, NULL, &err);
+    cl_mem d_C = p_clCreateBuffer(g_ctx, CL_MEM_READ_WRITE, size_C, NULL, &err);
+
+    if (err != CL_SUCCESS) {
+        if(d_A) p_clReleaseMemObject(d_A);
+        if(d_B) p_clReleaseMemObject(d_B);
+        if(d_C) p_clReleaseMemObject(d_C);
+        return;
+    }
+
+    // Initialize (optional, but good for stability)
+    float zero = 0.0f;
+    // Use fill kernel instead of clEnqueueFillBuffer (OpenCL 1.2+) for compatibility and to avoid linking issues
+    if (k_fill) {
+        p_clSetKernelArg(k_fill, 0, sizeof(cl_mem), &d_C);
+        p_clSetKernelArg(k_fill, 1, sizeof(float), &zero);
+        size_t fill_work = M * N; // Elements
+        p_clEnqueueNDRangeKernel(g_queue, k_fill, 1, NULL, &fill_work, NULL, 0, NULL, NULL);
+    }
+
+    // Warmup
+    for(int i=0; i<3; i++) {
+        p_clSetKernelArg(k_matmul, 0, sizeof(int), &M);
+        p_clSetKernelArg(k_matmul, 1, sizeof(int), &N);
+        p_clSetKernelArg(k_matmul, 2, sizeof(int), &K);
+        p_clSetKernelArg(k_matmul, 3, sizeof(cl_mem), &d_A);
+        p_clSetKernelArg(k_matmul, 4, sizeof(cl_mem), &d_B);
+        p_clSetKernelArg(k_matmul, 5, sizeof(cl_mem), &d_C);
+
+        size_t local_work[2] = {32, 32};
+        size_t global_work[2] = {
+            (size_t)ceil((double)N / 32.0) * 32,
+            (size_t)ceil((double)M / 32.0) * 32
+        };
+        p_clEnqueueNDRangeKernel(g_queue, k_matmul, 2, NULL, global_work, local_work, 0, NULL, NULL);
+    }
+    p_clFinish(g_queue);
+
+    // Measurement
+    double total_ms = 0.0;
+
+    for(int i=0; i<trials; i++) {
+        cl_event event;
+        // Same kernel launch logic as tensor_matmul
+        p_clSetKernelArg(k_matmul, 0, sizeof(int), &M);
+        p_clSetKernelArg(k_matmul, 1, sizeof(int), &N);
+        p_clSetKernelArg(k_matmul, 2, sizeof(int), &K);
+        p_clSetKernelArg(k_matmul, 3, sizeof(cl_mem), &d_A);
+        p_clSetKernelArg(k_matmul, 4, sizeof(cl_mem), &d_B);
+        p_clSetKernelArg(k_matmul, 5, sizeof(cl_mem), &d_C);
+
+        size_t local_work[2] = {32, 32};
+        size_t global_work[2] = {
+            (size_t)ceil((double)N / 32.0) * 32,
+            (size_t)ceil((double)M / 32.0) * 32
+        };
+
+        p_clEnqueueNDRangeKernel(g_queue, k_matmul, 2, NULL, global_work, local_work, 0, NULL, &event);
+        p_clWaitForEvents(1, &event);
+
+        cl_ulong start = 0, end = 0;
+        p_clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start, NULL);
+        p_clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end, NULL);
+
+        double ms = (double)(end - start) * 1e-6;
+        total_ms += ms;
+
+        p_clReleaseEvent(event);
+    }
+
+    *out_time_ms = total_ms / trials;
+
+    p_clReleaseMemObject(d_A);
+    p_clReleaseMemObject(d_B);
+    p_clReleaseMemObject(d_C);
 }
 
 EXPORT void tensor_set_tuning_param(int param_id, int value) {

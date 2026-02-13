@@ -29,6 +29,12 @@ typedef struct _cl_sampler *        cl_sampler;
 #define CL_MEM_ALLOC_HOST_PTR                       (1 << 4)
 #define CL_MEM_COPY_HOST_PTR                        (1 << 5)
 
+#define CL_QUEUE_PROFILING_ENABLE                   (1 << 1)
+#define CL_PROFILING_COMMAND_QUEUED                 0x1280
+#define CL_PROFILING_COMMAND_SUBMIT                 0x1281
+#define CL_PROFILING_COMMAND_START                  0x1282
+#define CL_PROFILING_COMMAND_END                    0x1283
+
 #define CL_TRUE                                     1
 #define CL_FALSE                                    0
 
@@ -56,5 +62,9 @@ typedef cl_int (*PTR_clGetProgramBuildInfo)(cl_program, cl_device_id, cl_uint, s
 typedef cl_int (*PTR_clEnqueueCopyBuffer)(cl_command_queue, cl_mem, cl_mem, size_t, size_t, size_t, cl_uint, const cl_event*, cl_event*);
 typedef cl_int (*PTR_clGetProgramInfo)(cl_program, cl_uint, size_t, void*, size_t*);
 typedef cl_program (*PTR_clCreateProgramWithBinary)(cl_context, cl_uint, const cl_device_id*, const size_t*, const unsigned char**, cl_int*, cl_int*);
+typedef cl_int (*PTR_clWaitForEvents)(cl_uint, const cl_event*);
+typedef cl_int (*PTR_clReleaseEvent)(cl_event);
+typedef cl_int (*PTR_clGetEventProfilingInfo)(cl_event, cl_uint, size_t, void*, size_t*);
+typedef cl_int (*PTR_clEnqueueFillBuffer)(cl_command_queue, cl_mem, const void*, size_t, size_t, size_t, cl_uint, const cl_event*, cl_event*);
 
 #endif // CL_MINIMAL_H
