@@ -5,12 +5,9 @@
   "description": "Qwen3-VL-2B-Instruct specialized multimodal model with advanced vision-language capabilities, optimized for image understanding, text generation, and multimodal tasks",
   "plugin_type": "MODEL_COMPONENT",
   "dependencies": [
-    "torch",
-    "pillow",
-    "numpy"
+    "pillow"
   ],
   "compatibility": {
-    "torch_version": ">=2.0.0",
     "python_version": ">=3.8",
     "min_memory_gb": 6.0
   },
