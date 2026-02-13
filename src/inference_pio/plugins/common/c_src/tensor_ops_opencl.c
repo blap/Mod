@@ -63,6 +63,7 @@ static cl_kernel k_scatter_add_by_index = NULL;
 static cl_kernel k_deltanet_recurrence = NULL;
 static cl_kernel k_conv2d = NULL;
 static cl_kernel k_dequantize = NULL;
+static cl_kernel k_fused_add_rms_norm = NULL;
 
 // Function Pointers
 static PTR_clGetPlatformIDs p_clGetPlatformIDs = NULL;
@@ -740,6 +741,23 @@ const char* KERNEL_SOURCE =
 "    // Simple case: Tensor scale.\n"
 "    float s = scale[0]; \n"
 "    out[idx] = (float)input[idx] * s;\n"
+"}\n"
+"__kernel void fused_add_rms_norm(__global float* x, __global const float* residual, \n"
+"                                 __global const float* weight, __global float* out, \n"
+"                                 float eps, int size) {\n"
+"    int row = get_global_id(0);\n"
+"    int offset = row * size;\n"
+"    \n"
+"    float sum_sq = 0.0f;\n"
+"    for(int i=0; i<size; i++) {\n"
+"        float val = x[offset + i] + residual[offset + i];\n"
+"        x[offset + i] = val; // In-place update\n"
+"        sum_sq += val * val;\n"
+"    }\n"
+"    float scale = rsqrt(sum_sq / size + eps);\n"
+"    for(int i=0; i<size; i++) {\n"
+"        out[offset + i] = x[offset + i] * scale * weight[i];\n"
+"    }\n"
 "}\n";
 
 // --- 3. Helper Functions ---
@@ -884,6 +902,7 @@ int init_opencl() {
     k_deltanet_recurrence = p_clCreateKernel(g_program, "deltanet_recurrence", &err); // Placeholder logic
     k_conv2d = p_clCreateKernel(g_program, "conv2d_naive", &err);
     k_dequantize = p_clCreateKernel(g_program, "dequantize", &err);
+    k_fused_add_rms_norm = p_clCreateKernel(g_program, "fused_add_rms_norm", &err);
 
     return 1;
 }
@@ -1539,3 +1558,35 @@ void tensor_deltanet_recurrence(Tensor* q, Tensor* k, Tensor* v, Tensor* beta, T
     // Real implementation requires maintaining state layout and scan.
     if (!k_deltanet_recurrence) return;
 }
+
+void tensor_fused_add_rms_norm(Tensor* x, Tensor* residual, Tensor* weight, Tensor* out, float eps) {
+    if (!k_fused_add_rms_norm) return;
+    int hidden = x->shape[x->ndim - 1];
+    int rows = x->size / hidden;
+
+    p_clSetKernelArg(k_fused_add_rms_norm, 0, sizeof(cl_mem), &x->data);
+    p_clSetKernelArg(k_fused_add_rms_norm, 1, sizeof(cl_mem), &residual->data);
+    p_clSetKernelArg(k_fused_add_rms_norm, 2, sizeof(cl_mem), &weight->data);
+    p_clSetKernelArg(k_fused_add_rms_norm, 3, sizeof(cl_mem), &out->data);
+    p_clSetKernelArg(k_fused_add_rms_norm, 4, sizeof(float), &eps);
+    p_clSetKernelArg(k_fused_add_rms_norm, 5, sizeof(int), &hidden);
+
+    size_t work = rows;
+    p_clEnqueueNDRangeKernel(g_queue, k_fused_add_rms_norm, 1, NULL, &work, NULL, 0, NULL, NULL);
+}
+
+// Exports for benchmarking and tuning (matching CUDA backend)
+void tensor_benchmark_matmul(int M, int N, int K, int trials, double* out_time_ms) {
+    // Basic OpenCL benchmarking
+    if (!g_queue) return;
+    // ... setup events ...
+    *out_time_ms = 0.0; // Placeholder
+}
+
+void tensor_set_tuning_param(int param_id, int value) {
+    // Placeholder
+}
+
+void begin_capture() {}
+void end_capture() {}
+void replay_graph() {}
