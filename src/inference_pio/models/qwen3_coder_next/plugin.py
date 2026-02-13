@@ -44,6 +44,11 @@ class Qwen3CoderNextPlugin(TextModelPluginInterface):
     def initialize(self, **kwargs: Any) -> bool:
         logger.info("Initializing Qwen3-Coder-Next Plugin...")
         self.config = create_qwen3_coder_next_config(**kwargs)
+
+        # Standardize Tokenizer Loading
+        from ...common.custom_components.tokenizer import load_custom_tokenizer
+        self.tokenizer = load_custom_tokenizer(getattr(self.config, 'model_path', None))
+
         self.load_model()
 
         # Initialize Batch Manager

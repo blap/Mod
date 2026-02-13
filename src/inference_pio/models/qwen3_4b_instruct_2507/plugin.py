@@ -58,6 +58,11 @@ class Qwen3_4B_Instruct_2507_Plugin(TextModelPluginInterface):
                     setattr(self._config, k, v)
 
             logger.info("Initializing Qwen3-4B-Instruct-2507 Plugin")
+
+            # Standardize Tokenizer Loading
+            from ...common.custom_components.tokenizer import load_custom_tokenizer
+            self.tokenizer = load_custom_tokenizer(getattr(self._config, 'model_path', None))
+
             self.load_model()
 
             from ...common.managers.batch_manager import BatchManager

@@ -35,6 +35,11 @@ class GLM_4_7_Flash_Plugin(TextModelPluginInterface):
     def initialize(self, **kwargs) -> bool:
         for k, v in kwargs.items():
             if hasattr(self._config, k): setattr(self._config, k, v)
+
+        # Standardize Tokenizer Loading
+        from ...common.custom_components.tokenizer import load_custom_tokenizer
+        self.tokenizer = load_custom_tokenizer(getattr(self._config, 'model_path', None))
+
         self.load_model()
 
         from ...common.managers.batch_manager import BatchManager

@@ -32,6 +32,11 @@ class Qwen3_Coder_30B_Plugin(TextModelPluginInterface):
         logger.info("Initializing Qwen3-Coder-30B Plugin...")
         for k, v in kwargs.items():
             if hasattr(self._config, k): setattr(self._config, k, v)
+
+        # Standardize Tokenizer Loading
+        from ...common.custom_components.tokenizer import load_custom_tokenizer
+        self.tokenizer = load_custom_tokenizer(getattr(self._config, 'model_path', None))
+
         self.load_model()
 
         from ...common.managers.batch_manager import BatchManager
