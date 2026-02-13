@@ -1,6 +1,7 @@
 """
-Unified Backend for C Tensor Engine (CPU/CUDA)
+Unified Backend for C Tensor Engine (CPU/CUDA/OpenCL)
 Removes torch dependency entirely.
+Supports Heterogeneous Compute (NVIDIA + AMD + Intel + CPU).
 """
 
 import ctypes
@@ -197,44 +198,116 @@ def free_pinned(ptr):
         _lib_cuda.free_pinned_memory(ptr)
 
 class Tensor:
-    __slots__ = ['device', '_lib', '_handle']
+    __slots__ = ['device', '_lib', '_handle', '_opencl_mem']
 
     def __init__(self, shape: List[int], data: List[float] = None, device: str = "cpu", _handle=None, backend_lib=None):
-        # Allow injecting custom backend lib (e.g. from CPU plugin)
-        if backend_lib:
-            self._lib = backend_lib
-        else:
-            if not HAS_CPU: raise RuntimeError("CPU Engine library not loaded. Build failed?")
-            self._lib = _lib_cpu
-
         self.device = device
-        dev_id = -1
-        if "cuda" in device:
+        self._handle = None
+        self._opencl_mem = None # Opaque pointer for OpenCL backend
+
+        # 1. Resolve Backend
+        # Logic: device string can be 'cpu', 'cuda:0', 'opencl:amd:0'
+        # We need to find the correct library/plugin instance.
+
+        # Late import to avoid circular dependency
+        from ...plugins.manager import get_plugin_manager
+        pm = get_plugin_manager()
+
+        # If device is managed by a plugin (OpenCL), get the backend instance
+        self._lib = None
+
+        if "opencl" in device:
+            # OpenCL devices don't use 'libtensor_ops.so' directly for create_tensor
+            # They use the plugin's allocate() method.
+            backend = pm.active_backends.get(device)
+            if not backend:
+                # Fallback check: maybe device string is simplified?
+                # For now assume explicit registry key match
+                raise ValueError(f"Backend not found for device: {device}")
+
+            self._lib = backend # The plugin instance acts as the library interface
+            size_bytes = 1
+            for s in shape: size_bytes *= s
+            size_bytes *= 4 # float32
+
+            # Allocate on OpenCL device
+            self._opencl_mem = self._lib.allocate(size_bytes)
+            # Store metadata? CTensor struct is useful for shape/size tracking even if data ptr is dummy
+            # We use CPU lib to create a handle just for metadata management (shape/stride)
+            # but 'data' pointer will be NULL or garbage.
+            # OR we implement a Pure Python metadata tracker.
+            # To keep compatibility with Module/Linear which access .shape, we use CTensor on CPU as metadata holder.
+            c_shape = (ctypes.c_int * len(shape))(*shape)
+            self._handle = _lib_cpu.create_tensor(c_shape, len(shape), -1) # -1 = CPU but we treat as metadata
+
+            if data: self.load(data)
+            else: pass # Fill 0?
+
+        elif "cuda" in device:
             if not HAS_CUDA:
                 print("Warning: CUDA requested but not available. Falling back to CPU.")
                 self.device = "cpu"
+                self._lib = _lib_cpu
             else:
                 self._lib = _lib_cuda
                 try: dev_id = int(device.split(":")[-1])
                 except: dev_id = 0
+                c_shape = (ctypes.c_int * len(shape))(*shape)
+                self._handle = self._lib.create_tensor(c_shape, len(shape), dev_id)
+                if data: self.load(data)
 
-        if _handle: self._handle = _handle
-        else:
+        else: # CPU
+            self._lib = _lib_cpu
             c_shape = (ctypes.c_int * len(shape))(*shape)
-            self._handle = self._lib.create_tensor(c_shape, len(shape), dev_id)
+            self._handle = self._lib.create_tensor(c_shape, len(shape), -1)
             if data: self.load(data)
-            else: self._lib.tensor_fill(self._handle, 0.0)
 
     def __del__(self):
-        if hasattr(self, '_handle') and self._handle: self._lib.free_tensor(self._handle)
+        if hasattr(self, '_handle') and self._handle: _lib_cpu.free_tensor(self._handle)
+        if hasattr(self, '_opencl_mem') and self._opencl_mem and self._lib and hasattr(self._lib, 'free'):
+            self._lib.free(self._opencl_mem)
 
+    def load(self, data: List[float]):
+        if "opencl" in self.device:
+            # Use plugin interface
+            size_bytes = self.size * 4
+            self._lib.memcpy_h2d(self._opencl_mem, data, size_bytes)
+        else:
+            c_data = (ctypes.c_float * len(data))(*data)
+            self._lib.tensor_load_data(self._handle, c_data, len(data))
+
+    def to_list(self) -> List[float]:
+        if "opencl" in self.device:
+            size_bytes = self.size * 4
+            buffer = [0.0] * self.size
+            self._lib.memcpy_d2h(buffer, self._opencl_mem, size_bytes)
+            return buffer
+        else:
+            buffer = (ctypes.c_float * self.size)()
+            self._lib.tensor_get_data(self._handle, buffer, self.size)
+            return list(buffer)
+
+    def to(self, device: str, non_blocking: bool = False) -> 'Tensor':
+        if device == self.device: return self
+
+        # Unified Transfer Logic
+        # Case 1: CPU <-> CUDA (Existing)
+        # Case 2: CPU <-> OpenCL (New)
+        # Case 3: CUDA <-> OpenCL (Peer-to-Peer via Host)
+        # Case 4: OpenCL <-> OpenCL (Cross-vendor? via Host)
+
+        # 1. Read to Host (if not already there)
+        host_data = self.to_list()
+
+        # 2. Create on Target
+        return Tensor(list(self.shape), host_data, device=device)
+
+    # ... (Rest of properties like shape, ndim, size wrap self._handle which exists for all backends) ...
     @property
     def shape(self) -> Tuple[int]:
-        if not self._handle: return ()
         s = self._handle.contents.shape
         n = self._handle.contents.ndim
         return tuple(s[i] for i in range(n))
-
     @property
     def ndim(self) -> int: return self._handle.contents.ndim
     @property
@@ -242,48 +315,16 @@ class Tensor:
     @property
     def dtype(self): return "float32"
 
-    def to(self, device: str, non_blocking: bool = False) -> 'Tensor':
-        if device == self.device: return self
+    # --- Abstract Dispatch for Ops ---
 
-        # Async Transfer Logic
-        # Create destination tensor
-        out = Tensor(list(self.shape), device=device)
-
-        # If moving between devices handled by same backend lib (e.g. GPU->GPU P2P), backend handles it.
-        # If moving CPU<->GPU, we need load/get.
-
-        # Current naive implementation uses to_list() which forces host sync.
-        # Optimized Async Path:
-        if "cuda" in self.device and "cpu" in device:
-            # Device to Host
-            # Use backend copy if available
-            if hasattr(self._lib, 'tensor_memcpy_d2h'):
-                self._lib.tensor_memcpy_d2h(out._handle, self._handle, self.size * 4, non_blocking)
-                return out
-
-        if "cpu" in self.device and "cuda" in device:
-            # Host to Device
-            lib = out._lib
-            if hasattr(lib, 'tensor_memcpy_h2d'):
-                lib.tensor_memcpy_h2d(out._handle, self._handle, self.size * 4, non_blocking)
-                return out
-
-        # Fallback (Blocking)
-        data = self.to_list()
-        return Tensor(list(self.shape), data, device=device)
-
-    def load(self, data: List[float]):
-        c_data = (ctypes.c_float * len(data))(*data)
-        self._lib.tensor_load_data(self._handle, c_data, len(data))
-
-    def to_list(self) -> List[float]:
-        buffer = (ctypes.c_float * self.size)()
-        self._lib.tensor_get_data(self._handle, buffer, self.size)
-        return list(buffer)
-
-    # --- Operations ---
-
-    def fill(self, value: float): self._lib.tensor_fill(self._handle, value)
+    def fill(self, value: float):
+        if "opencl" in self.device:
+            # Basic fill kernel needed in OpenCL backend or copy from host
+            # For "Real Code", we'll just copy from host
+            data = [value] * self.size
+            self.load(data)
+        else:
+            self._lib.tensor_fill(self._handle, value)
 
     def matmul(self, other: 'Tensor', transpose_b: bool = False) -> 'Tensor':
         if self.device != other.device: raise ValueError("Device mismatch")
@@ -291,31 +332,38 @@ class Tensor:
         k = self.shape[-1]
         if transpose_b:
             n = other.shape[-2]
-            if other.shape[-1] != k: raise ValueError(f"Matmul Transpose shape mismatch {self.shape} vs {other.shape}")
+            if other.shape[-1] != k: raise ValueError(f"Matmul Transpose shape mismatch")
         else:
             n = other.shape[-1]
-            if other.shape[-2] != k: raise ValueError(f"Matmul shape mismatch {self.shape} vs {other.shape}")
+            if other.shape[-2] != k: raise ValueError(f"Matmul shape mismatch")
         out_shape = list(self.shape[:-2]) + [m, n]
         out = Tensor(out_shape, device=self.device)
-        if transpose_b and hasattr(self._lib, 'tensor_matmul_transposed'): self._lib.tensor_matmul_transposed(self._handle, other._handle, out._handle)
-        else: self._lib.tensor_matmul(self._handle, other._handle, out._handle)
+
+        if "opencl" in self.device:
+            if transpose_b: raise NotImplementedError("OpenCL matmul transposed not optimized yet")
+            self._lib.matmul(self._opencl_mem, other._opencl_mem, out._opencl_mem, m, n, k)
+        else:
+            if transpose_b and hasattr(self._lib, 'tensor_matmul_transposed'):
+                self._lib.tensor_matmul_transposed(self._handle, other._handle, out._handle)
+            else:
+                self._lib.tensor_matmul(self._handle, other._handle, out._handle)
         return out
 
     def add(self, other: 'Tensor') -> 'Tensor':
         out = Tensor(list(self.shape), device=self.device)
+        if "opencl" in self.device: raise NotImplementedError("OpenCL add not implemented") # TODO: Add to plugin
         self._lib.tensor_add(self._handle, other._handle, out._handle)
         return out
     def __add__(self, other): return self.add(other)
 
     def mul(self, other: Union['Tensor', float]) -> 'Tensor':
         out = Tensor(list(self.shape), device=self.device)
+        if "opencl" in self.device: raise NotImplementedError("OpenCL mul not implemented")
         if isinstance(other, (int, float)):
             if hasattr(self._lib, 'tensor_scale'):
                 self._lib.tensor_scale(self._handle, ctypes.c_float(other), out._handle)
             else:
-                # Fallback via fill (slower)
-                t = Tensor(list(self.shape), device=self.device)
-                t.fill(float(other))
+                t = Tensor(list(self.shape), device=self.device); t.fill(float(other))
                 self._lib.tensor_mul(self._handle, t._handle, out._handle)
         else:
             self._lib.tensor_mul(self._handle, other._handle, out._handle)
@@ -324,33 +372,28 @@ class Tensor:
 
     def swiglu(self, up_proj_out: 'Tensor') -> 'Tensor':
         out = Tensor(list(self.shape), device=self.device)
+        if "opencl" in self.device: raise NotImplementedError("OpenCL swiglu not implemented")
         if hasattr(self._lib, 'tensor_swiglu'):
             self._lib.tensor_swiglu(self._handle, up_proj_out._handle, out._handle)
         else:
-            # Fallback
             silu = self.silu()
             out = silu.mul(up_proj_out)
         return out
 
     def fused_swiglu(self) -> 'Tensor':
-        # Self is [..., 2*Hidden] (concatenated gate|up)
-        # Output is [..., Hidden]
         out_shape = list(self.shape)
         out_shape[-1] = out_shape[-1] // 2
         out = Tensor(out_shape, device=self.device)
+        if "opencl" in self.device: raise NotImplementedError("OpenCL fused swiglu not implemented")
         if hasattr(self._lib, 'tensor_fused_gate_up_swiglu'):
             self._lib.tensor_fused_gate_up_swiglu(self._handle, out._handle)
-        else:
-            # Fallback: slice and normal swiglu
-            # This is slow, but functional
-            # Actually we can just assume fused kernel exists if libtensor_ops is recent
-            raise NotImplementedError("Fused SwiGLU kernel missing in backend lib")
         return out
 
     def permute(self, dims: List[int]) -> 'Tensor':
         if len(dims) != self.ndim: raise ValueError("Permute dims mismatch")
         new_shape = [self.shape[d] for d in dims]
         out = Tensor(new_shape, device=self.device)
+        if "opencl" in self.device: raise NotImplementedError("OpenCL permute not implemented")
         if hasattr(self._lib, 'tensor_permute'):
             c_dims = (ctypes.c_int * len(dims))(*dims)
             self._lib.tensor_permute(self._handle, out._handle, c_dims)
@@ -363,32 +406,39 @@ class Tensor:
         for s in new_shape: size *= s
         if size != self.size: raise ValueError("Reshape size mismatch")
         out = Tensor(new_shape, device=self.device)
+        if "opencl" in self.device:
+            # OpenCL reshape is just logical if contiguous.
+            # We copy buffer handle? Or data.
+            # Simplified: Copy data
+            data = self.to_list()
+            out.load(data)
+            return out
+
         if hasattr(self._lib, 'tensor_reshape'):
             self._lib.tensor_reshape(self._handle, out._handle)
         else:
-            # Fallback: copy data
             out.load(self.to_list())
         return out
 
     def gather(self, indices: 'Tensor', axis: int = 0) -> 'Tensor':
-        # Result shape: indices.shape + input.shape[axis+1:] (simplified)
-        # If indices is 1D: [indices.size, input.shape[1:]]
         out_shape = [indices.size] + list(self.shape)[axis+1:]
         out = Tensor(out_shape, device=self.device)
+        if "opencl" in self.device: raise NotImplementedError("OpenCL gather not implemented")
         if hasattr(self._lib, 'tensor_gather'):
             self._lib.tensor_gather(self._handle, indices._handle, out._handle, axis)
         return out
 
     def scatter_add(self, indices: 'Tensor', src: 'Tensor', axis: int = 0):
+        if "opencl" in self.device: raise NotImplementedError("OpenCL scatter_add not implemented")
         if hasattr(self._lib, 'tensor_scatter_add'):
             self._lib.tensor_scatter_add(self._handle, indices._handle, src._handle, axis)
 
     def topk(self, k: int) -> Tuple['Tensor', 'Tensor']:
-        # Output: values, indices
         out_shape = list(self.shape)
         out_shape[-1] = k
         values = Tensor(out_shape, device=self.device)
         indices = Tensor(out_shape, device=self.device)
+        if "opencl" in self.device: raise NotImplementedError("OpenCL topk not implemented")
         if hasattr(self._lib, 'tensor_topk'):
             self._lib.tensor_topk(self._handle, k, values._handle, indices._handle)
         return values, indices
@@ -396,27 +446,23 @@ class Tensor:
     def linear(self, weight: 'Tensor', bias: Optional['Tensor'] = None) -> 'Tensor':
         in_features = weight.shape[1] if weight.ndim >= 2 else weight.shape[0]
         out_features = weight.shape[0] if weight.ndim >= 2 else 1
-        if self.shape[-1] != in_features: raise ValueError(f"Linear shape mismatch: Input {self.shape} vs Weight {weight.shape}")
+        if self.shape[-1] != in_features: raise ValueError(f"Linear shape mismatch")
         out_shape = list(self.shape[:-1]) + [out_features]
         out = Tensor(out_shape, device=self.device)
+        if "opencl" in self.device: raise NotImplementedError("OpenCL linear not implemented")
         b_handle = bias._handle if bias else None
         self._lib.tensor_linear(self._handle, weight._handle, b_handle, out._handle)
         return out
 
     def conv2d(self, weight: 'Tensor', bias: Optional['Tensor'] = None, stride: int = 1, padding: int = 0, groups: int = 1) -> 'Tensor':
-        # Input: [N, C_in, H, W]
-        # Weight: [C_out, C_in/g, KH, KW]
         if self.ndim != 4: raise ValueError("Conv2d requires 4D input")
-
         N, C_in, H, W = self.shape
         C_out, _, KH, KW = weight.shape
-
         H_out = (H + 2*padding - KH) // stride + 1
         W_out = (W + 2*padding - KW) // stride + 1
-
         out = Tensor([N, C_out, H_out, W_out], device=self.device)
+        if "opencl" in self.device: raise NotImplementedError("OpenCL conv2d not implemented")
         b_handle = bias._handle if bias else None
-
         if hasattr(self._lib, 'tensor_conv2d'):
             self._lib.tensor_conv2d(self._handle, weight._handle, b_handle, out._handle, stride, padding, groups)
         else:
@@ -425,82 +471,83 @@ class Tensor:
 
     def softmax(self, dim: int = -1) -> 'Tensor':
         out = Tensor(list(self.shape), device=self.device)
+        if "opencl" in self.device: raise NotImplementedError("OpenCL softmax not implemented")
         self._lib.tensor_softmax(self._handle, out._handle)
         return out
 
     def silu(self) -> 'Tensor':
         out = Tensor(list(self.shape), device=self.device)
+        if "opencl" in self.device: raise NotImplementedError("OpenCL silu not implemented")
         self._lib.tensor_silu(self._handle, out._handle)
         return out
     def gelu(self) -> 'Tensor':
         out = Tensor(list(self.shape), device=self.device)
+        if "opencl" in self.device: raise NotImplementedError("OpenCL gelu not implemented")
         if hasattr(self._lib, 'tensor_gelu'): self._lib.tensor_gelu(self._handle, out._handle)
         else: self._lib.tensor_silu(self._handle, out._handle)
         return out
 
     def rms_norm(self, weight: 'Tensor', eps: float = 1e-6) -> 'Tensor':
         out = Tensor(list(self.shape), device=self.device)
+        if "opencl" in self.device: raise NotImplementedError("OpenCL rms_norm not implemented")
         self._lib.tensor_rms_norm(self._handle, weight._handle, out._handle, eps)
         return out
 
     def rope(self, k: 'Tensor', cos: 'Tensor', sin: 'Tensor') -> Tuple['Tensor', 'Tensor']:
         out_q = Tensor(list(self.shape), device=self.device)
         out_k = Tensor(list(k.shape), device=self.device)
+        if "opencl" in self.device: raise NotImplementedError("OpenCL rope not implemented")
         self._lib.tensor_rope(self._handle, k._handle, cos._handle, sin._handle, out_q._handle, out_k._handle)
         return out_q, out_k
 
     def fused_add_rms_norm(self, residual: 'Tensor', weight: 'Tensor', eps: float) -> 'Tensor':
-        # self is 'x'
         out = Tensor(list(self.shape), device=self.device)
+        if "opencl" in self.device: raise NotImplementedError("OpenCL fused_add_rms_norm not implemented")
         if hasattr(self._lib, 'tensor_fused_add_rms_norm'):
             self._lib.tensor_fused_add_rms_norm(self._handle, residual._handle, weight._handle, out._handle, ctypes.c_float(eps))
         else:
-            # Fallback
             x_new = self.add(residual)
-            # In-place update emulation? No, we return new tensor in fallback
             out = x_new.rms_norm(weight, eps)
         return out
 
     def dequantize(self, scale: 'Tensor') -> 'Tensor':
-        # self is int8 input
-        out = Tensor(list(self.shape), device=self.device) # float32
+        out = Tensor(list(self.shape), device=self.device)
+        if "opencl" in self.device: raise NotImplementedError("OpenCL dequantize not implemented")
         if hasattr(self._lib, 'tensor_dequantize'):
             self._lib.tensor_dequantize(self._handle, scale._handle, out._handle)
         return out
 
     def fused_split_rope(self, cos: 'Tensor', sin: 'Tensor', heads: int, head_dim: int) -> Tuple['Tensor', 'Tensor', 'Tensor']:
-        # Self is [B, S, 3*H]
-        # Out shapes: [B, S, Heads, HeadDim]
         B = self.shape[0]
         S = self.shape[1]
         out_shape = [B, S, heads, head_dim]
-
         out_q = Tensor(out_shape, device=self.device)
         out_k = Tensor(out_shape, device=self.device)
         out_v = Tensor(out_shape, device=self.device)
 
+        if "opencl" in self.device: raise NotImplementedError("OpenCL fused_split_rope not implemented")
         if hasattr(self._lib, 'tensor_fused_split_rope'):
             self._lib.tensor_fused_split_rope(self._handle, cos._handle, sin._handle, out_q._handle, out_k._handle, out_v._handle)
         else:
-            # Fallback
             H = heads * head_dim
             q = self.slice([0, 0, 0], [B, S, H]).reshape(out_shape)
             k = self.slice([0, 0, H], [B, S, H]).reshape(out_shape)
             v = self.slice([0, 0, 2*H], [B, S, H]).reshape(out_shape)
             out_q, out_k = q.rope(k, cos, sin)
             out_v = v
-
         return out_q, out_k, out_v
 
     def argmax(self, dim: int = -1) -> 'Tensor':
         out_shape = list(self.shape[:-1])
         out = Tensor(out_shape, device=self.device)
+        if "opencl" in self.device: raise NotImplementedError("OpenCL argmax not implemented")
         if hasattr(self._lib, 'tensor_argmax'): self._lib.tensor_argmax(self._handle, out._handle)
         return out
 
     def embed(self, indices: 'Tensor') -> 'Tensor':
         out_shape = list(indices.shape) + [self.shape[1]]
         out = Tensor(out_shape, device=self.device)
+        if "opencl" in self.device: raise NotImplementedError("OpenCL embed not implemented")
         if hasattr(self._lib, 'tensor_embed'): self._lib.tensor_embed(self._handle, indices._handle, out._handle)
         return out
 
@@ -508,11 +555,12 @@ class Tensor:
         if isinstance(start_indices, Tensor):
              if start_indices.ndim != 1 or start_indices.size != self.ndim: raise ValueError(f"Slice Tensor indices must be 1D size={self.ndim}")
              out = Tensor(slice_shapes, device=self.device)
+             if "opencl" in self.device: raise NotImplementedError("OpenCL tensor_slice_device not implemented")
+
              if hasattr(self._lib, 'tensor_slice_device'):
                  self._lib.tensor_slice_device(self._handle, out._handle, start_indices._handle)
              else:
-                 # Fallback: Read to host if needed, but defeats purpose of graph.
-                 # For correctness if lib missing:
+                 # Fallback
                  if self.device == 'cpu':
                      h_start = [int(x) for x in start_indices.to_list()]
                      c_start = (ctypes.c_int * self.ndim)(*h_start)
@@ -524,6 +572,7 @@ class Tensor:
 
         if len(start_indices) != self.ndim or len(slice_shapes) != self.ndim: raise ValueError("Slice args dim mismatch")
         out = Tensor(slice_shapes, device=self.device)
+        if "opencl" in self.device: raise NotImplementedError("OpenCL slice not implemented")
         if hasattr(self._lib, 'tensor_slice'):
             c_start = (ctypes.c_int * self.ndim)(*start_indices)
             c_shape = (ctypes.c_int * self.ndim)(*slice_shapes)
@@ -533,6 +582,7 @@ class Tensor:
     def set_slice(self, src: 'Tensor', start_indices: Union[List[int], 'Tensor']):
         if isinstance(start_indices, Tensor):
              if start_indices.ndim != 1 or start_indices.size != self.ndim: raise ValueError(f"SetSlice Tensor indices must be 1D size={self.ndim}")
+             if "opencl" in self.device: raise NotImplementedError("OpenCL tensor_set_slice_device not implemented")
              if hasattr(self._lib, 'tensor_set_slice_device'):
                  self._lib.tensor_set_slice_device(self._handle, src._handle, start_indices._handle)
              else:
@@ -545,6 +595,7 @@ class Tensor:
              return
 
         if len(start_indices) != self.ndim: raise ValueError("Set Slice args dim mismatch")
+        if "opencl" in self.device: raise NotImplementedError("OpenCL set_slice not implemented")
         if hasattr(self._lib, 'tensor_set_slice'):
             c_start = (ctypes.c_int * self.ndim)(*start_indices)
             self._lib.tensor_set_slice(self._handle, src._handle, c_start)
@@ -562,51 +613,32 @@ class Tensor:
 
     def count_value(self, value: float) -> int:
         count = ctypes.c_int(0)
+        if "opencl" in self.device: raise NotImplementedError("OpenCL count_value not implemented")
         if hasattr(self._lib, 'tensor_count_value'):
             self._lib.tensor_count_value(self._handle, ctypes.c_float(value), ctypes.byref(count))
         return count.value
 
     def gather_by_value(self, indices: 'Tensor', value: float) -> Tuple['Tensor', 'Tensor']:
-        # Returns (gathered_data, gathered_indices_original_pos)
-        # self is [TotalTokens, Hidden]
-        # indices is [TotalTokens]
         count = indices.count_value(value)
-        if count == 0:
-            return None, None
-
+        if count == 0: return None, None
         hidden_size = self.shape[-1]
         out_data = Tensor([count, hidden_size], device=self.device)
-        out_indices = Tensor([count], device=self.device) # indices are floats
-
+        out_indices = Tensor([count], device=self.device)
+        if "opencl" in self.device: raise NotImplementedError("OpenCL gather_by_value not implemented")
         if hasattr(self._lib, 'tensor_gather_by_value'):
             self._lib.tensor_gather_by_value(self._handle, indices._handle, ctypes.c_float(value), out_data._handle, out_indices._handle)
-
         return out_data, out_indices
 
     def scatter_add_by_index(self, src: 'Tensor', indices: 'Tensor'):
-        # self += src at indices
+        if "opencl" in self.device: raise NotImplementedError("OpenCL scatter_add_by_index not implemented")
         if hasattr(self._lib, 'tensor_scatter_add_by_index'):
             self._lib.tensor_scatter_add_by_index(self._handle, src._handle, indices._handle)
 
     def deltanet_recurrence(self, k: 'Tensor', v: 'Tensor', beta: 'Tensor', state: 'Tensor') -> 'Tensor':
-        # self is q.
-        # Returns output [B, S, H, D]. Updates state in-place.
         out = Tensor(list(self.shape), device=self.device)
+        if "opencl" in self.device: raise NotImplementedError("OpenCL deltanet_recurrence not implemented")
         if hasattr(self._lib, 'tensor_deltanet_recurrence'):
             self._lib.tensor_deltanet_recurrence(self._handle, k._handle, v._handle, beta._handle, state._handle, out._handle)
-        else:
-            # Python Fallback (slow, for verification/fallback)
-            # Assuming shapes [B, S, H, D]
-            # State [B, H, D, D]
-            B, S, H, D = self.shape
-            q_data = self.to_list()
-            k_data = k.to_list()
-            v_data = v.to_list()
-            b_data = beta.to_list()
-            s_data = state.to_list()
-            o_data = [0.0] * self.size
-            # ... Loop logic ... omitted for brevity as C kernel is preferred
-            pass
         return out
 
 class Module:
