@@ -29,38 +29,6 @@ __global__ void fill_kernel(float* data, float value, int size) {
 }
 
 // Coalesced float4 kernels
-__global__ void add_kernel(float* a, float* b, float* out, int size) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    // Try vector path first
-    int vec_size = size / 4;
-    if (idx < vec_size) {
-        float4 va = ((float4*)a)[idx];
-        float4 vb = ((float4*)b)[idx];
-        float4 vout;
-        vout.x = va.x + vb.x;
-        vout.y = va.y + vb.y;
-        vout.z = va.z + vb.z;
-        vout.w = va.w + vb.w;
-        ((float4*)out)[idx] = vout;
-    }
-    // Remainder handling required, but simple 1D grid launch assumes scalar?
-    // Current launch logic: (size + threads - 1) / threads.
-    // If we switch to float4, we need 1/4 threads.
-    // To keep host logic simple, we stick to scalar kernel or need branching.
-    // Branching for remainder inside kernel:
-    int remain_start = vec_size * 4;
-    if (idx == 0) { // Single thread clean up tail? inefficient.
-        // Actually, mixing vector/scalar in one kernel launch is tricky if grid is scalar-sized.
-        // Better: Check alignment and use vector load if idx*4 is valid?
-        // But stride is blockDim.x.
-        // Standard pattern: reinterpret cast grid.
-    }
-    // Reverting to scalar for now to avoid complexity without updating Host launch logic.
-    // The Plan step says "Update kernels... to process float4".
-    // This implies changing the Host Launch too!
-    // I will implement a separate vectorized kernel and switch dispatch on host.
-}
-
 __global__ void add_kernel_vec4(float4* a, float4* b, float4* out, int vec_size) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < vec_size) {
@@ -321,46 +289,6 @@ __global__ void matmul_kernel_naive(float* A, float* B, float* C, int TotalM, in
     }
 }
 
-// Split-K MatMul (Stage 1: Partial Sums)
-// Grid: [N/16, M/16, SplitK]. Block: [16, 16]
-// Output: [SplitK, M, N]
-__global__ void __launch_bounds__(256) matmul_split_k_stage1(float* A, float* B, float* partial_C, int M, int N, int K, int split_k) {
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    int split_idx = blockIdx.z; // Which chunk of K
-
-    int k_chunk_size = (K + split_k - 1) / split_k;
-    int k_start = split_idx * k_chunk_size;
-    int k_end = min(k_start + k_chunk_size, K);
-
-    if (row < M && col < N) {
-        float sum = 0.0f;
-        for (int k = k_start; k < k_end; k++) {
-            sum += A[row * K + k] * B[k * N + col];
-        }
-        // Write to partial buffer [SplitK, M, N]
-        // Flattened index: split_idx * (M*N) + row * N + col
-        partial_C[split_idx * (M * N) + row * N + col] = sum;
-    }
-}
-
-// Split-K Reduction (Stage 2: Sum Partial Results)
-// Grid: [N/Threads, M, 1]. Block: [Threads, 1]
-__global__ void __launch_bounds__(256) matmul_split_k_reduce(float* partial_C, float* C, int M, int N, int split_k) {
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    int row = blockIdx.y; // One block per row? Or generic 2D grid.
-    // Let's use simple 1D grid over total elements M*N
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    int total = M * N;
-
-    if (idx < total) {
-        float sum = 0.0f;
-        for (int s = 0; s < split_k; s++) {
-            sum += partial_C[s * total + idx];
-        }
-        C[idx] = sum;
-    }
-}
 
 // Naive MatMul Transposed B: [M, K] x [N, K] -> [M, N]
 __global__ void matmul_transposed_kernel(float* A, float* B, float* C, int TotalM, int K, int N, int batch_count, int M, int broadcast_B) {

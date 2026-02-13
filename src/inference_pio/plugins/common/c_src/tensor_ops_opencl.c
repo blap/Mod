@@ -1422,10 +1422,29 @@ EXPORT void tensor_embed(Tensor* weight, Tensor* indices, Tensor* out) {
 }
 
 EXPORT void tensor_cat(Tensor** tensors, int num_tensors, int axis, Tensor* out) {
-    // Implementing simple loop copy for concatenation
-    // Easier than a complex generic kernel
-    // Placeholder - requires manual CopyBuffer calls
     if (!g_queue) return;
+
+    int outer_dim = 1;
+    for(int i=0; i<axis; i++) outer_dim *= out->shape[i];
+    int inner_dim = 1;
+    for(int i=axis+1; i<out->ndim; i++) inner_dim *= out->shape[i];
+
+    int offset_accum = 0;
+
+    for(int i=0; i<num_tensors; i++) {
+        Tensor* t = tensors[i];
+        int dim = t->shape[axis];
+        for(int o=0; o<outer_dim; o++) {
+            size_t src_offset = o * dim * inner_dim;
+            size_t dst_offset = (o * out->shape[axis] + offset_accum) * inner_dim;
+            size_t size = dim * inner_dim;
+
+            p_clEnqueueCopyBuffer(g_queue, (cl_mem)t->data, (cl_mem)out->data,
+                                  src_offset * sizeof(float), dst_offset * sizeof(float),
+                                  size * sizeof(float), 0, NULL, NULL);
+        }
+        offset_accum += dim;
+    }
 }
 
 // Helper to compute strides
@@ -1575,10 +1594,8 @@ EXPORT void tensor_permute(Tensor* input, Tensor* out, int* dims) {
 
 EXPORT void tensor_reshape(Tensor* input, Tensor* out) {
     if (!g_queue) return;
-    float* temp = (float*)malloc(input->size * 4);
-    tensor_get_data(input, temp, input->size);
-    tensor_load_data(out, temp, input->size);
-    free(temp);
+    size_t size = input->size * sizeof(float);
+    p_clEnqueueCopyBuffer(g_queue, (cl_mem)input->data, (cl_mem)out->data, 0, 0, size, 0, NULL, NULL);
 }
 
 EXPORT void tensor_precompute_freqs_cis(int dim, int end, float theta, Tensor* out_cos, Tensor* out_sin) {
