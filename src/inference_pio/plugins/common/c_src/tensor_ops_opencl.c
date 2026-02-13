@@ -17,6 +17,12 @@
 
 #include "cl_minimal.h"
 
+#ifdef _WIN32
+#define EXPORT __declspec(dllexport)
+#else
+#define EXPORT
+#endif
+
 #ifndef VENDOR_FILTER
 #define VENDOR_FILTER "AMD"
 #endif
@@ -67,6 +73,9 @@ static cl_kernel k_fused_add_rms_norm = NULL;
 static cl_kernel k_gemv = NULL;
 static cl_kernel k_fused_add_mul = NULL;
 static cl_kernel k_matmul_image = NULL;
+static cl_kernel k_verify_tokens = NULL;
+static cl_kernel k_fp32_to_bf16 = NULL;
+static cl_kernel k_bf16_to_fp32 = NULL;
 
 // Function Pointers
 static PTR_clGetPlatformIDs p_clGetPlatformIDs = NULL;
@@ -85,6 +94,10 @@ static PTR_clSetKernelArg p_clSetKernelArg = NULL;
 static PTR_clEnqueueNDRangeKernel p_clEnqueueNDRangeKernel = NULL;
 static PTR_clFinish p_clFinish = NULL;
 static PTR_clGetProgramBuildInfo p_clGetProgramBuildInfo = NULL;
+static PTR_clEnqueueCopyBuffer p_clEnqueueCopyBuffer = NULL;
+static PTR_clGetProgramInfo p_clGetProgramInfo = NULL;
+static PTR_clCreateProgramWithBinary p_clCreateProgramWithBinary = NULL;
+static PTR_clReleaseProgram p_clReleaseProgram = NULL;
 
 // --- 2. Kernel Source Code ---
 
@@ -750,37 +763,41 @@ const char* KERNEL_SOURCE =
 "// Parallelism: Batch * Heads (Global ID 0). Local ID handles D.\n"
 "// Each WorkGroup handles one recurrence sequence.\n"
 "__kernel void deltanet_recurrence(__global const float* q, __global const float* k, __global const float* v, __global const float* beta,\n"
-"                                  __global float* state, __global float* out, int S, int D) {\n"
-"    int b_h = get_group_id(0); \n"
+"                                  __global float* state, __global float* out, int B, int S, int H, int D) {\n"
+"    int b = get_group_id(0);\n"
+"    int h = get_group_id(1);\n"
 "    int tid = get_local_id(0);\n"
 "    \n"
-"    // Pointers\n"
-"    // Input is [Batch, Seq, Heads, HeadDim]\n"
-"    // But we iterate Seq. So offset is (b_h / Heads)*Seq*... complex indexing.\n"
-"    // Let's assume input is [B, H, S, D] for easier indexing? No, standard is BSHD.\n"
-"    // Index: ((b*S + t)*H + h)*D + d\n"
-"    // H = get_num_groups(0) / B? Need H passed or inferred.\n"
-"    // Simplified: Flattened view logic\n"
-"    // We need 'heads' count to jump seq correctly.\n"
-"    // Let's passed strides or assume layout.\n"
-"    // Re-using args: H is not passed. Let's rely on standard logic: Inputs are permuted to [B, H, S, D] before? \n"
-"    // If inputs are [B, S, H, D], stride between t and t+1 is (H*D).\n"
+"    __global float* my_state = state + (b*H + h) * D * D;\n"
 "    \n"
-"    // NOTE: This kernel is complex. Implementing a simplified version assuming state fits in local mem.\n"
-"    // Max D=128 -> State 128*128*4 = 64KB. Might exceed local mem on some GPUs (32KB/48KB limit).\n"
-"    // If D=64 -> 16KB. OK.\n"
-"    // Fallback: Read/Write Global State directly (slower) or tile.\n"
-"    // Here we use Global Memory for State to be safe for large D, with cache.\n"
-"    \n"
-"    // To implement effectively without strict dimensions, we need strides.\n"
-"    // Let's assume packed [S, D] per thread block for simplicity of this 'No Stub' implementation.\n"
-"    // i.e., Call this kernel for each B*H separately? No, that's too many kernel launches.\n"
-"    // We need arguments: strides.\n"
-"    // Since we can't change signature easily, let's assume inputs are contiguous [Total_Seq, D] \n"
-"    // and we process one sequence. \n"
-"    // WAIT: The C wrapper passes tensors. We can extract shape there.\n"
-"    // But here in kernel source string we are fixed.\n"
-"    // Let's define the kernel to take `stride_s` (stride for sequence step).\n"
+"    for (int t = 0; t < S; t++) {\n"
+"        // Indexing for BSHD layout: ((b*S + t)*H + h)*D\n"
+"        int offset = ((b*S + t)*H + h);\n"
+"        int q_off = offset * D;\n"
+"        int k_off = offset * D;\n"
+"        int v_off = offset * D;\n"
+"        int out_off = offset * D;\n"
+"        float b_val = beta[offset];\n"
+"        \n"
+"        // Update State: S = beta * S + K^T * V\n"
+"        for (int i = tid; i < D*D; i += get_local_size(0)) {\n"
+"            int r = i / D;\n"
+"            int c = i % D;\n"
+"            float kv = k[k_off + r] * v[v_off + c];\n"
+"            my_state[i] = b_val * my_state[i] + kv;\n"
+"        }\n"
+"        barrier(CLK_GLOBAL_MEM_FENCE);\n"
+"        \n"
+"        // Compute Output: O = Q * S\n"
+"        if (tid < D) {\n"
+"            float sum = 0.0f;\n"
+"            for (int i = 0; i < D; i++) {\n"
+"                sum += q[q_off + i] * my_state[i*D + tid];\n"
+"            }\n"
+"            out[out_off + tid] = sum;\n"
+"        }\n"
+"        barrier(CLK_GLOBAL_MEM_FENCE);\n"
+"    }\n"
 "}\n"
 "__kernel void conv2d_naive(__global const float* input, __global const float* weight, __global const float* bias, __global float* out,\n"
 "                           int C_in, int H_in, int W_in, int C_out, int H_out, int W_out, \n"
@@ -845,6 +862,27 @@ const char* KERNEL_SOURCE =
 "    for(int i=0; i<size; i++) {\n"
 "        out[offset + i] = x[offset + i] * scale * weight[i];\n"
 "    }\n"
+"}\n"
+"__kernel void verify_tokens(__global const int* draft, __global const int* target, __global int* out_count, int len) {\n"
+"    int idx = get_global_id(0);\n"
+"    if (idx == 0) {\n"
+"        int matches = 0;\n"
+"        for (int i = 0; i < len; i++) {\n"
+"            if (draft[i] == target[i]) matches++;\n"
+"            else break;\n"
+"        }\n"
+"        *out_count = matches;\n"
+"    }\n"
+"}\n"
+"__kernel void fp32_to_bf16(__global const float* in, __global ushort* out) {\n"
+"    int idx = get_global_id(0);\n"
+"    uint f = as_uint(in[idx]);\n"
+"    out[idx] = (ushort)(f >> 16);\n"
+"}\n"
+"__kernel void bf16_to_fp32(__global const ushort* in, __global float* out) {\n"
+"    int idx = get_global_id(0);\n"
+"    uint f = ((uint)in[idx]) << 16;\n"
+"    out[idx] = as_float(f);\n"
 "}\n";
 
 // --- 3. Helper Functions ---
@@ -885,6 +923,10 @@ int init_opencl() {
     LOAD_SYM(clEnqueueNDRangeKernel);
     LOAD_SYM(clFinish);
     LOAD_SYM(clGetProgramBuildInfo);
+    LOAD_SYM(clEnqueueCopyBuffer);
+    LOAD_SYM(clGetProgramInfo);
+    LOAD_SYM(clCreateProgramWithBinary);
+    LOAD_SYM(clReleaseProgram);
 
     // 3. Select Platform
     cl_uint num_platforms = 0;
@@ -936,19 +978,80 @@ int init_opencl() {
          return 0;
     }
 
-    // 6. Build Program
-    // Add build options for FP16 or optimization if needed
+    // 6. Build Program (Caching)
     const char* options = "-cl-mad-enable -cl-fast-relaxed-math";
-    g_program = p_clCreateProgramWithSource(g_ctx, 1, &KERNEL_SOURCE, NULL, &err);
-    err = p_clBuildProgram(g_program, 1, &device, options, NULL, NULL);
-    if (err != CL_SUCCESS) {
-        size_t len;
-        p_clGetProgramBuildInfo(g_program, device, 0x1183, 0, NULL, &len); // CL_PROGRAM_BUILD_LOG
-        char* log = (char*)malloc(len);
-        p_clGetProgramBuildInfo(g_program, device, 0x1183, len, log, NULL);
-        printf("[OpenCL] Build Error:\n%s\n", log);
-        free(log);
-        return 0;
+    char cache_path[512];
+    const char* home = getenv("HOME");
+    // Simple logic: try HOME cache dir, fallback to /tmp
+    if (home) snprintf(cache_path, 512, "%s/.inference_pio/cache/kernel_opencl.bin", home);
+    else snprintf(cache_path, 512, "/tmp/inference_pio_kernel_opencl.bin");
+
+    // Try loading binary
+    FILE* f = fopen(cache_path, "rb");
+    if (f) {
+        fseek(f, 0, SEEK_END);
+        size_t bin_size = ftell(f);
+        fseek(f, 0, SEEK_SET);
+        unsigned char* bin = (unsigned char*)malloc(bin_size);
+        if (fread(bin, 1, bin_size, f) == bin_size) {
+            cl_int bin_status;
+            // Note: clCreateProgramWithBinary takes array of lengths/binaries
+            const size_t lengths[1] = { bin_size };
+            const unsigned char* bins[1] = { bin };
+            g_program = p_clCreateProgramWithBinary(g_ctx, 1, &device, lengths, bins, &bin_status, &err);
+            if (err == CL_SUCCESS && bin_status == CL_SUCCESS) {
+                err = p_clBuildProgram(g_program, 1, &device, options, NULL, NULL);
+                if (err == CL_SUCCESS) {
+                    printf("[OpenCL] Loaded kernel from cache: %s\n", cache_path);
+                } else {
+                    p_clReleaseProgram(g_program);
+                    g_program = NULL;
+                }
+            } else {
+                if(g_program) p_clReleaseProgram(g_program);
+                g_program = NULL;
+            }
+        }
+        free(bin);
+        fclose(f);
+    }
+
+    if (!g_program) {
+        // Compile from Source
+        printf("[OpenCL] Compiling kernels from source...\n");
+        g_program = p_clCreateProgramWithSource(g_ctx, 1, &KERNEL_SOURCE, NULL, &err);
+        err = p_clBuildProgram(g_program, 1, &device, options, NULL, NULL);
+        if (err != CL_SUCCESS) {
+            size_t len;
+            p_clGetProgramBuildInfo(g_program, device, 0x1183, 0, NULL, &len); // CL_PROGRAM_BUILD_LOG
+            char* log = (char*)malloc(len);
+            p_clGetProgramBuildInfo(g_program, device, 0x1183, len, log, NULL);
+            printf("[OpenCL] Build Error:\n%s\n", log);
+            free(log);
+            return 0;
+        }
+
+        // Save Binary
+        size_t bin_size;
+        p_clGetProgramInfo(g_program, 0x1165, sizeof(size_t), &bin_size, NULL); // CL_PROGRAM_BINARY_SIZES
+        if (bin_size > 0) {
+            unsigned char* bin = (unsigned char*)malloc(bin_size);
+            unsigned char* bins[1] = { bin };
+            p_clGetProgramInfo(g_program, 0x1166, sizeof(unsigned char*), bins, NULL); // CL_PROGRAM_BINARIES
+
+            f = fopen(cache_path, "wb");
+            if (!f && home) {
+                 // Try /tmp fallback
+                 snprintf(cache_path, 512, "/tmp/inference_pio_kernel_opencl.bin");
+                 f = fopen(cache_path, "wb");
+            }
+            if (f) {
+                fwrite(bin, 1, bin_size, f);
+                fclose(f);
+                printf("[OpenCL] Saved kernel cache to: %s\n", cache_path);
+            }
+            free(bin);
+        }
     }
 
     // 7. Create Kernels
@@ -995,6 +1098,9 @@ int init_opencl() {
 
     // Optional Image kernel - might fail if image support is missing on device\n"
     k_matmul_image = p_clCreateKernel(g_program, "matmul_image", &err);
+    k_verify_tokens = p_clCreateKernel(g_program, "verify_tokens", &err);
+    k_fp32_to_bf16 = p_clCreateKernel(g_program, "fp32_to_bf16", &err);
+    k_bf16_to_fp32 = p_clCreateKernel(g_program, "bf16_to_fp32", &err);
 
     return 1;
 }
@@ -1012,7 +1118,7 @@ typedef struct {
 // NOTE: We assume Tensor* passed from Python already has allocated 'data' field used as cl_mem.
 // But Python `create_tensor` expects us to return a Tensor*.
 
-Tensor* create_tensor(int* shape, int ndim, int device_id) {
+EXPORT Tensor* create_tensor(int* shape, int ndim, int device_id) {
     if (!init_opencl()) return NULL;
 
     Tensor* t = (Tensor*)malloc(sizeof(Tensor));
@@ -1034,7 +1140,7 @@ Tensor* create_tensor(int* shape, int ndim, int device_id) {
     return t;
 }
 
-void free_tensor(Tensor* t) {
+EXPORT void free_tensor(Tensor* t) {
     if (t) {
         if (t->data) p_clReleaseMemObject((cl_mem)t->data);
         free(t->shape);
@@ -1042,20 +1148,20 @@ void free_tensor(Tensor* t) {
     }
 }
 
-void tensor_load_data(Tensor* t, float* buffer, int size) {
+EXPORT void tensor_load_data(Tensor* t, float* buffer, int size) {
     if (!g_queue) return;
     // Blocking write to ensure buffer is valid before Python returns?
     // Usually Python gc handles buffer lifetime, but sync is safer for now.
     p_clEnqueueWriteBuffer(g_queue, (cl_mem)t->data, CL_TRUE, 0, size * sizeof(float), buffer, 0, NULL, NULL);
 }
 
-void tensor_get_data(Tensor* t, float* buffer, int size) {
+EXPORT void tensor_get_data(Tensor* t, float* buffer, int size) {
     if (!g_queue) return;
     // Blocking read to get data to host immediately
     p_clEnqueueReadBuffer(g_queue, (cl_mem)t->data, CL_TRUE, 0, size * sizeof(float), buffer, 0, NULL, NULL);
 }
 
-void tensor_fill(Tensor* t, float value) {
+EXPORT void tensor_fill(Tensor* t, float value) {
     if (!k_fill) return;
     p_clSetKernelArg(k_fill, 0, sizeof(cl_mem), &t->data);
     p_clSetKernelArg(k_fill, 1, sizeof(float), &value);
@@ -1063,7 +1169,7 @@ void tensor_fill(Tensor* t, float value) {
     p_clEnqueueNDRangeKernel(g_queue, k_fill, 1, NULL, &work_size, NULL, 0, NULL, NULL);
 }
 
-void tensor_add(Tensor* a, Tensor* b, Tensor* out) {
+EXPORT void tensor_add(Tensor* a, Tensor* b, Tensor* out) {
     if (!k_add) return;
     p_clSetKernelArg(k_add, 0, sizeof(cl_mem), &a->data);
     p_clSetKernelArg(k_add, 1, sizeof(cl_mem), &b->data);
@@ -1072,7 +1178,7 @@ void tensor_add(Tensor* a, Tensor* b, Tensor* out) {
     p_clEnqueueNDRangeKernel(g_queue, k_add, 1, NULL, &work_size, NULL, 0, NULL, NULL);
 }
 
-void tensor_mul(Tensor* a, Tensor* b, Tensor* out) {
+EXPORT void tensor_mul(Tensor* a, Tensor* b, Tensor* out) {
     if (!k_mul) return;
     p_clSetKernelArg(k_mul, 0, sizeof(cl_mem), &a->data);
     p_clSetKernelArg(k_mul, 1, sizeof(cl_mem), &b->data);
@@ -1081,7 +1187,7 @@ void tensor_mul(Tensor* a, Tensor* b, Tensor* out) {
     p_clEnqueueNDRangeKernel(g_queue, k_mul, 1, NULL, &work_size, NULL, 0, NULL, NULL);
 }
 
-void tensor_matmul(Tensor* a, Tensor* b, Tensor* out) {
+EXPORT void tensor_matmul(Tensor* a, Tensor* b, Tensor* out) {
     if (!k_matmul) return;
     // Dimensions: A[M, K], B[K, N] -> C[M, N]
     int M = a->shape[a->ndim - 2];
@@ -1116,7 +1222,7 @@ void tensor_matmul(Tensor* a, Tensor* b, Tensor* out) {
     }
 }
 
-void tensor_rms_norm(Tensor* input, Tensor* weight, Tensor* out, float eps) {
+EXPORT void tensor_rms_norm(Tensor* input, Tensor* weight, Tensor* out, float eps) {
     if (!k_rms_norm) return;
     // Input flattened [rows * hidden], Weight [hidden]
     int hidden = input->shape[input->ndim - 1];
@@ -1132,7 +1238,7 @@ void tensor_rms_norm(Tensor* input, Tensor* weight, Tensor* out, float eps) {
     p_clEnqueueNDRangeKernel(g_queue, k_rms_norm, 1, NULL, &global_work, NULL, 0, NULL, NULL);
 }
 
-void tensor_silu(Tensor* input, Tensor* out) {
+EXPORT void tensor_silu(Tensor* input, Tensor* out) {
     if (!k_silu) return;
     p_clSetKernelArg(k_silu, 0, sizeof(cl_mem), &input->data);
     p_clSetKernelArg(k_silu, 1, sizeof(cl_mem), &out->data);
@@ -1140,7 +1246,7 @@ void tensor_silu(Tensor* input, Tensor* out) {
     p_clEnqueueNDRangeKernel(g_queue, k_silu, 1, NULL, &work_size, NULL, 0, NULL, NULL);
 }
 
-void tensor_gelu(Tensor* input, Tensor* out) {
+EXPORT void tensor_gelu(Tensor* input, Tensor* out) {
     if (!k_gelu) return;
     p_clSetKernelArg(k_gelu, 0, sizeof(cl_mem), &input->data);
     p_clSetKernelArg(k_gelu, 1, sizeof(cl_mem), &out->data);
@@ -1148,7 +1254,7 @@ void tensor_gelu(Tensor* input, Tensor* out) {
     p_clEnqueueNDRangeKernel(g_queue, k_gelu, 1, NULL, &work_size, NULL, 0, NULL, NULL);
 }
 
-void tensor_rope(Tensor* q, Tensor* k, Tensor* cos, Tensor* sin, Tensor* out_q, Tensor* out_k) {
+EXPORT void tensor_rope(Tensor* q, Tensor* k, Tensor* cos, Tensor* sin, Tensor* out_q, Tensor* out_k) {
     if (!k_rope) return;
     int dim = q->shape[q->ndim - 1];
     int total_tokens = q->size / dim;
@@ -1166,7 +1272,7 @@ void tensor_rope(Tensor* q, Tensor* k, Tensor* cos, Tensor* sin, Tensor* out_q, 
     p_clEnqueueNDRangeKernel(g_queue, k_rope, 1, NULL, &work_size, NULL, 0, NULL, NULL);
 }
 
-void tensor_softmax(Tensor* input, Tensor* out) {
+EXPORT void tensor_softmax(Tensor* input, Tensor* out) {
     if (!k_softmax) return;
     int cols = input->shape[input->ndim - 1];
     int rows = input->size / cols;
@@ -1183,7 +1289,7 @@ void tensor_softmax(Tensor* input, Tensor* out) {
     p_clEnqueueNDRangeKernel(g_queue, k_softmax, 1, NULL, &global_work, &local_work, 0, NULL, NULL);
 }
 
-void tensor_topk(Tensor* input, int k, Tensor* out_val, Tensor* out_idx) {
+EXPORT void tensor_topk(Tensor* input, int k, Tensor* out_val, Tensor* out_idx) {
     if (!k_topk) return;
     int cols = input->shape[input->ndim - 1];
     int rows = input->size / cols;
@@ -1198,7 +1304,7 @@ void tensor_topk(Tensor* input, int k, Tensor* out_val, Tensor* out_idx) {
     p_clEnqueueNDRangeKernel(g_queue, k_topk, 1, NULL, &global_work, NULL, 0, NULL, NULL);
 }
 
-void tensor_scaled_dot_product_attention(Tensor* q, Tensor* k, Tensor* v, Tensor* out, float scale) {
+EXPORT void tensor_scaled_dot_product_attention(Tensor* q, Tensor* k, Tensor* v, Tensor* out, float scale) {
     if (!k_fused_attn) return;
 
     // Assumptions for Lite kernel:
@@ -1238,7 +1344,7 @@ void tensor_scaled_dot_product_attention(Tensor* q, Tensor* k, Tensor* v, Tensor
     p_clEnqueueNDRangeKernel(g_queue, k_fused_attn, 1, NULL, &global_work, &local_work, 0, NULL, NULL);
 }
 
-void tensor_matmul_transposed(Tensor* a, Tensor* b, Tensor* out) {
+EXPORT void tensor_matmul_transposed(Tensor* a, Tensor* b, Tensor* out) {
     if (!k_matmul_transposed) return;
     int M = a->shape[a->ndim - 2];
     int K = a->shape[a->ndim - 1];
@@ -1255,7 +1361,7 @@ void tensor_matmul_transposed(Tensor* a, Tensor* b, Tensor* out) {
     p_clEnqueueNDRangeKernel(g_queue, k_matmul_transposed, 2, NULL, global_work, NULL, 0, NULL, NULL);
 }
 
-void tensor_linear(Tensor* input, Tensor* weight, Tensor* bias, Tensor* out) {
+EXPORT void tensor_linear(Tensor* input, Tensor* weight, Tensor* bias, Tensor* out) {
     if (!k_linear) return;
     int K = input->shape[input->ndim - 1];
     int rows = input->size / K;
@@ -1274,7 +1380,7 @@ void tensor_linear(Tensor* input, Tensor* weight, Tensor* bias, Tensor* out) {
     p_clEnqueueNDRangeKernel(g_queue, k_linear, 2, NULL, global_work, NULL, 0, NULL, NULL);
 }
 
-void tensor_swiglu(Tensor* gate, Tensor* up, Tensor* out) {
+EXPORT void tensor_swiglu(Tensor* gate, Tensor* up, Tensor* out) {
     if (!k_swiglu) return;
     p_clSetKernelArg(k_swiglu, 0, sizeof(cl_mem), &gate->data);
     p_clSetKernelArg(k_swiglu, 1, sizeof(cl_mem), &up->data);
@@ -1283,7 +1389,7 @@ void tensor_swiglu(Tensor* gate, Tensor* up, Tensor* out) {
     p_clEnqueueNDRangeKernel(g_queue, k_swiglu, 1, NULL, &work, NULL, 0, NULL, NULL);
 }
 
-void tensor_fused_gate_up_swiglu(Tensor* gate_up, Tensor* out) {
+EXPORT void tensor_fused_gate_up_swiglu(Tensor* gate_up, Tensor* out) {
     if (!k_fused_gate_up_swiglu) return;
     int hidden = out->shape[out->ndim - 1];
     p_clSetKernelArg(k_fused_gate_up_swiglu, 0, sizeof(cl_mem), &gate_up->data);
@@ -1293,7 +1399,7 @@ void tensor_fused_gate_up_swiglu(Tensor* gate_up, Tensor* out) {
     p_clEnqueueNDRangeKernel(g_queue, k_fused_gate_up_swiglu, 1, NULL, &work, NULL, 0, NULL, NULL);
 }
 
-void tensor_argmax(Tensor* input, Tensor* out) {
+EXPORT void tensor_argmax(Tensor* input, Tensor* out) {
     if (!k_argmax) return;
     int cols = input->shape[input->ndim - 1];
     int rows = input->size / cols;
@@ -1304,7 +1410,7 @@ void tensor_argmax(Tensor* input, Tensor* out) {
     p_clEnqueueNDRangeKernel(g_queue, k_argmax, 1, NULL, &work, NULL, 0, NULL, NULL);
 }
 
-void tensor_embed(Tensor* weight, Tensor* indices, Tensor* out) {
+EXPORT void tensor_embed(Tensor* weight, Tensor* indices, Tensor* out) {
     if (!k_embed) return;
     int hidden = weight->shape[1];
     p_clSetKernelArg(k_embed, 0, sizeof(cl_mem), &weight->data);
@@ -1315,7 +1421,7 @@ void tensor_embed(Tensor* weight, Tensor* indices, Tensor* out) {
     p_clEnqueueNDRangeKernel(g_queue, k_embed, 1, NULL, &work, NULL, 0, NULL, NULL);
 }
 
-void tensor_cat(Tensor** tensors, int num_tensors, int axis, Tensor* out) {
+EXPORT void tensor_cat(Tensor** tensors, int num_tensors, int axis, Tensor* out) {
     // Implementing simple loop copy for concatenation
     // Easier than a complex generic kernel
     // Placeholder - requires manual CopyBuffer calls
@@ -1328,7 +1434,7 @@ void compute_strides(int* shape, int ndim, int* strides) {
     for(int i=ndim-2; i>=0; i--) strides[i] = strides[i+1] * shape[i+1];
 }
 
-void tensor_slice(Tensor* input, Tensor* out, int* start_indices, int* slice_shapes) {
+EXPORT void tensor_slice(Tensor* input, Tensor* out, int* start_indices, int* slice_shapes) {
     if (!k_slice) return;
     int ndim = input->ndim;
     int h_in[8], h_out[8]; // Max ndim 8
@@ -1359,7 +1465,7 @@ void tensor_slice(Tensor* input, Tensor* out, int* start_indices, int* slice_sha
     p_clReleaseMemObject(d_hout);
 }
 
-void tensor_slice_device(Tensor* input, Tensor* out, Tensor* start_indices) {
+EXPORT void tensor_slice_device(Tensor* input, Tensor* out, Tensor* start_indices) {
     if (!k_slice_device) return;
     int ndim = input->ndim;
     int h_in[8], h_out[8];
@@ -1385,7 +1491,7 @@ void tensor_slice_device(Tensor* input, Tensor* out, Tensor* start_indices) {
     p_clReleaseMemObject(d_hout);
 }
 
-void tensor_set_slice(Tensor* dst, Tensor* src, int* start_indices) {
+EXPORT void tensor_set_slice(Tensor* dst, Tensor* src, int* start_indices) {
     if (!k_set_slice) return;
     int ndim = dst->ndim;
     int h_dst[8], h_src[8];
@@ -1413,7 +1519,7 @@ void tensor_set_slice(Tensor* dst, Tensor* src, int* start_indices) {
     p_clReleaseMemObject(d_hsrc);
 }
 
-void tensor_set_slice_device(Tensor* dst, Tensor* src, Tensor* start_indices) {
+EXPORT void tensor_set_slice_device(Tensor* dst, Tensor* src, Tensor* start_indices) {
     if (!k_set_slice_device) return;
     int ndim = dst->ndim;
     int h_dst[8], h_src[8];
@@ -1439,7 +1545,7 @@ void tensor_set_slice_device(Tensor* dst, Tensor* src, Tensor* start_indices) {
     p_clReleaseMemObject(d_hsrc);
 }
 
-void tensor_permute(Tensor* input, Tensor* out, int* dims) {
+EXPORT void tensor_permute(Tensor* input, Tensor* out, int* dims) {
     if (!k_permute) return;
     int ndim = input->ndim;
     int h_in[8], h_out[8];
@@ -1467,7 +1573,7 @@ void tensor_permute(Tensor* input, Tensor* out, int* dims) {
     p_clReleaseMemObject(d_hout);
 }
 
-void tensor_reshape(Tensor* input, Tensor* out) {
+EXPORT void tensor_reshape(Tensor* input, Tensor* out) {
     if (!g_queue) return;
     float* temp = (float*)malloc(input->size * 4);
     tensor_get_data(input, temp, input->size);
@@ -1475,7 +1581,7 @@ void tensor_reshape(Tensor* input, Tensor* out) {
     free(temp);
 }
 
-void tensor_precompute_freqs_cis(int dim, int end, float theta, Tensor* out_cos, Tensor* out_sin) {
+EXPORT void tensor_precompute_freqs_cis(int dim, int end, float theta, Tensor* out_cos, Tensor* out_sin) {
     if (!k_precompute_freqs) return;
     int half = dim / 2;
     p_clSetKernelArg(k_precompute_freqs, 0, sizeof(cl_mem), &out_cos->data);
@@ -1488,7 +1594,7 @@ void tensor_precompute_freqs_cis(int dim, int end, float theta, Tensor* out_cos,
     p_clEnqueueNDRangeKernel(g_queue, k_precompute_freqs, 1, NULL, &work, NULL, 0, NULL, NULL);
 }
 
-void tensor_fused_split_rope(Tensor* qkv, Tensor* cos, Tensor* sin, Tensor* out_q, Tensor* out_k, Tensor* out_v) {
+EXPORT void tensor_fused_split_rope(Tensor* qkv, Tensor* cos, Tensor* sin, Tensor* out_q, Tensor* out_k, Tensor* out_v) {
     if (!k_fused_split_rope) return;
     int heads = out_q->shape[out_q->ndim - 2];
     int head_dim = out_q->shape[out_q->ndim - 1];
@@ -1508,7 +1614,7 @@ void tensor_fused_split_rope(Tensor* qkv, Tensor* cos, Tensor* sin, Tensor* out_
     p_clEnqueueNDRangeKernel(g_queue, k_fused_split_rope, 1, NULL, &work, NULL, 0, NULL, NULL);
 }
 
-void tensor_paged_attention(Tensor* q, Tensor* k_cache, Tensor* v_cache,
+EXPORT void tensor_paged_attention(Tensor* q, Tensor* k_cache, Tensor* v_cache,
                             Tensor* block_tables, Tensor* context_lens,
                             Tensor* out, float scale, int page_size, int max_blocks, int head_dim) {
     if (!k_paged_attn) return;
@@ -1537,7 +1643,7 @@ void tensor_paged_attention(Tensor* q, Tensor* k_cache, Tensor* v_cache,
     p_clEnqueueNDRangeKernel(g_queue, k_paged_attn, 2, NULL, g_work, l_work, 0, NULL, NULL);
 }
 
-void tensor_count_value(Tensor* t, float value, int* count) {
+EXPORT void tensor_count_value(Tensor* t, float value, int* count) {
     if (!k_count_value) return;
 
     cl_int err;
@@ -1557,7 +1663,7 @@ void tensor_count_value(Tensor* t, float value, int* count) {
     p_clReleaseMemObject(d_count);
 }
 
-void tensor_gather_by_value(Tensor* input, Tensor* indices, float value, Tensor* out_data, Tensor* out_indices) {
+EXPORT void tensor_gather_by_value(Tensor* input, Tensor* indices, float value, Tensor* out_data, Tensor* out_indices) {
     if (!k_gather_by_value) return;
 
     cl_int err;
@@ -1582,7 +1688,7 @@ void tensor_gather_by_value(Tensor* input, Tensor* indices, float value, Tensor*
     p_clReleaseMemObject(d_counter);
 }
 
-void tensor_scatter_add_by_index(Tensor* out, Tensor* src, Tensor* indices) {
+EXPORT void tensor_scatter_add_by_index(Tensor* out, Tensor* src, Tensor* indices) {
     if (!k_scatter_add_by_index) return;
 
     int count = indices->size;
@@ -1600,7 +1706,7 @@ void tensor_scatter_add_by_index(Tensor* out, Tensor* src, Tensor* indices) {
     p_clEnqueueNDRangeKernel(g_queue, k_scatter_add_by_index, 1, NULL, &work, NULL, 0, NULL, NULL);
 }
 
-void tensor_conv2d(Tensor* input, Tensor* weight, Tensor* bias, Tensor* out, int stride, int padding, int groups) {
+EXPORT void tensor_conv2d(Tensor* input, Tensor* weight, Tensor* bias, Tensor* out, int stride, int padding, int groups) {
     if (!k_conv2d) return;
     int N = input->shape[0];
     int C_in = input->shape[1];
@@ -1632,7 +1738,7 @@ void tensor_conv2d(Tensor* input, Tensor* weight, Tensor* bias, Tensor* out, int
     p_clEnqueueNDRangeKernel(g_queue, k_conv2d, 1, NULL, &work, NULL, 0, NULL, NULL);
 }
 
-void tensor_dequantize(Tensor* input, Tensor* scale, Tensor* out) {
+EXPORT void tensor_dequantize(Tensor* input, Tensor* scale, Tensor* out) {
     if (!k_dequantize) return;
     int hidden = 1; // Unused in simple per-tensor scaling
     p_clSetKernelArg(k_dequantize, 0, sizeof(cl_mem), &input->data);
@@ -1644,15 +1750,31 @@ void tensor_dequantize(Tensor* input, Tensor* scale, Tensor* out) {
     p_clEnqueueNDRangeKernel(g_queue, k_dequantize, 1, NULL, &work, NULL, 0, NULL, NULL);
 }
 
-void tensor_deltanet_recurrence(Tensor* q, Tensor* k, Tensor* v, Tensor* beta, Tensor* state, Tensor* out) {
-    // Stub implementation: Logic is extremely complex for OpenCL string kernel without extensive helper code.
-    // Given the constraints and risk of kernel compilation failure on huge source strings,
-    // we acknowledge this op is defined but implementation is deferred or minimal.
-    // Real implementation requires maintaining state layout and scan.
+EXPORT void tensor_deltanet_recurrence(Tensor* q, Tensor* k, Tensor* v, Tensor* beta, Tensor* state, Tensor* out) {
     if (!k_deltanet_recurrence) return;
+    int B = q->shape[0];
+    int S = q->shape[1];
+    int H = q->shape[2];
+    int D = q->shape[3];
+
+    p_clSetKernelArg(k_deltanet_recurrence, 0, sizeof(cl_mem), &q->data);
+    p_clSetKernelArg(k_deltanet_recurrence, 1, sizeof(cl_mem), &k->data);
+    p_clSetKernelArg(k_deltanet_recurrence, 2, sizeof(cl_mem), &v->data);
+    p_clSetKernelArg(k_deltanet_recurrence, 3, sizeof(cl_mem), &beta->data);
+    p_clSetKernelArg(k_deltanet_recurrence, 4, sizeof(cl_mem), &state->data);
+    p_clSetKernelArg(k_deltanet_recurrence, 5, sizeof(cl_mem), &out->data);
+    p_clSetKernelArg(k_deltanet_recurrence, 6, sizeof(int), &B);
+    p_clSetKernelArg(k_deltanet_recurrence, 7, sizeof(int), &S);
+    p_clSetKernelArg(k_deltanet_recurrence, 8, sizeof(int), &H);
+    p_clSetKernelArg(k_deltanet_recurrence, 9, sizeof(int), &D);
+
+    size_t local_work[2] = { 256, 1 };
+    size_t global_wk[2] = { (size_t)B * 256, (size_t)H };
+
+    p_clEnqueueNDRangeKernel(g_queue, k_deltanet_recurrence, 2, NULL, global_wk, local_work, 0, NULL, NULL);
 }
 
-void tensor_fused_add_mul(Tensor* a, Tensor* b, Tensor* c, Tensor* out) {
+EXPORT void tensor_fused_add_mul(Tensor* a, Tensor* b, Tensor* c, Tensor* out) {
     if (!k_fused_add_mul) return;
     p_clSetKernelArg(k_fused_add_mul, 0, sizeof(cl_mem), &a->data);
     p_clSetKernelArg(k_fused_add_mul, 1, sizeof(cl_mem), &b->data);
@@ -1662,7 +1784,7 @@ void tensor_fused_add_mul(Tensor* a, Tensor* b, Tensor* c, Tensor* out) {
     p_clEnqueueNDRangeKernel(g_queue, k_fused_add_mul, 1, NULL, &work, NULL, 0, NULL, NULL);
 }
 
-void tensor_fused_add_rms_norm(Tensor* x, Tensor* residual, Tensor* weight, Tensor* out, float eps) {
+EXPORT void tensor_fused_add_rms_norm(Tensor* x, Tensor* residual, Tensor* weight, Tensor* out, float eps) {
     if (!k_fused_add_rms_norm) return;
     int hidden = x->shape[x->ndim - 1];
     int rows = x->size / hidden;
@@ -1678,18 +1800,59 @@ void tensor_fused_add_rms_norm(Tensor* x, Tensor* residual, Tensor* weight, Tens
     p_clEnqueueNDRangeKernel(g_queue, k_fused_add_rms_norm, 1, NULL, &work, NULL, 0, NULL, NULL);
 }
 
+EXPORT void tensor_verify_tokens(Tensor* draft, Tensor* target, Tensor* out_count) {
+    if (!k_verify_tokens) return;
+    int len = draft->size;
+    p_clSetKernelArg(k_verify_tokens, 0, sizeof(cl_mem), &draft->data);
+    p_clSetKernelArg(k_verify_tokens, 1, sizeof(cl_mem), &target->data);
+    p_clSetKernelArg(k_verify_tokens, 2, sizeof(cl_mem), &out_count->data);
+    p_clSetKernelArg(k_verify_tokens, 3, sizeof(int), &len);
+    size_t work = 1;
+    p_clEnqueueNDRangeKernel(g_queue, k_verify_tokens, 1, NULL, &work, NULL, 0, NULL, NULL);
+}
+
+EXPORT void tensor_convert_fp32_bf16(Tensor* fp32, Tensor* bf16) {
+    if (!k_fp32_to_bf16) return;
+    p_clSetKernelArg(k_fp32_to_bf16, 0, sizeof(cl_mem), &fp32->data);
+    p_clSetKernelArg(k_fp32_to_bf16, 1, sizeof(cl_mem), &bf16->data);
+    size_t work = fp32->size;
+    p_clEnqueueNDRangeKernel(g_queue, k_fp32_to_bf16, 1, NULL, &work, NULL, 0, NULL, NULL);
+}
+
+EXPORT void tensor_convert_bf16_fp32(Tensor* bf16, Tensor* fp32) {
+    if (!k_bf16_to_fp32) return;
+    p_clSetKernelArg(k_bf16_to_fp32, 0, sizeof(cl_mem), &bf16->data);
+    p_clSetKernelArg(k_bf16_to_fp32, 1, sizeof(cl_mem), &fp32->data);
+    size_t work = fp32->size;
+    p_clEnqueueNDRangeKernel(g_queue, k_bf16_to_fp32, 1, NULL, &work, NULL, 0, NULL, NULL);
+}
+
+EXPORT void tensor_copy_p2p(Tensor* src, Tensor* dst) {
+    if (!g_queue) return;
+    size_t size = src->size;
+    if ((size_t)dst->size < size) size = (size_t)dst->size;
+    p_clEnqueueCopyBuffer(g_queue, (cl_mem)src->data, (cl_mem)dst->data, 0, 0, size * sizeof(float), 0, NULL, NULL);
+}
+
+EXPORT void tensor_copy_offset(Tensor* src, int src_offset, Tensor* dst, int dst_offset, int count) {
+    if (!g_queue) return;
+    p_clEnqueueCopyBuffer(g_queue, (cl_mem)src->data, (cl_mem)dst->data,
+                          src_offset * sizeof(float), dst_offset * sizeof(float),
+                          count * sizeof(float), 0, NULL, NULL);
+}
+
 // Exports for benchmarking and tuning (matching CUDA backend)
-void tensor_benchmark_matmul(int M, int N, int K, int trials, double* out_time_ms) {
+EXPORT void tensor_benchmark_matmul(int M, int N, int K, int trials, double* out_time_ms) {
     // Basic OpenCL benchmarking
     if (!g_queue) return;
     // ... setup events ...
     *out_time_ms = 0.0; // Placeholder
 }
 
-void tensor_set_tuning_param(int param_id, int value) {
+EXPORT void tensor_set_tuning_param(int param_id, int value) {
     // Placeholder
 }
 
-void begin_capture() {}
-void end_capture() {}
-void replay_graph() {}
+EXPORT void begin_capture() {}
+EXPORT void end_capture() {}
+EXPORT void replay_graph() {}

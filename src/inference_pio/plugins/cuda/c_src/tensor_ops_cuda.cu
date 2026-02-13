@@ -611,7 +611,6 @@ EXPORT Tensor* create_tensor(int* shape, int ndim, int device_id) {
     return t;
 }
 EXPORT void free_tensor(Tensor* t) { if (t) { if (t->device_id >= 0) CUDA_CHECK(cudaFree(t->data)); else free(t->data); free(t->shape); free(t); } }
-EXPORT void tensor_fill(Tensor* t, float value) { if (t->device_id >= 0) { int threads = 256; int blocks = (t->size + threads - 1) / threads; fill_kernel<<<blocks, threads>>>(t->data, value, t->size); CUDA_CHECK(cudaDeviceSynchronize()); } }
 EXPORT void tensor_add(Tensor* a, Tensor* b, Tensor* out) {
     if (out->device_id >= 0) {
         if (out->size % 4 == 0) {
@@ -640,7 +639,6 @@ EXPORT void tensor_mul(Tensor* a, Tensor* b, Tensor* out) {
         }
     }
 }
-EXPORT void tensor_gelu(Tensor* input, Tensor* out) { if (out->device_id >= 0) { int threads = 256; int blocks = (out->size + threads - 1) / threads; gelu_kernel<<<blocks, threads>>>(input->data, out->data, out->size); CUDA_CHECK(cudaDeviceSynchronize()); } }
 EXPORT void tensor_silu(Tensor* input, Tensor* out) {
     if (out->device_id >= 0) {
         if (out->size % 4 == 0) {
@@ -669,15 +667,6 @@ EXPORT void tensor_fused_add_mul(Tensor* a, Tensor* b, Tensor* c, Tensor* out) {
         }
     }
 }
-EXPORT void tensor_rms_norm(Tensor* input, Tensor* weight, Tensor* out, float eps) { if (out->device_id >= 0) { int rows = input->size / input->shape[input->ndim - 1]; int cols = input->shape[input->ndim - 1]; int threads = 1; int blocks = rows; rms_norm_kernel<<<blocks, threads>>>(input->data, weight->data, out->data, rows, cols, eps); CUDA_CHECK(cudaDeviceSynchronize()); } }
-EXPORT void tensor_softmax(Tensor* input, Tensor* out) { if (out->device_id >= 0) { int rows = input->size / input->shape[input->ndim - 1]; int cols = input->shape[input->ndim - 1]; int threads = 1; int blocks = rows; softmax_kernel<<<blocks, threads>>>(input->data, out->data, rows, cols); CUDA_CHECK(cudaDeviceSynchronize()); } }
-EXPORT void tensor_matmul(Tensor* a, Tensor* b, Tensor* out) { if (out->device_id >= 0) { int M = a->shape[a->ndim-2]; int K = a->shape[a->ndim-1]; int N = b->shape[b->ndim-1]; int TotalM = a->size / K; int broadcast_B = (b->ndim == 2); dim3 threads(16, 16); dim3 blocks((N + 15) / 16, (TotalM + 15) / 16); matmul_kernel_naive<<<blocks, threads>>>(a->data, b->data, out->data, TotalM, K, N, TotalM/M, M, broadcast_B); CUDA_CHECK(cudaDeviceSynchronize()); } }
-EXPORT void tensor_matmul_transposed(Tensor* a, Tensor* b, Tensor* out) { if (out->device_id >= 0) { int M = a->shape[a->ndim-2]; int K = a->shape[a->ndim-1]; int N = b->shape[b->ndim-2]; int TotalM = a->size / K; int broadcast_B = (b->ndim == 2); dim3 threads(16, 16); dim3 blocks((N + 15) / 16, (TotalM + 15) / 16); matmul_transposed_kernel<<<blocks, threads>>>(a->data, b->data, out->data, TotalM, K, N, TotalM/M, M, broadcast_B); CUDA_CHECK(cudaDeviceSynchronize()); } }
-EXPORT void tensor_linear(Tensor* input, Tensor* weight, Tensor* bias, Tensor* out) { if (out->device_id >= 0) { int K = input->shape[input->ndim - 1]; int TotalRows = input->size / K; int N = weight->shape[0]; dim3 threads(16, 16); dim3 blocks((N + 15) / 16, (TotalRows + 15) / 16); linear_kernel_naive<<<blocks, threads>>>(input->data, weight->data, bias ? bias->data : NULL, out->data, TotalRows, K, N); CUDA_CHECK(cudaDeviceSynchronize()); } }
-EXPORT void tensor_rope(Tensor* q, Tensor* k, Tensor* cos, Tensor* sin, Tensor* out_q, Tensor* out_k) { if (out_q->device_id >= 0) { int dim = q->shape[q->ndim - 1]; int total_tokens = q->size / dim; int threads = 256; int blocks = (total_tokens * (dim/2) + threads - 1) / threads; rope_kernel<<<blocks, threads>>>(q->data, k->data, cos->data, sin->data, out_q->data, out_k->data, total_tokens, dim); CUDA_CHECK(cudaDeviceSynchronize()); } }
-EXPORT void tensor_conv2d(Tensor* input, Tensor* weight, Tensor* bias, Tensor* out, int stride, int padding, int groups) { if (out->device_id >= 0) { int N = input->shape[0]; int C_in = input->shape[1]; int H_in = input->shape[2]; int W_in = input->shape[3]; int C_out = weight->shape[0]; int KH = weight->shape[2]; int KW = weight->shape[3]; int H_out = out->shape[2]; int W_out = out->shape[3]; int total = out->size; int threads = 256; int blocks = (total + threads - 1) / threads; conv2d_kernel_naive<<<blocks, threads>>>(input->data, weight->data, bias ? bias->data : NULL, out->data, N, C_in, H_in, W_in, C_out, KH, KW, H_out, W_out, stride, padding, groups); CUDA_CHECK(cudaDeviceSynchronize()); } }
-EXPORT void tensor_swiglu(Tensor* gate, Tensor* up, Tensor* out) { if (out->device_id >= 0) { int size = out->size; int threads = 256; int blocks = (size + threads - 1) / threads; swiglu_kernel<<<blocks, threads>>>(gate->data, up->data, out->data, size); CUDA_CHECK(cudaDeviceSynchronize()); } }
-EXPORT void tensor_fused_gate_up_swiglu(Tensor* gate_up, Tensor* out) { if (out->device_id >= 0) { int hidden = out->shape[out->ndim - 1]; int size = out->size; int threads = 256; int blocks = (size + threads - 1) / threads; fused_gate_up_swiglu_kernel<<<blocks, threads>>>(gate_up->data, out->data, hidden, size); CUDA_CHECK(cudaDeviceSynchronize()); } }
 __global__ void argmax_kernel(float* input, float* out, int cols) {
     int row = blockIdx.x;
     int offset = row * cols;
@@ -697,7 +686,77 @@ EXPORT void tensor_argmax(Tensor* input, Tensor* out) {
         int cols = input->shape[input->ndim - 1];
         int rows = input->size / cols;
         argmax_kernel<<<rows, 1>>>(input->data, out->data, cols);
-        CUDA_CHECK(cudaDeviceSynchronize());
+    }
+}
+
+// BFloat16 Support (Storage/Conversion)
+__global__ void fp32_to_bf16_kernel(float* in, unsigned short* out, int size) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        unsigned int f = __float_as_uint(in[idx]);
+        out[idx] = (unsigned short)(f >> 16);
+    }
+}
+
+__global__ void bf16_to_fp32_kernel(unsigned short* in, float* out, int size) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        unsigned int f = ((unsigned int)in[idx]) << 16;
+        out[idx] = __uint_as_float(f);
+    }
+}
+
+EXPORT void tensor_convert_fp32_bf16(Tensor* fp32, Tensor* bf16) {
+    if (fp32->device_id >= 0) {
+        int size = fp32->size;
+        int threads = 256;
+        int blocks = (size + threads - 1) / threads;
+        fp32_to_bf16_kernel<<<blocks, threads>>>(fp32->data, (unsigned short*)bf16->data, size);
+    }
+}
+
+EXPORT void tensor_convert_bf16_fp32(Tensor* bf16, Tensor* fp32) {
+    if (bf16->device_id >= 0) {
+        int size = fp32->size;
+        int threads = 256;
+        int blocks = (size + threads - 1) / threads;
+        bf16_to_fp32_kernel<<<blocks, threads>>>((unsigned short*)bf16->data, fp32->data, size);
+    }
+}
+
+// Speculative Decoding Verification
+__global__ void verify_tokens_kernel(int* draft, int* target, int* out_count, int len) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx == 0) {
+        int matches = 0;
+        for (int i = 0; i < len; i++) {
+            if (draft[i] == target[i]) matches++;
+            else break;
+        }
+        *out_count = matches;
+    }
+}
+
+EXPORT void tensor_verify_tokens(Tensor* draft, Tensor* target, Tensor* out_count) {
+    if (draft->device_id >= 0) {
+        int len = draft->size;
+        verify_tokens_kernel<<<1, 1>>>((int*)draft->data, (int*)target->data, (int*)out_count->data, len);
+    }
+}
+
+// P2P Copy
+EXPORT void tensor_copy_p2p(Tensor* src, Tensor* dst) {
+    if (src->device_id >= 0 && dst->device_id >= 0) {
+        size_t size = src->size;
+        if (dst->size < size) size = dst->size;
+        CUDA_CHECK(cudaMemcpyPeer(dst->data, dst->device_id, src->data, src->device_id, size * sizeof(float)));
+    }
+}
+
+// VRAM Defrag / Offset Copy
+EXPORT void tensor_copy_offset(Tensor* src, int src_offset, Tensor* dst, int dst_offset, int count) {
+    if (src->device_id >= 0 && dst->device_id >= 0) {
+        CUDA_CHECK(cudaMemcpy(dst->data + dst_offset, src->data + src_offset, count * sizeof(float), cudaMemcpyDeviceToDevice));
     }
 }
 
@@ -727,7 +786,6 @@ EXPORT void tensor_embed(Tensor* weight, Tensor* indices, Tensor* out) {
         // Re-declaring kernel to accept size?
         // Using existing logic structure.
         embed_kernel<<<blocks, threads>>>(weight->data, indices->data, out->data, hidden);
-        CUDA_CHECK(cudaDeviceSynchronize());
     }
 }
 
@@ -776,7 +834,6 @@ EXPORT void tensor_permute(Tensor* input, Tensor* out, int* dims) {
         int threads = 256;
         int blocks = (size + threads - 1) / threads;
         permute_kernel<<<blocks, threads>>>(input->data, out->data, size, d_params, d_params+ndim, ndim);
-        CUDA_CHECK(cudaDeviceSynchronize());
         CUDA_CHECK(cudaFree(d_params));
     }
 }
@@ -812,7 +869,6 @@ EXPORT void tensor_cat(Tensor** tensors, int num_tensors, int axis, Tensor* out)
         }
         offset_accum += dim;
     }
-    CUDA_CHECK(cudaDeviceSynchronize());
 }
 
 // Flash Attention Lite (Online Softmax) - Non-Paged Version for completeness
@@ -847,8 +903,6 @@ EXPORT void tensor_scaled_dot_product_attention(Tensor* q, Tensor* k, Tensor* v,
 }
 
 EXPORT void tensor_count_value(Tensor* t, float value, int* count) { if (t->device_id >= 0) { int* d_count; CUDA_CHECK(cudaMalloc((void**)&d_count, sizeof(int))); CUDA_CHECK(cudaMemset(d_count, 0, sizeof(int))); int threads = 256; int blocks = (t->size + threads - 1) / threads; count_value_kernel<<<blocks, threads>>>(t->data, t->size, value, d_count); CUDA_CHECK(cudaMemcpy(count, d_count, sizeof(int), cudaMemcpyDeviceToHost)); CUDA_CHECK(cudaFree(d_count)); } }
-EXPORT void tensor_gather_by_value(Tensor* input, Tensor* indices, float value, Tensor* out_data, Tensor* out_indices) { if (input->device_id >= 0) { reset_gather_idx<<<1, 1>>>(); int hidden_size = input->shape[input->ndim - 1]; int size = indices->size; int threads = 256; int blocks = (size + threads - 1) / threads; gather_by_value_kernel<<<blocks, threads>>>(input->data, indices->data, size, value, out_data->data, out_indices->data, hidden_size); CUDA_CHECK(cudaDeviceSynchronize()); } }
-EXPORT void tensor_scatter_add_by_index(Tensor* out, Tensor* src, Tensor* indices) { if (out->device_id >= 0) { int count = indices->size; int hidden_size = src->shape[src->ndim - 1]; int total_rows = out->size / hidden_size; int total_elements = count * hidden_size; int threads = 256; int blocks = (total_elements + threads - 1) / threads; scatter_add_kernel<<<blocks, threads>>>(out->data, src->data, indices->data, count, hidden_size, total_rows); CUDA_CHECK(cudaDeviceSynchronize()); } }
 EXPORT void tensor_load_data(Tensor* t, float* buffer, int size) { if (t->device_id >= 0) CUDA_CHECK(cudaMemcpy(t->data, buffer, size*4, cudaMemcpyHostToDevice)); else memcpy(t->data, buffer, size*4); }
 EXPORT void tensor_get_data(Tensor* t, float* buffer, int size) { if (t->device_id >= 0) CUDA_CHECK(cudaMemcpy(buffer, t->data, size*4, cudaMemcpyDeviceToHost)); else memcpy(buffer, t->data, size*4); }
 EXPORT void tensor_topk(Tensor* input, int k, Tensor* out_values, Tensor* out_indices) {
@@ -858,7 +912,6 @@ EXPORT void tensor_topk(Tensor* input, int k, Tensor* out_values, Tensor* out_in
         int threads = 1; // Single thread per row
         int blocks = rows;
         topk_kernel_naive<<<blocks, threads>>>(input->data, cols, k, out_values->data, out_indices->data, rows);
-        CUDA_CHECK(cudaDeviceSynchronize());
     }
 }
 EXPORT void tensor_deltanet_recurrence(Tensor* q, Tensor* k, Tensor* v, Tensor* beta, Tensor* state, Tensor* out) {
@@ -877,14 +930,12 @@ EXPORT void tensor_deltanet_recurrence(Tensor* q, Tensor* k, Tensor* v, Tensor* 
             q->data, k->data, v->data, beta->data, state->data, out->data,
             B, S, H, D
         );
-        CUDA_CHECK(cudaDeviceSynchronize());
     }
 }
 
 // Missing: slice, precompute (add empty or copy from previous if not modified, assuming typical impl)
 // Adding minimal versions to prevent link error
 __global__ void slice_kernel(float* in, float* out, int size, int* start, int* h_in, int* h_out, int ndim) { int idx = blockIdx.x*blockDim.x + threadIdx.x; if(idx<size) { int temp=idx; int offset=0; for(int i=0; i<ndim; i++) { int c=temp/h_out[i]; temp%=h_out[i]; offset+=(start[i]+c)*h_in[i]; } out[idx]=in[offset]; } }
-EXPORT void tensor_slice(Tensor* input, Tensor* out, int* start_indices, int* slice_shapes) { if (out->device_id >= 0) { int ndim = input->ndim; int* h_in = (int*)malloc(ndim*4); int* h_out = h_in + ndim; h_in[ndim-1]=1; h_out[ndim-1]=1; for(int i=ndim-2; i>=0; i--) { h_in[i] = h_in[i+1]*input->shape[i+1]; h_out[i] = h_out[i+1]*out->shape[i+1]; } int* d_params; CUDA_CHECK(cudaMalloc((void**)&d_params, 3*ndim*4)); CUDA_CHECK(cudaMemcpy(d_params, start_indices, ndim*4, cudaMemcpyHostToDevice)); CUDA_CHECK(cudaMemcpy(d_params+ndim, h_in, ndim*4, cudaMemcpyHostToDevice)); CUDA_CHECK(cudaMemcpy(d_params+2*ndim, h_out, ndim*4, cudaMemcpyHostToDevice)); int size = out->size; int threads=256; int blocks=(size+255)/256; slice_kernel<<<blocks, threads>>>(input->data, out->data, size, d_params, d_params+ndim, d_params+2*ndim, ndim); CUDA_CHECK(cudaDeviceSynchronize()); CUDA_CHECK(cudaFree(d_params)); free(h_in); } }
 
 __global__ void slice_kernel_device(float* in, float* out, int size, float* start, int* h_in, int* h_out, int ndim) {
     int idx = blockIdx.x*blockDim.x + threadIdx.x;
@@ -916,7 +967,6 @@ EXPORT void tensor_slice_device(Tensor* input, Tensor* out, Tensor* start_indice
         int threads=256;
         int blocks=(size+255)/256;
         slice_kernel_device<<<blocks, threads>>>(input->data, out->data, size, start_indices->data, d_strides, d_strides+ndim, ndim);
-        CUDA_CHECK(cudaDeviceSynchronize());
         CUDA_CHECK(cudaFree(d_strides));
         free(h_in);
     }
@@ -956,7 +1006,6 @@ EXPORT void tensor_set_slice(Tensor* dst, Tensor* src, int* start_indices) {
         int threads=256;
         int blocks=(size+255)/256;
         set_slice_kernel<<<blocks, threads>>>(dst->data, src->data, size, d_params, d_params+ndim, d_params+2*ndim, ndim);
-        CUDA_CHECK(cudaDeviceSynchronize());
         CUDA_CHECK(cudaFree(d_params));
         free(strides);
     }
@@ -995,7 +1044,6 @@ EXPORT void tensor_set_slice_device(Tensor* dst, Tensor* src, Tensor* start_indi
         int threads=256;
         int blocks=(size+255)/256;
         set_slice_kernel_device<<<blocks, threads>>>(dst->data, src->data, size, start_indices->data, d_strides, d_strides+ndim, ndim);
-        CUDA_CHECK(cudaDeviceSynchronize());
         CUDA_CHECK(cudaFree(d_strides));
         free(strides);
     }
@@ -1137,7 +1185,6 @@ EXPORT void tensor_fused_split_rope(
             out_q->data, out_k->data, out_v->data,
             total_tokens, heads, head_dim
         );
-        CUDA_CHECK(cudaDeviceSynchronize());
     }
 }
 
@@ -1159,7 +1206,6 @@ EXPORT void end_capture() {
 
 EXPORT void replay_graph() {
     CUDA_CHECK(cudaGraphLaunch(g_instance, 0));
-    CUDA_CHECK(cudaDeviceSynchronize());
 }
 
 // Auto-Tuning Primitive
@@ -1220,11 +1266,9 @@ EXPORT void tensor_paged_attention(
             out->data, scale,
             batch, heads, head_dim, page_size, max_blocks_per_seq
         );
-        CUDA_CHECK(cudaDeviceSynchronize());
     }
 }
 __global__ void precompute_freqs_kernel(float* cos, float* sin, int end, int half, float theta) { int idx = blockIdx.x*blockDim.x + threadIdx.x; if(idx < end*half) { int i = idx / half; int j = idx % half; float freq = 1.0f / powf(theta, (float)(2*j) / (half*2)); float val = i * freq; cos[idx] = cosf(val); sin[idx] = sinf(val); } }
-EXPORT void tensor_precompute_freqs_cis(int dim, int end, float theta, Tensor* out_cos, Tensor* out_sin) { if (out_cos->device_id >= 0) { int half = dim/2; int total = end*half; int th=256; int bl=(total+255)/256; precompute_freqs_kernel<<<bl, th>>>(out_cos->data, out_sin->data, end, half, theta); CUDA_CHECK(cudaDeviceSynchronize()); } }
 
 // --- Fused Ops from previous fused_ops.cu integrated here for correct signature ---
 
@@ -1235,7 +1279,6 @@ EXPORT void tensor_fused_add_rms_norm(Tensor* x, Tensor* residual, Tensor* weigh
         int threads = 256;
         if (hidden_size < 256) threads = hidden_size;
         fused_add_rms_norm_row_kernel<<<rows, threads>>>(x->data, residual->data, weight->data, out->data, hidden_size, eps);
-        CUDA_CHECK(cudaDeviceSynchronize());
     }
 }
 
@@ -1250,6 +1293,5 @@ EXPORT void tensor_dequantize(Tensor* input, Tensor* scale, Tensor* out) {
         int threads = 256;
         int blocks = (size + threads - 1) / threads;
         dequantize_kernel<<<blocks, threads>>>(in_ptr, scale->data, out->data, size);
-        CUDA_CHECK(cudaDeviceSynchronize());
     }
 }

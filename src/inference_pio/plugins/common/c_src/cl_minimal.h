@@ -53,5 +53,8 @@ typedef cl_int (*PTR_clReleaseProgram)(cl_program);
 typedef cl_int (*PTR_clReleaseCommandQueue)(cl_command_queue);
 typedef cl_int (*PTR_clReleaseContext)(cl_context);
 typedef cl_int (*PTR_clGetProgramBuildInfo)(cl_program, cl_device_id, cl_uint, size_t, void*, size_t*);
+typedef cl_int (*PTR_clEnqueueCopyBuffer)(cl_command_queue, cl_mem, cl_mem, size_t, size_t, size_t, cl_uint, const cl_event*, cl_event*);
+typedef cl_int (*PTR_clGetProgramInfo)(cl_program, cl_uint, size_t, void*, size_t*);
+typedef cl_program (*PTR_clCreateProgramWithBinary)(cl_context, cl_uint, const cl_device_id*, const size_t*, const unsigned char**, cl_int*, cl_int*);
 
 #endif // CL_MINIMAL_H
