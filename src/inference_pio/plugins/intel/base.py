@@ -1,14 +1,15 @@
-import ctypes
-import os
-from ..base.gpu_interface import GPUHardwareInterface
+from ..common.opencl_backend import OpenCLBackend
 
-class IntelBasePlugin(GPUHardwareInterface):
-    def initialize(self, **kwargs): return True
-    def get_device_info(self): return {"vendor": "Intel", "backend": "OneAPI"}
-    def allocate(self, size): return 1
-    def free(self, ptr): pass
-    def memcpy_h2d(self, dst, src, size): pass
-    def memcpy_d2h(self, dst, src, size): pass
-    def synchronize(self): pass
-    def matmul(self, a, b, c, m, n, k): pass
-    def cleanup(self): pass
+class IntelBasePlugin(OpenCLBackend):
+    """
+    Intel GPU Plugin using OpenCL Backend.
+    Provides "Real Code" execution for Intel GPUs (iGPU/Arc) via the system's OpenCL runtime.
+    This effectively replaces the need for a complex SYCL/DPC++ build in this environment.
+    """
+    def __init__(self):
+        super().__init__(platform_vendor_filter="Intel")
+
+    def get_device_info(self) -> dict:
+        info = super().get_device_info()
+        info["vendor"] = "Intel"
+        return info
