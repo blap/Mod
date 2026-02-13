@@ -6,10 +6,13 @@ It replaces the legacy PyTorch-based GenericCPUPlugin.
 """
 
 import logging
+import ctypes
+import os
 from typing import Any, Dict, Optional, List
 
 from ...common.interfaces.improved_base_plugin_interface import BasePluginInterface, PluginMetadata, PluginType
 from ...core.engine.backend import Tensor, scaled_dot_product_attention
+from ...common.utils.lib_loader import load_backend_lib
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +35,17 @@ class NativeCPUPlugin(BasePluginInterface):
         super().__init__(metadata)
         self._config = {}
         self._num_threads = 1
+        self.lib = None
 
     def initialize(self, config: Dict[str, Any] = None) -> bool:
         self._config = config or {}
+
+        # Load backend library
+        try:
+            self.lib = load_backend_lib("cpu")
+        except ImportError as e:
+            logger.error(f"Failed to load CPU backend: {e}")
+            return False
 
         # Determine optimal thread count (physical cores)
         from ...common.hardware.hardware_analyzer import get_system_profile
@@ -47,33 +58,13 @@ class NativeCPUPlugin(BasePluginInterface):
         target_threads = self._config.get("num_threads", physical_cores)
         self._num_threads = target_threads
 
-        # Try to set threads dynamically via backend handle
-        # Note: Environment variable OMP_NUM_THREADS must be set BEFORE importing if dynamic setting fails.
+        # Set threads dynamically via backend handle
         try:
-            # We need to access the underlying C library handle
-            # It is not directly exposed but we can try to find it via Tensor class or module
-            from ...core.engine.backend import _lib_cpu
-            import ctypes
-
-            if _lib_cpu:
-                # Assuming standard OpenMP runtime symbols might be linked
-                # Or a wrapper function 'omp_set_num_threads' exposed by libtensor_ops
-                # Standard name is usually omp_set_num_threads but often mangled or hidden.
-                # If libtensor_ops wraps it, good. If not, we might not be able to change it.
-                if hasattr(_lib_cpu, 'omp_set_num_threads'):
-                    _lib_cpu.omp_set_num_threads(ctypes.c_int(target_threads))
-                    logger.info(f"Set OpenMP threads to {target_threads}")
-                else:
-                    # Fallback: Try to find symbol by name if ctypes allows
-                    try:
-                        func = _lib_cpu['omp_set_num_threads']
-                        func.argtypes = [ctypes.c_int]
-                        func(target_threads)
-                        logger.info(f"Set OpenMP threads to {target_threads} (via symbol lookup)")
-                    except:
-                        logger.info(f"Dynamic thread setting not available. Using default env OMP_NUM_THREADS. (Target: {target_threads})")
-        except ImportError:
-            pass
+            if hasattr(self.lib, 'omp_set_num_threads'):
+                self.lib.omp_set_num_threads(ctypes.c_int(target_threads))
+                logger.info(f"Set OpenMP threads to {target_threads}")
+            else:
+                logger.info("Dynamic thread setting not exposed by libtensor_ops.so")
         except Exception as e:
             logger.warning(f"Failed to set CPU threads: {e}")
 
@@ -86,19 +77,12 @@ class NativeCPUPlugin(BasePluginInterface):
 
     def _set_affinity(self):
         try:
-            import ctypes
-            # Simplified affinity setting for Linux (libc)
-            libc = ctypes.CDLL("libc.so.6")
-            # sched_setaffinity(pid, len, mask)
-            # Creating mask is complex in ctypes, skipping strict impl for stability
-            # but acknowledging the optimization step.
-            # In a real engine we would use `os.sched_setaffinity` if available (Python 3.3+)
-            if hasattr(os, "sched_setaffinity"):
-                # Pin to first N physical cores
-                # Assuming simple mapping
-                cpu_ids = list(range(self._num_threads))
-                os.sched_setaffinity(0, cpu_ids)
-                logger.info(f"Thread Affinity Set: Pinned to CPUs {cpu_ids}")
+            # Platform specific affinity
+            if os.name == 'posix':
+                if hasattr(os, "sched_setaffinity"):
+                    cpu_ids = list(range(self._num_threads))
+                    os.sched_setaffinity(0, cpu_ids)
+                    logger.info(f"Thread Affinity Set: Pinned to CPUs {cpu_ids}")
         except Exception as e:
             logger.debug(f"Affinity setting skipped: {e}")
 
@@ -134,8 +118,9 @@ class NativeCPUPlugin(BasePluginInterface):
 
     def manage_threads(self, num_threads: int):
         # Set env var for OpenMP
-        import os
         os.environ["OMP_NUM_THREADS"] = str(num_threads)
+        if self.lib and hasattr(self.lib, 'omp_set_num_threads'):
+             self.lib.omp_set_num_threads(ctypes.c_int(num_threads))
 
 def create_generic_cpu_plugin() -> NativeCPUPlugin:
     """
