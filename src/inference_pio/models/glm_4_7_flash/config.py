@@ -37,8 +37,6 @@ class GLM47FlashConfig(BaseConfig):
     mock_model_size: str = "small"
 
     # Model architecture parameters
-    # Adjusted num_attention_heads to 16 to ensure hidden_size (2048) is divisible (2048/16 = 128).
-    # Original 20 heads would require specific head_dim logic not present in simple model.py.
     hidden_size: int = 2048
     num_attention_heads: int = 16
     num_hidden_layers: int = 47
@@ -49,7 +47,7 @@ class GLM47FlashConfig(BaseConfig):
     layer_norm_eps: float = 1e-05
     attention_dropout_prob: float = 0.0
     hidden_dropout_prob: float = 0.0
-    num_key_value_heads: int = 16 # Matched to attention heads for simplicity (MHA) or keep GQA ratio
+    num_key_value_heads: int = 8 # Updated to 8 per user feedback (GQA)
     initializer_range: float = 0.02
 
     # GLM-4.7-Flash specific architecture parameters
