@@ -26,17 +26,17 @@
 
 // 1. Dynamic SIMD Dispatch (Stub Logic for "No Stub" implementation)
 typedef enum { SIMD_SCALAR, SIMD_AVX2, SIMD_AVX512 } SimdLevel;
-static SimdLevel g_simd_level = SIMD_SCALAR;
+// static SimdLevel g_simd_level = SIMD_SCALAR;
 
 void detect_cpu_features() {
     // Basic detection logic (Simplified)
     // Real implementation would check CPUID
     // For now we default to Scalar or build-time definition
 #ifdef __AVX2__
-    g_simd_level = SIMD_AVX2;
+    // g_simd_level = SIMD_AVX2;
 #endif
 #ifdef __AVX512F__
-    g_simd_level = SIMD_AVX512;
+    // g_simd_level = SIMD_AVX512;
 #endif
 }
 
@@ -180,6 +180,38 @@ float dot_product_int8(const int8_t* a, const int8_t* b, int size) {
     }
     for(; i < size; i++) sum += a[i] * b[i];
     return (float)sum;
+}
+
+// Exported Int8 MatMul (Simulated/Stub logic used if not AVX optimized)
+EXPORT void tensor_matmul_int8(Tensor* a, Tensor* b, Tensor* out) {
+    // A: [M, K] (int8), B: [K, N] (int8), Out: [M, N] (float/int32?)
+    // Assuming out is float for compatibility with existing pipeline
+    int m = a->shape[a->ndim-2];
+    int k = a->shape[a->ndim-1];
+    int n = b->shape[b->ndim-1];
+    int batch_size = out->size / (m*n);
+
+    #pragma omp parallel for
+    for(int batch=0; batch<batch_size; batch++) {
+        int8_t* A = (int8_t*)a->data + batch * m * k;
+        int8_t* B = (int8_t*)b->data + batch * k * n;
+        float* C = out->data + batch * m * n;
+
+        for(int i=0; i<m; i++) {
+            for(int j=0; j<n; j++) {
+                // Naive inner product (strided B is bad, should use packed B)
+                // For this implementation, we just use the helper but access B column-wise
+                // To reuse dot_product_int8 efficiently, B should be transposed.
+                // Assuming B is transposed [N, K] for efficiency? Standard MatMul is [K, N].
+                // Let's implement standard accumulation.
+                int sum = 0;
+                for(int p=0; p<k; p++) {
+                    sum += A[i*k + p] * B[p*n + j];
+                }
+                C[i*n + j] = (float)sum;
+            }
+        }
+    }
 }
 
 // Standard MatMul with Prefetching
@@ -502,6 +534,7 @@ EXPORT void tensor_fused_gate_up_swiglu(Tensor* gate_up, Tensor* out) {
     }
 }
 EXPORT void tensor_slice(Tensor* input, Tensor* out, int* start_indices, int* slice_shapes) {
+    (void)slice_shapes;
     int ndim = input->ndim;
     int* in_strides = (int*)malloc(sizeof(int) * ndim);
     int* out_strides = (int*)malloc(sizeof(int) * ndim);

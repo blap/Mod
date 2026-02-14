@@ -54,7 +54,7 @@ static cl_kernel k_swiglu = NULL;
 static cl_kernel k_fused_gate_up_swiglu = NULL;
 static cl_kernel k_argmax = NULL;
 static cl_kernel k_embed = NULL;
-static cl_kernel k_cat = NULL;
+// static cl_kernel k_cat = NULL;
 static cl_kernel k_slice = NULL;
 static cl_kernel k_slice_device = NULL;
 static cl_kernel k_set_slice = NULL;
@@ -791,7 +791,8 @@ int init_opencl() {
                     p_clReleaseProgram(g_program); g_program = NULL;
                 }
             } else {
-                if(g_program) p_clReleaseProgram(g_program); g_program = NULL;
+                if(g_program) { p_clReleaseProgram(g_program); }
+                g_program = NULL;
             }
         }
         free(bin);
@@ -874,13 +875,7 @@ int init_opencl() {
 
 // --- 4. Tensor Ops Implementation ---
 
-typedef struct {
-    float* data; // cl_mem
-    int* shape;
-    int ndim;
-    int size;
-    int device_id;
-} Tensor;
+#include "../../common/tensor.h"
 
 EXPORT Tensor* create_tensor(int* shape, int ndim, int device_id) {
     if (!init_opencl()) return NULL;
@@ -1173,6 +1168,7 @@ void compute_strides(int* shape, int ndim, int* strides) {
 }
 
 EXPORT void tensor_slice(Tensor* input, Tensor* out, int* start_indices, int* slice_shapes) {
+    (void)slice_shapes;
     if (!k_slice) return;
     int ndim = input->ndim;
     int h_in[8], h_out[8]; // Max ndim 8
@@ -1400,8 +1396,9 @@ EXPORT void tensor_scatter_add_by_index(Tensor* out, Tensor* src, Tensor* indice
 }
 
 EXPORT void tensor_conv2d(Tensor* input, Tensor* weight, Tensor* bias, Tensor* out, int stride, int padding, int groups) {
+    (void)groups;
     if (!k_conv2d) return;
-    int N = input->shape[0];
+    // int N = input->shape[0];
     int C_in = input->shape[1];
     int H_in = input->shape[2];
     int W_in = input->shape[3];

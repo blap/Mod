@@ -1,9 +1,7 @@
 import ctypes
-import os
 import logging
 from ..base.cpu_interface import CPUHardwareInterface
 from ...common.utils.lib_loader import load_backend_lib
-from ...core.engine.backend import Tensor
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +22,8 @@ class NativeCPUPlugin(CPUHardwareInterface):
             logger.error(f"Failed to load Native CPU backend: {e}")
 
     def _setup_signatures(self):
-        if not self.lib: return
+        if not self.lib:
+            return
         # Standardize function signatures if needed
         # Assuming int* for shape, int ndim, int device_id -> void*
         self.lib.create_tensor.restype = ctypes.c_void_p
@@ -46,9 +45,11 @@ class NativeCPUPlugin(CPUHardwareInterface):
 
     # --- Standard Allocator Interface ---
     def allocate(self, size_bytes: int):
-        if not self.lib: return None
+        if not self.lib:
+            return None
         elements = size_bytes // 4
-        if elements == 0: elements = 1
+        if elements == 0:
+            elements = 1
         shape = (ctypes.c_int * 1)(elements)
         # Device -1 for CPU in C backend logic
         return self.lib.create_tensor(shape, 1, -1)
