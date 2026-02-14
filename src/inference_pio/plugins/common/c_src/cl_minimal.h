@@ -8,6 +8,9 @@
 typedef int cl_int;
 typedef unsigned int cl_uint;
 typedef uint64_t cl_ulong;
+typedef cl_ulong cl_bitfield;
+typedef cl_bitfield cl_mem_flags; // Added typedef
+
 typedef struct _cl_platform_id *    cl_platform_id;
 typedef struct _cl_device_id *      cl_device_id;
 typedef struct _cl_context *        cl_context;
