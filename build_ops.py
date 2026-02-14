@@ -31,6 +31,9 @@ def compile_cpu():
     """Compile CPU backend."""
     print("\n[Build] Compiling CPU Backend...")
     src = PLUGINS_DIR / "cpu" / "c_src" / "tensor_ops.c"
+    # Also include the safetensors_loader.c
+    loader_src = PLUGINS_DIR / "cpu" / "c_src" / "safetensors_loader.c"
+
     if not src.exists():
         print(f"Skipping CPU: {src} not found")
         return
@@ -38,14 +41,21 @@ def compile_cpu():
     out_name = "libtensor_ops.dll" if os.name == "nt" else "libtensor_ops.so"
     out_path = src.parent / out_name
 
-    cmd = ["gcc"] + [str(src)] + CFLAGS + ["-o", str(out_path)]
+    cmd = ["gcc"] + [str(src)] + CFLAGS
+
+    # Check if loader exists and append
+    if loader_src.exists():
+        cmd.append(str(loader_src))
+
+    cmd += ["-o", str(out_path)]
+
     # Link with math library on Linux
     if os.name != "nt":
         cmd.append("-lm")
         cmd.append("-fopenmp") # Link OpenMP
 
     if os.name == "nt":
-        # MSVC syntax is different
+        # MSVC syntax is different - NOT UPDATED FOR LOADER YET (TODO)
         cmd = ["cl", str(src)] + CFLAGS + ["/Fe:" + str(out_path)]
 
     if run_command(cmd):

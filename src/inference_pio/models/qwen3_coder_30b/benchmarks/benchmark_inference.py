@@ -1,5 +1,5 @@
 """
-Standardized Benchmark for Qwen3-Coder-Next
+Standardized Benchmark for Qwen3-Coder-30B
 """
 import sys
 import os
@@ -9,28 +9,28 @@ import psutil
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../")))
 
 from src.inference_pio.core.engine.backend import Tensor
-from src.inference_pio.models.qwen3_coder_next.model import Qwen3CoderNextForCausalLM
-from src.inference_pio.models.qwen3_coder_next.config import Qwen3CoderNextConfig
+from src.inference_pio.models.qwen3_coder_30b.model import Qwen3Coder30BModel
+from src.inference_pio.models.qwen3_coder_30b.config import Qwen3Coder30BConfig
 from src.inference_pio.common.processing.prompt_utils import format_math_prompt, format_mcq_prompt
 
 def run_benchmark():
     print("="*60)
-    print("Benchmark: Qwen3-Coder-Next (Standardized)")
+    print("Benchmark: Qwen3-Coder-30B (Standardized)")
     print("="*60)
 
     start_load = time.time()
-    config = Qwen3CoderNextConfig()
+    config = Qwen3Coder30BConfig()
     try:
-        model = Qwen3CoderNextForCausalLM(config)
+        model = Qwen3Coder30BModel(config)
         print(f"Model Loaded in {time.time() - start_load:.2f}s")
     except Exception as e:
         print(f"Failed to load model: {e}")
         return
 
     prompts = [
-        ("Code", "def quicksort(arr):"),
-        ("Math", format_math_prompt("Solve the recurrence relation T(n) = 2T(n/2) + n.")),
-        ("MCQ", format_mcq_prompt("What is the time complexity of QuickSort? A) O(n) B) O(n log n) C) O(n^2)"))
+        ("Code", "def fibonacci(n):"),
+        ("Math", format_math_prompt("Calculate the complexity of Bubble Sort.")),
+        ("MCQ", format_mcq_prompt("Which language uses whitespace for blocks? A) C++ B) Python C) Java"))
     ]
 
     tokenizer = model._tokenizer

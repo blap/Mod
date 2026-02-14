@@ -665,6 +665,21 @@ class Module:
             if p: yield p
         for m in self._modules.values(): yield from m.parameters()
 
+    def state_dict(self, prefix: str = "", destination: Dict[str, Tensor] = None) -> Dict[str, Tensor]:
+        if destination is None:
+            destination = {}
+
+        # Add parameters
+        for name, param in self._parameters.items():
+            if param is not None:
+                destination[prefix + name] = param
+
+        # Add submodules
+        for name, module in self._modules.items():
+            module.state_dict(prefix + name + ".", destination)
+
+        return destination
+
 class Linear(Module):
     def __init__(self, in_features: int, out_features: int, bias: bool = True):
         super().__init__()

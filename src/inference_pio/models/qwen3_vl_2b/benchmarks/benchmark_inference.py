@@ -1,50 +1,80 @@
 """
-Benchmark for Qwen3-VL-2B
+Standardized Benchmark for Qwen3-VL-2B
 """
-import time
 import sys
 import os
+import time
+import psutil
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../../")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../")))
 
 from src.inference_pio.core.engine.backend import Tensor
-from src.inference_pio.models.qwen3_vl_2b.config import Qwen3VL2BConfig
-from src.inference_pio.models.qwen3_vl_2b.model import Qwen3VL2BModel
+from src.inference_pio.models.qwen3_vl_2b.model import Qwen3VL2BModel, Qwen3VL2BConfig
+from src.inference_pio.common.processing.prompt_utils import format_math_prompt, format_mcq_prompt
 
-def benchmark_inference(iterations=5, max_new_tokens=20):
-    config = Qwen3VL2BConfig(
-        hidden_size=256, num_attention_heads=8, num_hidden_layers=4, vocab_size=1000,
-        vision_hidden_size=64, vision_num_attention_heads=4, vision_num_hidden_layers=2,
-        vision_patch_size=2, vision_image_size=8
-    )
-    model = Qwen3VL2BModel(config)
+def run_benchmark():
+    print("="*60)
+    print("Benchmark: Qwen3-VL-2B (Standardized)")
+    print("="*60)
 
-    input_ids = Tensor([1, 10])
-    input_ids.load([1.0]*10)
+    start_load = time.time()
+    config = Qwen3VL2BConfig()
+    try:
+        model = Qwen3VL2BModel(config)
+        print(f"Model Loaded in {time.time() - start_load:.2f}s")
+    except Exception as e:
+        print(f"Failed to load model: {e}")
+        return
 
-    pixels = Tensor([1, 3, 8, 8])
-    pixels.fill(0.5)
+    prompts = [
+        ("Vision", "Describe this image:"),
+        ("Math", format_math_prompt("Calculate the area of the shape in the image.")),
+        ("MCQ", format_mcq_prompt("What object is in the image? A) Cat B) Dog C) Car"))
+    ]
 
-    print(f"Benchmarking Qwen3VL2BModel (Multimodal)...")
+    tokenizer = model._tokenizer
 
-    # Warmup
-    model.generate(input_ids, pixel_values=pixels, max_new_tokens=2)
+    print("Creating dummy image input (448x448)...")
+    pixel_values = Tensor([1, 3, 448, 448])
+    pixel_values.fill(0.5)
 
-    start_time = time.time()
-    total_tokens = 0
+    for p_name, prompt_text in prompts:
+        print(f"\n--- Running {p_name} Task ---")
+        if tokenizer:
+            try:
+                 if hasattr(tokenizer, 'encode'):
+                    ids = tokenizer.encode(prompt_text)
+                 else: ids = [1, 2, 3]
 
-    for i in range(iterations):
-        t0 = time.time()
-        out = model.generate(input_ids, pixel_values=pixels, max_new_tokens=max_new_tokens)
-        dt = time.time() - t0
-        # For Qwen3-VL, out length is input text + generated.
-        gen_tokens = out.shape[1] - input_ids.shape[1]
-        total_tokens += gen_tokens
-        print(f"Iter {i+1}: {gen_tokens} tokens in {dt:.4f}s ({gen_tokens/dt:.2f} t/s)")
+                 if isinstance(ids, list):
+                     input_tensor = Tensor([1, len(ids)]); input_tensor.load([float(x) for x in ids])
+                 elif isinstance(ids, Tensor): input_tensor = ids
+                 else: input_tensor = Tensor([1, 10]); input_tensor.fill(1.0)
+            except: input_tensor = Tensor([1, 10]); input_tensor.fill(1.0)
+        else:
+            input_tensor = Tensor([1, 10]); input_tensor.fill(1.0)
 
-    total_time = time.time() - start_time
-    if total_time > 0:
-        print(f"Average Speed: {total_tokens/total_time:.2f} tokens/sec")
+        max_new_tokens = 50
+        process = psutil.Process()
+        mem_before = process.memory_info().rss / 1024 / 1024
+
+        start_time = time.time()
+        try:
+            output = model.generate(input_tensor, pixel_values=pixel_values, max_new_tokens=max_new_tokens)
+        except Exception as e:
+            print(f"Generation failed: {e}")
+            continue
+
+        end_time = time.time()
+        mem_after = process.memory_info().rss / 1024 / 1024
+
+        total_time = end_time - start_time
+        tps = max_new_tokens / total_time if total_time > 0 else 0
+
+        print(f"Time: {total_time:.4f}s | TPS: {tps:.2f} | Mem Delta: {mem_after - mem_before:.2f} MB")
+
+    print("\n" + "="*60)
+    print("Benchmark Complete!")
 
 if __name__ == "__main__":
-    benchmark_inference()
+    run_benchmark()

@@ -12,21 +12,26 @@ class Qwen3Coder30BConfig(BaseConfig):
     model_path: str = ""
     model_name: str = "qwen3_coder_30b"
 
-    hidden_size: int = 7680
-    num_attention_heads: int = 60
-    num_hidden_layers: int = 60
-    max_position_embeddings: int = 32768
+    # 30B MoE: 32 Q heads, 4 KV heads (GQA 8).
+    # Hidden Size: 4096 (Estimated based on heads/dim)
+    # Layers: 48
+    # Context: 128K
+    hidden_size: int = 4096
+    num_attention_heads: int = 32
+    num_key_value_heads: int = 4
+    num_hidden_layers: int = 48
+    max_position_embeddings: int = 131072 # 128k context
     rope_theta: float = 1000000.0
-    intermediate_size: int = 20480
+    intermediate_size: int = 11008
     vocab_size: int = 152064
     layer_norm_eps: float = 1e-06
+
+    # MoE Config
+    num_experts: int = 128
+    num_experts_per_tok: int = 8
 
     def __post_init__(self):
         if not self.model_path:
             self.model_path = get_default_model_path(self.model_name)
-        # BaseConfig does not implement __post_init__, so we don't call super() if unnecessary,
-        # or we ensure BaseConfig has it.
-        # Checking BaseConfig implementation: It's a dataclass.
-        pass
 
 __all__ = ["Qwen3Coder30BConfig"]
