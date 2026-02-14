@@ -1526,6 +1526,26 @@ EXPORT void tensor_copy_offset(Tensor* src, int src_offset, Tensor* dst, int dst
                           count * sizeof(float), 0, NULL, NULL);
 }
 
+// 39. Texture MatMul (Optimization)
+EXPORT void tensor_matmul_image(Tensor* a, Tensor* b, Tensor* out) {
+    if (!k_matmul_image) return;
+    // B is assumed to be image2d_t (handled by higher level allocator/converter?)
+    // For now, assume b->data IS a cl_mem image handle created elsewhere.
+    int M = a->shape[a->ndim - 2];
+    int K = a->shape[a->ndim - 1];
+    int N = b->shape[b->ndim - 1];
+
+    p_clSetKernelArg(k_matmul_image, 0, sizeof(int), &M);
+    p_clSetKernelArg(k_matmul_image, 1, sizeof(int), &N);
+    p_clSetKernelArg(k_matmul_image, 2, sizeof(int), &K);
+    p_clSetKernelArg(k_matmul_image, 3, sizeof(cl_mem), &a->data);
+    p_clSetKernelArg(k_matmul_image, 4, sizeof(cl_mem), &b->data);
+    p_clSetKernelArg(k_matmul_image, 5, sizeof(cl_mem), &out->data);
+
+    size_t global[2] = {N, M};
+    p_clEnqueueNDRangeKernel(g_queue, k_matmul_image, 2, NULL, global, NULL, 0, NULL, NULL);
+}
+
 EXPORT void tensor_benchmark_matmul(int M, int N, int K, int trials, double* out_time_ms) {
     if (!g_queue || !k_matmul) return;
     cl_int err;

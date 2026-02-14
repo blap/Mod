@@ -844,12 +844,20 @@ EXPORT void tensor_cat(Tensor** tensors, int num_tensors, int axis, Tensor* out)
     }
 }
 EXPORT void tensor_scaled_dot_product_attention(Tensor* q, Tensor* k, Tensor* v, Tensor* out, float scale) {
-    // Stub or real simple impl? Required for standard.
-    // Use paged attention with dummy table?
-    // Implementing basic launch of fused kernel placeholder
-    int seq_len = k->shape[1];
+    int batch = q->shape[0];
+    int heads = q->shape[1];
     int head_dim = q->shape[2];
-    fused_attention_kernel<<<q->shape[0]*q->shape[1], 128>>>(q->data, k->data, v->data, out->data, scale, seq_len, head_dim);
+    int seq_len = k->shape[1];
+
+    // Launch one block per head (Batch * Heads)
+    // Threads = HeadDim (clamped to 1024 if needed, usually 128)
+    int threads = head_dim;
+    if (threads > 1024) threads = 1024;
+
+    int blocks = batch * heads;
+    int shared_mem = head_dim * sizeof(float);
+
+    fused_attention_kernel<<<blocks, threads, shared_mem>>>(q->data, k->data, v->data, out->data, scale, seq_len, head_dim);
 }
 EXPORT void tensor_count_value(Tensor* t, float value, int* count) { if (t->device_id >= 0) { int* d_count; CUDA_CHECK(cudaMalloc((void**)&d_count, sizeof(int))); CUDA_CHECK(cudaMemset(d_count, 0, sizeof(int))); int threads = 256; int blocks = (t->size + threads - 1) / threads; count_value_kernel<<<blocks, threads>>>(t->data, t->size, value, d_count); CUDA_CHECK(cudaMemcpy(count, d_count, sizeof(int), cudaMemcpyDeviceToHost)); CUDA_CHECK(cudaFree(d_count)); } }
 EXPORT void tensor_gather_by_value(Tensor* input, Tensor* indices, float value, Tensor* out_data, Tensor* out_indices) { if (input->device_id >= 0) { reset_gather_idx<<<1, 1>>>(); int hidden_size = input->shape[input->ndim - 1]; int size = indices->size; int threads = 256; int blocks = (size + threads - 1) / threads; gather_by_value_kernel<<<blocks, threads>>>(input->data, indices->data, size, value, out_data->data, out_indices->data, hidden_size); } }

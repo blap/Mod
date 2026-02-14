@@ -44,7 +44,16 @@ class IntelBasePlugin(GPUHardwareInterface):
             self.lib.free_tensor(ptr)
 
     def memcpy_h2d(self, dst_ptr, src_data, size_bytes):
-        pass
+        if not self.lib: return
+        c_float_p = ctypes.POINTER(ctypes.c_float)
+
+        if hasattr(src_data, 'ctypes'):
+             data_ptr = src_data.ctypes.data_as(c_float_p)
+        else:
+             # Convert list/bytearray if needed
+             pass
+
+        self.lib.tensor_load_data(dst_ptr, data_ptr, size_bytes//4)
 
     def memcpy_d2h(self, dst_data, src_ptr, size_bytes):
         if not self.lib: return
