@@ -119,10 +119,11 @@ def _setup_sigs(lib):
 
     if hasattr(lib, 'open_safetensors'):
         lib.open_safetensors.argtypes = [ctypes.c_char_p]
-        lib.open_safetensors.restype = ctypes.c_int
-        lib.load_tensor_data.argtypes = [ctypes.c_char_p, ctypes.POINTER(ctypes.c_float), ctypes.c_int]
+        lib.open_safetensors.restype = ctypes.c_void_p
+        lib.load_tensor_data.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_float), ctypes.c_int]
         lib.load_tensor_data.restype = ctypes.c_int
-        lib.close_safetensors.argtypes = []
+        lib.close_safetensors.argtypes = [ctypes.c_void_p]
+        lib.close_safetensors.restype = None
     if hasattr(lib, 'image_resize_bilinear'):
         lib.image_resize_bilinear.argtypes = [ctypes.POINTER(ctypes.c_float), ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_float), ctypes.c_int, ctypes.c_int]
 
@@ -263,9 +264,20 @@ class Tensor:
             if data: self.load(data)
 
     def __del__(self):
-        if hasattr(self, '_handle') and self._handle: _lib_cpu.free_tensor(self._handle)
-        if hasattr(self, '_opencl_mem') and self._opencl_mem and self._lib and hasattr(self._lib, 'free'):
-            self._lib.free(self._opencl_mem)
+        if hasattr(self, '_handle') and self._handle is not None and _lib_cpu:
+            try:
+                _lib_cpu.free_tensor(self._handle)
+            except OSError:
+                pass # Library might be unloaded
+            self._handle = None
+
+        if hasattr(self, '_opencl_mem') and self._opencl_mem is not None and self._lib:
+            if hasattr(self._lib, 'free'):
+                try:
+                    self._lib.free(self._opencl_mem)
+                except OSError:
+                    pass
+            self._opencl_mem = None
 
     def load(self, data: List[float]):
         if "opencl" in self.device:
@@ -799,14 +811,25 @@ class CUDAGraph:
 
 def load_safetensors(filepath: str, model_layers: Dict[str, Tensor]):
     if not _lib_cpu or not os.path.exists(filepath): return False
-    if _lib_cpu.open_safetensors(filepath.encode('utf-8')) <= 0: return False
-    for name, tensor in model_layers.items():
-        if tensor.device != "cpu":
-            size = tensor.size
-            host_buffer = (ctypes.c_float * size)()
-            if _lib_cpu.load_tensor_data(name.encode('utf-8'), host_buffer, size) == 0:
-                tensor.load(list(host_buffer))
-        else:
-            _lib_cpu.load_tensor_data(name.encode('utf-8'), tensor._handle.contents.data, tensor.size)
-    _lib_cpu.close_safetensors()
+
+    ctx = _lib_cpu.open_safetensors(filepath.encode('utf-8'))
+    if not ctx: return False
+
+    try:
+        for name, tensor in model_layers.items():
+            if tensor.device != "cpu":
+                size = tensor.size
+                host_buffer = (ctypes.c_float * size)()
+                # Load to host buffer
+                if _lib_cpu.load_tensor_data(ctx, name.encode('utf-8'), host_buffer, size) != 0:
+                    # Optimize: Direct pointer pass if backend supports it
+                    if hasattr(tensor._lib, 'tensor_load_data'):
+                         tensor._lib.tensor_load_data(tensor._handle, host_buffer, size)
+                    else:
+                         tensor.load(list(host_buffer))
+            else:
+                _lib_cpu.load_tensor_data(ctx, name.encode('utf-8'), tensor._handle.contents.data, tensor.size)
+    finally:
+        _lib_cpu.close_safetensors(ctx)
+
     return True

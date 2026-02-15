@@ -12,7 +12,7 @@ from ...common.interfaces.improved_base_plugin_interface import (
     PluginType,
     TextModelPluginInterface,
 )
-from .config import Qwen3_0_6B_Config, Qwen3_0_6B_DynamicConfig
+from .config import Qwen3_0_6bConfig as Qwen3_0_6B_Config, Qwen3_0_6B_DynamicConfig
 from .model import Qwen3_0_6B_Model
 
 logger = logging.getLogger(__name__)

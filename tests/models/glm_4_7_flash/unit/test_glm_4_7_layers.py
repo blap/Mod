@@ -14,7 +14,7 @@ class TestLayers(unittest.TestCase):
         m = GLM47FlashModel(c)
         layer = m.layers[0]
         x = Tensor([1, 5, c.hidden_size]); x.fill(0.1)
-        out = layer(x)
+        out, _ = layer(x)
         self.assertEqual(out.shape, (1, 5, c.hidden_size))
 
 if __name__ == '__main__':

@@ -91,9 +91,14 @@ EXPORT void reset_memory_pool() {
 }
 
 EXPORT Tensor* create_tensor(int* shape, int ndim, int device_id) {
-    Tensor* t = (Tensor*)malloc(sizeof(Tensor));
+    // printf("DEBUG: create_tensor ndim=%d\n", ndim);
+    Tensor* t = (Tensor*)calloc(1, sizeof(Tensor));
+    if (!t) return NULL;
+
     t->ndim = ndim;
     t->shape = (int*)malloc(sizeof(int) * ndim);
+    if (!t->shape) { free(t); return NULL; }
+
     t->size = 1;
     for(int i=0; i<ndim; i++) {
         t->shape[i] = shape[i];
@@ -104,6 +109,7 @@ EXPORT Tensor* create_tensor(int* shape, int ndim, int device_id) {
     size_t bytes = sizeof(float) * t->size;
 
     // Arena Logic
+    int in_pool = 0;
     if (g_memory_pool && device_id == -1) {
         // Align to 64 bytes (cache line / AVX512)
         size_t alignment_padding = (64 - (g_pool_offset % 64)) % 64;
@@ -111,20 +117,43 @@ EXPORT Tensor* create_tensor(int* shape, int ndim, int device_id) {
             g_pool_offset += alignment_padding;
             t->data = (float*)((char*)g_memory_pool + g_pool_offset);
             g_pool_offset += bytes;
-            return t;
+            in_pool = 1;
         }
     }
 
-    t->data = (float*)aligned_alloc(64, bytes);
+    if (!in_pool) {
+        t->data = (float*)aligned_alloc(64, bytes);
+        // printf("DEBUG: Allocated %p (size=%zu)\n", t->data, bytes);
+    } else {
+        // printf("DEBUG: Allocated from pool %p\n", t->data);
+    }
     return t;
 }
 
 EXPORT void free_tensor(Tensor* t) {
     if(t) {
+        // printf("DEBUG: free_tensor %p\n", t);
         // Only free if NOT in pool
-        if (!g_memory_pool || t->data < g_memory_pool || t->data >= g_memory_pool + g_pool_size/sizeof(float)) {
-             if(t->data) aligned_free(t->data);
+        // Check if data pointer is within the pool range
+        int is_in_pool = 0;
+        if (g_memory_pool && t->data) {
+            char* pool_start = (char*)g_memory_pool;
+            char* pool_end = pool_start + g_pool_size;
+            char* data_ptr = (char*)t->data;
+            if (data_ptr >= pool_start && data_ptr < pool_end) {
+                is_in_pool = 1;
+            }
         }
+
+        if (!is_in_pool) {
+             if(t->data) {
+                 // printf("DEBUG: Freeing data %p\n", t->data);
+                 aligned_free(t->data);
+             }
+        } else {
+            // printf("DEBUG: Not freeing pool data %p\n", t->data);
+        }
+
         if(t->shape) free(t->shape);
         free(t);
     }

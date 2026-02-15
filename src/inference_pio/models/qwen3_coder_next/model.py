@@ -282,8 +282,11 @@ class Qwen3CoderNextDecoderLayer(Module):
         self.hidden_size = config.hidden_size
 
         # Select layer type based on hybrid pattern
-        pattern = config.hybrid_block_pattern
-        layer_type = pattern[layer_idx % len(pattern)]
+        if hasattr(config, 'hybrid_block_pattern') and config.hybrid_block_pattern:
+            pattern = config.hybrid_block_pattern
+            layer_type = pattern[layer_idx % len(pattern)]
+        else:
+            layer_type = "attention" # Default fallback
 
         if layer_type == "deltanet":
             self.self_attn = Qwen3CoderNextDeltaNet(config)

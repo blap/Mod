@@ -56,9 +56,10 @@ EXPORT void tensor_embed(Tensor* weight, Tensor* indices, Tensor* out);
 EXPORT void tensor_cat(Tensor** inputs, int count, int axis, Tensor* out);
 
 // Loader / Image
-EXPORT int open_safetensors(const char* filepath);
-EXPORT int load_tensor_data(const char* name, float* buffer, int size);
-EXPORT void close_safetensors();
+typedef struct SafetensorsContext SafetensorsContext;
+EXPORT SafetensorsContext* open_safetensors(const char* filepath);
+EXPORT int load_tensor_data(SafetensorsContext* ctx, const char* name, float* buffer, int size);
+EXPORT void close_safetensors(SafetensorsContext* ctx);
 EXPORT void image_resize_bilinear(float* input, int channels, int h, int w, float* output, int target_h, int target_w);
 
 #ifdef __cplusplus

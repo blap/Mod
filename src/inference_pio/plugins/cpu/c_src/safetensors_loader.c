@@ -15,95 +15,106 @@
 #define USE_MMAP_WIN
 #endif
 
-// Minimal SafeTensors Loader (Dependency-Free)
-// Supports reading tensors from a .safetensors file by name.
+// SafeTensors Loader - Context Based (Thread Safe / Re-entrant)
 
-FILE* g_current_file = NULL;
-char* g_header_json = NULL;
-uint64_t g_header_size = 0;
+struct SafetensorsContext {
+    FILE* file;
+    char* header_json;
+    uint64_t header_size;
 
-#ifdef USE_MMAP
-int g_fd = -1;
-void* g_mmap_addr = NULL;
-size_t g_mmap_size = 0;
-#endif
-
-#ifdef USE_MMAP_WIN
-HANDLE g_hFile = INVALID_HANDLE_VALUE;
-HANDLE g_hMap = NULL;
-void* g_mmap_addr_win = NULL;
-size_t g_mmap_size_win = 0;
-#endif
-
-int open_safetensors(const char* filepath) {
-    if (g_current_file) fclose(g_current_file);
     #ifdef USE_MMAP
-    if (g_mmap_addr) { munmap(g_mmap_addr, g_mmap_size); g_mmap_addr = NULL; }
-    if (g_fd != -1) { close(g_fd); g_fd = -1; }
+    int fd;
+    void* mmap_addr;
+    size_t mmap_size;
+    #endif
+
+    #ifdef USE_MMAP_WIN
+    HANDLE hFile;
+    HANDLE hMap;
+    void* mmap_addr_win;
+    size_t mmap_size_win;
+    #endif
+};
+
+EXPORT SafetensorsContext* open_safetensors(const char* filepath) {
+    SafetensorsContext* ctx = (SafetensorsContext*)calloc(1, sizeof(SafetensorsContext));
+    if (!ctx) return NULL;
+
+    #ifdef USE_MMAP
+    ctx->fd = -1;
     #endif
     #ifdef USE_MMAP_WIN
-    if (g_mmap_addr_win) { UnmapViewOfFile(g_mmap_addr_win); g_mmap_addr_win = NULL; }
-    if (g_hMap) { CloseHandle(g_hMap); g_hMap = NULL; }
-    if (g_hFile != INVALID_HANDLE_VALUE) { CloseHandle(g_hFile); g_hFile = INVALID_HANDLE_VALUE; }
+    ctx->hFile = INVALID_HANDLE_VALUE;
     #endif
 
-    g_current_file = fopen(filepath, "rb");
-    if (!g_current_file) return 0;
+    ctx->file = fopen(filepath, "rb");
+    if (!ctx->file) {
+        free(ctx);
+        return NULL;
+    }
 
-    // Read header size (8 bytes, little endian uint64)
-    if (fread(&g_header_size, 8, 1, g_current_file) != 1) {
-        fclose(g_current_file); g_current_file = NULL; return 0;
+    // Read header size
+    if (fread(&ctx->header_size, 8, 1, ctx->file) != 1) {
+        fclose(ctx->file);
+        free(ctx);
+        return NULL;
     }
 
     // Read header JSON
-    if (g_header_json) free(g_header_json);
-    g_header_json = (char*)malloc(g_header_size + 1);
-    if (fread(g_header_json, 1, g_header_size, g_current_file) != g_header_size) {
-        free(g_header_json); g_header_json = NULL;
-        fclose(g_current_file); g_current_file = NULL; return 0;
+    ctx->header_json = (char*)malloc(ctx->header_size + 1);
+    if (!ctx->header_json) {
+        fclose(ctx->file);
+        free(ctx);
+        return NULL;
     }
-    g_header_json[g_header_size] = '\0';
+    if (fread(ctx->header_json, 1, ctx->header_size, ctx->file) != ctx->header_size) {
+        free(ctx->header_json);
+        fclose(ctx->file);
+        free(ctx);
+        return NULL;
+    }
+    ctx->header_json[ctx->header_size] = '\0';
 
     #ifdef USE_MMAP
     // Linux Mmap
-    g_fd = open(filepath, O_RDONLY);
-    if (g_fd != -1) {
+    ctx->fd = open(filepath, O_RDONLY);
+    if (ctx->fd != -1) {
         struct stat sb;
-        if (fstat(g_fd, &sb) != -1) {
-            g_mmap_size = sb.st_size;
-            g_mmap_addr = mmap(NULL, g_mmap_size, PROT_READ, MAP_PRIVATE, g_fd, 0);
-            if (g_mmap_addr == MAP_FAILED) {
-                g_mmap_addr = NULL;
-                close(g_fd); g_fd = -1;
+        if (fstat(ctx->fd, &sb) != -1) {
+            ctx->mmap_size = sb.st_size;
+            ctx->mmap_addr = mmap(NULL, ctx->mmap_size, PROT_READ, MAP_PRIVATE, ctx->fd, 0);
+            if (ctx->mmap_addr == MAP_FAILED) {
+                ctx->mmap_addr = NULL;
+                close(ctx->fd); ctx->fd = -1;
             }
         } else {
-            close(g_fd); g_fd = -1;
+            close(ctx->fd); ctx->fd = -1;
         }
     }
     #endif
 
     #ifdef USE_MMAP_WIN
     // Windows Map
-    g_hFile = CreateFileA(filepath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (g_hFile != INVALID_HANDLE_VALUE) {
+    ctx->hFile = CreateFileA(filepath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (ctx->hFile != INVALID_HANDLE_VALUE) {
         DWORD high = 0;
-        DWORD low = GetFileSize(g_hFile, &high);
-        g_mmap_size_win = ((size_t)high << 32) | low;
+        DWORD low = GetFileSize(ctx->hFile, &high);
+        ctx->mmap_size_win = ((size_t)high << 32) | low;
 
-        g_hMap = CreateFileMappingA(g_hFile, NULL, PAGE_READONLY, 0, 0, NULL);
-        if (g_hMap) {
-            g_mmap_addr_win = MapViewOfFile(g_hMap, FILE_MAP_READ, 0, 0, 0);
-            if (!g_mmap_addr_win) {
-                CloseHandle(g_hMap); g_hMap = NULL;
-                CloseHandle(g_hFile); g_hFile = INVALID_HANDLE_VALUE;
+        ctx->hMap = CreateFileMappingA(ctx->hFile, NULL, PAGE_READONLY, 0, 0, NULL);
+        if (ctx->hMap) {
+            ctx->mmap_addr_win = MapViewOfFile(ctx->hMap, FILE_MAP_READ, 0, 0, 0);
+            if (!ctx->mmap_addr_win) {
+                CloseHandle(ctx->hMap); ctx->hMap = NULL;
+                CloseHandle(ctx->hFile); ctx->hFile = INVALID_HANDLE_VALUE;
             }
         } else {
-            CloseHandle(g_hFile); g_hFile = INVALID_HANDLE_VALUE;
+            CloseHandle(ctx->hFile); ctx->hFile = INVALID_HANDLE_VALUE;
         }
     }
     #endif
 
-    return 1;
+    return ctx;
 }
 
 // Helper for F16->F32
@@ -131,23 +142,21 @@ static inline float half_to_float(uint16_t h) {
     return result;
 }
 
-// Simple string search for "tensor_name": { ... "data_offsets": [start, end] ... }
-// This is fragile but works for standard safetensors if keys are quoted.
-int load_tensor_data(const char* name, float* buffer, int size) {
+EXPORT int load_tensor_data(SafetensorsContext* ctx, const char* name, float* buffer, int size) {
+    if (!ctx || !ctx->header_json) return 0;
+
     int mapped = 0;
     #ifdef USE_MMAP
-    if (g_mmap_addr) mapped = 1;
+    if (ctx->mmap_addr) mapped = 1;
     #endif
     #ifdef USE_MMAP_WIN
-    if (g_mmap_addr_win) mapped = 1;
+    if (ctx->mmap_addr_win) mapped = 1;
     #endif
-
-    if ((!g_current_file && !mapped) || !g_header_json) return 0;
 
     char search_key[256];
     snprintf(search_key, 256, "\"%s\"", name);
 
-    char* pos = strstr(g_header_json, search_key);
+    char* pos = strstr(ctx->header_json, search_key);
     if (!pos) return 0;
 
     // Found name. Find "data_offsets" after it.
@@ -160,21 +169,19 @@ int load_tensor_data(const char* name, float* buffer, int size) {
     if (!bracket_start) return 0;
 
     int64_t start, end;
-    // Use %ld for Linux 64-bit long, but safest is %lld and casting or int64 specific macros.
-    // Assuming standard C library support for %lld for int64_t (C99).
     if (sscanf(bracket_start + 1, "%lld, %lld", (long long*)&start, (long long*)&end) != 2) return 0;
 
-    int64_t data_start = 8 + g_header_size + start;
+    int64_t data_start = 8 + ctx->header_size + start;
     int64_t bytes = end - start;
 
     #ifdef USE_MMAP
-    if (g_mmap_addr) {
-        if (data_start + bytes > (int64_t)g_mmap_size) return 0;
-        uint8_t* ptr = (uint8_t*)g_mmap_addr + data_start;
+    if (ctx->mmap_addr) {
+        if (data_start + bytes > (int64_t)ctx->mmap_size) return 0;
+        uint8_t* ptr = (uint8_t*)ctx->mmap_addr + data_start;
 
-        if (bytes == size * sizeof(float)) {
+        if (bytes == size * (int64_t)sizeof(float)) {
             memcpy(buffer, ptr, bytes);
-        } else if (bytes == size * sizeof(uint16_t)) {
+        } else if (bytes == size * (int64_t)sizeof(uint16_t)) {
             uint16_t* temp = (uint16_t*)ptr;
             #pragma omp parallel for
             for(int i=0; i<size; i++) {
@@ -188,13 +195,13 @@ int load_tensor_data(const char* name, float* buffer, int size) {
     #endif
 
     #ifdef USE_MMAP_WIN
-    if (g_mmap_addr_win) {
-        if (data_start + bytes > (int64_t)g_mmap_size_win) return 0;
-        uint8_t* ptr = (uint8_t*)g_mmap_addr_win + data_start;
+    if (ctx->mmap_addr_win) {
+        if (data_start + bytes > (int64_t)ctx->mmap_size_win) return 0;
+        uint8_t* ptr = (uint8_t*)ctx->mmap_addr_win + data_start;
 
-        if (bytes == size * sizeof(float)) {
+        if (bytes == size * (int64_t)sizeof(float)) {
             memcpy(buffer, ptr, bytes);
-        } else if (bytes == size * sizeof(uint16_t)) {
+        } else if (bytes == size * (int64_t)sizeof(uint16_t)) {
             uint16_t* temp = (uint16_t*)ptr;
             #pragma omp parallel for
             for(int i=0; i<size; i++) {
@@ -208,17 +215,19 @@ int load_tensor_data(const char* name, float* buffer, int size) {
     #endif
 
     // Fallback to fread
+    if (!ctx->file) return 0;
+
     #ifdef _WIN32
-    _fseeki64(g_current_file, data_start, SEEK_SET);
+    _fseeki64(ctx->file, data_start, SEEK_SET);
     #else
-    fseeko(g_current_file, data_start, SEEK_SET);
+    fseeko(ctx->file, data_start, SEEK_SET);
     #endif
 
-    if (bytes == size * sizeof(float)) {
-        if (fread(buffer, sizeof(float), size, g_current_file) != (size_t)size) return 0;
-    } else if (bytes == size * sizeof(uint16_t)) {
+    if (bytes == size * (int64_t)sizeof(float)) {
+        if (fread(buffer, sizeof(float), size, ctx->file) != (size_t)size) return 0;
+    } else if (bytes == size * (int64_t)sizeof(uint16_t)) {
         uint16_t* temp = (uint16_t*)malloc(bytes);
-        if (fread(temp, 1, bytes, g_current_file) != (size_t)bytes) { free(temp); return 0; }
+        if (fread(temp, 1, bytes, ctx->file) != (size_t)bytes) { free(temp); return 0; }
 
         #pragma omp parallel for
         for(int i=0; i<size; i++) {
@@ -226,22 +235,28 @@ int load_tensor_data(const char* name, float* buffer, int size) {
         }
         free(temp);
     } else {
-        return 0; // Size mismatch / unknown type
+        return 0;
     }
 
     return 1;
 }
 
-void close_safetensors() {
-    if (g_current_file) { fclose(g_current_file); g_current_file = NULL; }
-    if (g_header_json) { free(g_header_json); g_header_json = NULL; }
+EXPORT void close_safetensors(SafetensorsContext* ctx) {
+    if (!ctx) return;
+
+    if (ctx->file) { fclose(ctx->file); ctx->file = NULL; }
+    if (ctx->header_json) { free(ctx->header_json); ctx->header_json = NULL; }
+
     #ifdef USE_MMAP
-    if (g_mmap_addr) { munmap(g_mmap_addr, g_mmap_size); g_mmap_addr = NULL; }
-    if (g_fd != -1) { close(g_fd); g_fd = -1; }
+    if (ctx->mmap_addr) { munmap(ctx->mmap_addr, ctx->mmap_size); ctx->mmap_addr = NULL; }
+    if (ctx->fd != -1) { close(ctx->fd); ctx->fd = -1; }
     #endif
+
     #ifdef USE_MMAP_WIN
-    if (g_mmap_addr_win) { UnmapViewOfFile(g_mmap_addr_win); g_mmap_addr_win = NULL; }
-    if (g_hMap) { CloseHandle(g_hMap); g_hMap = NULL; }
-    if (g_hFile != INVALID_HANDLE_VALUE) { CloseHandle(g_hFile); g_hFile = INVALID_HANDLE_VALUE; }
+    if (ctx->mmap_addr_win) { UnmapViewOfFile(ctx->mmap_addr_win); ctx->mmap_addr_win = NULL; }
+    if (ctx->hMap) { CloseHandle(ctx->hMap); ctx->hMap = NULL; }
+    if (ctx->hFile != INVALID_HANDLE_VALUE) { CloseHandle(ctx->hFile); ctx->hFile = INVALID_HANDLE_VALUE; }
     #endif
+
+    free(ctx);
 }

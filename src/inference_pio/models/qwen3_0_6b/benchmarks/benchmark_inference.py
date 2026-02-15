@@ -15,8 +15,8 @@ import psutil
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../")))
 
 from src.inference_pio.core.engine.backend import Tensor
+from src.inference_pio.models.qwen3_0_6b.config import Qwen3_0_6bConfig as Qwen3_0_6B_Config
 from src.inference_pio.models.qwen3_0_6b.model import Qwen3_0_6B_Model
-from src.inference_pio.models.qwen3_0_6b.config import Qwen3_0_6B_Config
 from src.inference_pio.common.processing.prompt_utils import (
     format_math_prompt,
     format_mcq_prompt,

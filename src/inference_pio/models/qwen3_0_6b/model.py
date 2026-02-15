@@ -13,7 +13,7 @@ from ...core.engine.backend import Module
 from ...common.custom_components.model_loader import CustomModelLoader
 from ...common.custom_components.tokenizer import load_custom_tokenizer
 
-from .config import Qwen3_0_6B_Config
+from .config import Qwen3_0_6bConfig as Qwen3_0_6B_Config
 from .architecture import Qwen3ForCausalLM
 
 logger = logging.getLogger(__name__)
