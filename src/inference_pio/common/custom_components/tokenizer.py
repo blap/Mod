@@ -52,8 +52,12 @@ class CustomBPETokenizer:
         self.cache = {}
 
         # Regex pattern for tokenization (GPT-2 style)
+        # Replaced \p{L} and \p{N} with approx classes for standard re
+        # \p{L} -> [a-zA-Z\u00C0-\u00FF...] (Unicode letters)
+        # \p{N} -> \d (Digits)
+        # Simplified pattern to avoid 'bad escape \p' error
         self.pat = re.compile(
-            r"""'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
+            r"""'s|'t|'re|'ve|'m|'ll|'d| ?[a-zA-Z\u0080-\uFFFF]+| ?\d+| ?[^\s\w]+|\s+(?!\S)|\s+"""
         )
 
         self.unk_token = unk_token
@@ -114,11 +118,8 @@ class CustomBPETokenizer:
 
     def encode(self, text: str) -> List[int]:
         bpe_tokens = []
-        # Fallback regex if p{L} not supported in python re (it isn't by default without regex module)
-        # Using simpler approximation for standard lib re
-        pat = re.compile(r"""'s|'t|'re|'ve|'m|'ll|'d| ?[a-zA-Z]+| ?\d+| ?[^\s\w]+|\s+(?!\S)|\s+""")
-
-        for token in re.findall(pat, text):
+        # Fallback regex usage
+        for token in re.findall(self.pat, text):
             token = "".join(self.byte_encoder[b] for b in token.encode("utf-8"))
             bpe_tokens.extend(self.encoder.get(bpe_token, self.unk_token_id)
                             for bpe_token in self.bpe(token).split(" "))

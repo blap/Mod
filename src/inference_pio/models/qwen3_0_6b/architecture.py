@@ -1,5 +1,6 @@
 """
 Qwen3-0.6B Architecture - C Backend (Real Implementation)
+Updated for GQA Support.
 """
 
 from typing import Optional, Tuple, List
@@ -29,29 +30,57 @@ class Qwen3MLP(Module):
 class Qwen3Attention(Module):
     def __init__(self, config):
         super().__init__()
-        self.head_dim = config.hidden_size // config.num_attention_heads
-        self.q_proj = Linear(config.hidden_size, config.hidden_size, bias=True)
-        self.k_proj = Linear(config.hidden_size, config.hidden_size, bias=True)
-        self.v_proj = Linear(config.hidden_size, config.hidden_size, bias=True)
-        self.o_proj = Linear(config.hidden_size, config.hidden_size, bias=False)
+        self.hidden_size = config.hidden_size
+        self.num_heads = config.num_attention_heads
+        # GQA support: default to MHA if num_key_value_heads not present
+        self.num_kv_heads = getattr(config, 'num_key_value_heads', self.num_heads)
+        if self.num_kv_heads is None: self.num_kv_heads = self.num_heads
+
+        self.head_dim = self.hidden_size // self.num_heads
+
+        # Projection sizes
+        self.q_size = self.num_heads * self.head_dim
+        self.kv_size = self.num_kv_heads * self.head_dim
+        self.total_proj = self.q_size + 2 * self.kv_size
+
+        # Combined QKV projection for efficiency
+        self.qkv_proj = Linear(self.hidden_size, self.total_proj, bias=True)
+        # Separate projections deprecated in favor of fused, but keeping class structure clean
+        # self.q_proj = ...
+
+        self.o_proj = Linear(self.hidden_size, self.hidden_size, bias=False)
         self.rotary_emb = Qwen3RotaryEmbedding(self.head_dim)
 
+        # Group size for GQA repetition
+        self.group_size = self.num_heads // self.num_kv_heads
+
+    def repeat_kv(self, x: Tensor, n_rep: int) -> Tensor:
+        if n_rep == 1: return x
+        # Naive repeat: [B, S, H_kv, D] -> [B, S, H_q, D] via interleaving
+        B, S, H_kv, D = x.shape
+        head_tensors = []
+        for h in range(H_kv):
+            head = x.slice([0, 0, h, 0], [B, S, 1, D])
+            for _ in range(n_rep):
+                head_tensors.append(head)
+        return cat(head_tensors, axis=2)
+
     def forward(self, hidden_states, attention_mask=None, position_ids=None, past_key_value=None, use_cache=False, cache_position=0):
-        q = self.q_proj(hidden_states)
-        k = self.k_proj(hidden_states)
-        v = self.v_proj(hidden_states)
+        # Fused QKV
+        qkv = self.qkv_proj(hidden_states)
+        B, S, _ = qkv.shape
 
-        # Reshape [B, S, Hidden] -> [B, S, Heads, HeadDim]
-        B = q.shape[0]
-        S = q.shape[1]
-        H = q.shape[2]
-        heads = H // self.head_dim
-        new_shape = [B, S, heads, self.head_dim]
-        q = q.reshape(new_shape)
-        k = k.reshape(new_shape)
-        v = v.reshape(new_shape)
+        # Slice Q, K, V
+        q = qkv.slice([0, 0, 0], [B, S, self.q_size])
+        k = qkv.slice([0, 0, self.q_size], [B, S, self.kv_size])
+        v = qkv.slice([0, 0, self.q_size + self.kv_size], [B, S, self.kv_size])
 
-        # RoPE with correct offset
+        # Reshape to 4D
+        q = q.reshape([B, S, self.num_heads, self.head_dim])
+        k = k.reshape([B, S, self.num_kv_heads, self.head_dim])
+        v = v.reshape([B, S, self.num_kv_heads, self.head_dim])
+
+        # RoPE
         start = [cache_position, 0]
         shape = [S, self.rotary_emb.cos.shape[1]]
         cos = self.rotary_emb.cos.slice(start, shape)
@@ -59,6 +88,7 @@ class Qwen3Attention(Module):
 
         q, k = q.rope(k, cos, sin)
 
+        # Cache Update
         if use_cache and past_key_value is not None:
              k_cache, v_cache = past_key_value
              start_indices = [0, cache_position, 0, 0]
@@ -66,15 +96,20 @@ class Qwen3Attention(Module):
              v_cache.set_slice(v, start_indices)
 
              valid_len = cache_position + S
-             k = k_cache.slice([0,0,0,0], [B, valid_len, heads, self.head_dim])
-             v = v_cache.slice([0,0,0,0], [B, valid_len, heads, self.head_dim])
+             k = k_cache.slice([0,0,0,0], [B, valid_len, self.num_kv_heads, self.head_dim])
+             v = v_cache.slice([0,0,0,0], [B, valid_len, self.num_kv_heads, self.head_dim])
 
         current_cache = past_key_value if use_cache else None
+
+        # GQA Expand
+        if self.group_size > 1:
+            k = self.repeat_kv(k, self.group_size)
+            v = self.repeat_kv(v, self.group_size)
 
         out = scaled_dot_product_attention(q, k, v)
 
         # Flatten back
-        out = out.reshape([B, S, H])
+        out = out.reshape([B, S, self.hidden_size])
 
         return self.o_proj(out), None, current_cache
 
@@ -150,13 +185,17 @@ class Qwen3ForCausalLM(Module):
         seq_len = input_ids.shape[1]
         max_seq_len = seq_len + max_new_tokens
 
-        # Static KV Cache Pre-allocation
+        # Static KV Cache Pre-allocation (GQA Aware)
         device = input_ids.device
+        num_kv_heads = getattr(self.config, 'num_key_value_heads', self.config.num_attention_heads)
+        if num_kv_heads is None: num_kv_heads = self.config.num_attention_heads
+
         head_dim = self.config.hidden_size // self.config.num_attention_heads
+
         past_key_values = []
         for _ in range(self.config.num_hidden_layers):
-             k_cache = Tensor([batch_size, max_seq_len, self.config.num_attention_heads, head_dim], device=device)
-             v_cache = Tensor([batch_size, max_seq_len, self.config.num_attention_heads, head_dim], device=device)
+             k_cache = Tensor([batch_size, max_seq_len, num_kv_heads, head_dim], device=device)
+             v_cache = Tensor([batch_size, max_seq_len, num_kv_heads, head_dim], device=device)
              k_cache.fill(0.0)
              v_cache.fill(0.0)
              past_key_values.append((k_cache, v_cache))

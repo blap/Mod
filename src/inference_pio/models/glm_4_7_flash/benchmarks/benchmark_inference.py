@@ -1,48 +1,77 @@
 """
-Benchmark for GLM-4.7-Flash
+Standardized Benchmark for GLM-4.7-Flash
 """
-import time
 import sys
 import os
+import time
+import psutil
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../../")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../")))
 
 from src.inference_pio.core.engine.backend import Tensor
-from src.inference_pio.models.glm_4_7_flash.config import GLM47FlashConfig
 from src.inference_pio.models.glm_4_7_flash.model import GLM47FlashModel
+from src.inference_pio.models.glm_4_7_flash.config import GLM47FlashConfig
+from src.inference_pio.common.processing.prompt_utils import format_math_prompt, format_mcq_prompt
 
-def benchmark_inference(iterations=5, max_new_tokens=20):
-    config = GLM47FlashConfig(
-        hidden_size=256,
-        num_attention_heads=8,
-        num_layers=4,
-        vocab_size=1000,
-        max_position_embeddings=512
-    )
-    model = GLM47FlashModel(config)
+def run_benchmark():
+    print("="*60)
+    print("Benchmark: GLM-4.7-Flash (Standardized)")
+    print("="*60)
 
-    input_ids = Tensor([1, 10])
-    input_ids.load([1.0]*10)
+    start_load = time.time()
+    config = GLM47FlashConfig()
+    try:
+        model = GLM47FlashModel(config)
+        print(f"Model Loaded in {time.time() - start_load:.2f}s")
+    except Exception as e:
+        print(f"Failed to load model: {e}")
+        return
 
-    print(f"Benchmarking GLM47FlashModel...")
+    prompts = [
+        ("General", "Hello, artificial intelligence is"),
+        ("Math", format_math_prompt("Solve 2x + 5 = 15")),
+        ("MCQ", format_mcq_prompt("What is the capital of France? A) London B) Paris C) Berlin"))
+    ]
 
-    # Warmup
-    model.generate(input_ids, max_new_tokens=2)
+    tokenizer = model._tokenizer
 
-    start_time = time.time()
-    total_tokens = 0
+    for p_name, prompt_text in prompts:
+        print(f"\n--- Running {p_name} Task ---")
+        if tokenizer:
+            try:
+                 if hasattr(tokenizer, 'encode'):
+                    ids = tokenizer.encode(prompt_text)
+                 else: ids = [1, 2, 3]
 
-    for i in range(iterations):
-        t0 = time.time()
-        out = model.generate(input_ids, max_new_tokens=max_new_tokens)
-        dt = time.time() - t0
-        gen_tokens = out.shape[1] - input_ids.shape[1]
-        total_tokens += gen_tokens
-        print(f"Iter {i+1}: {gen_tokens} tokens in {dt:.4f}s ({gen_tokens/dt:.2f} t/s)")
+                 if isinstance(ids, list):
+                     input_tensor = Tensor([1, len(ids)]); input_tensor.load([float(x) for x in ids])
+                 elif isinstance(ids, Tensor): input_tensor = ids
+                 else: input_tensor = Tensor([1, 10]); input_tensor.fill(1.0)
+            except: input_tensor = Tensor([1, 10]); input_tensor.fill(1.0)
+        else:
+            input_tensor = Tensor([1, 10]); input_tensor.fill(1.0)
 
-    total_time = time.time() - start_time
-    if total_time > 0:
-        print(f"Average Speed: {total_tokens/total_time:.2f} tokens/sec")
+        max_new_tokens = 50
+        process = psutil.Process()
+        mem_before = process.memory_info().rss / 1024 / 1024
+
+        start_time = time.time()
+        try:
+            output = model.generate(input_tensor, max_new_tokens=max_new_tokens)
+        except Exception as e:
+            print(f"Generation failed: {e}")
+            continue
+
+        end_time = time.time()
+        mem_after = process.memory_info().rss / 1024 / 1024
+
+        total_time = end_time - start_time
+        tps = max_new_tokens / total_time if total_time > 0 else 0
+
+        print(f"Time: {total_time:.4f}s | TPS: {tps:.2f} | Mem Delta: {mem_after - mem_before:.2f} MB")
+
+    print("\n" + "="*60)
+    print("Benchmark Complete!")
 
 if __name__ == "__main__":
-    benchmark_inference()
+    run_benchmark()
