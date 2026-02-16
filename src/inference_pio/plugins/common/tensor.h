@@ -55,6 +55,12 @@ EXPORT void tensor_argmax(Tensor* input, Tensor* out);
 EXPORT void tensor_embed(Tensor* weight, Tensor* indices, Tensor* out);
 EXPORT void tensor_cat(Tensor** inputs, int count, int axis, Tensor* out);
 
+// MoE / DeltaNet Primitives
+EXPORT void tensor_count_value(Tensor* t, float value, int* count);
+EXPORT void tensor_gather_by_value(Tensor* input, Tensor* indices, float value, Tensor* out_data, Tensor* out_indices);
+EXPORT void tensor_scatter_add_by_index(Tensor* out, Tensor* src, Tensor* indices);
+EXPORT void tensor_deltanet_recurrence(Tensor* q, Tensor* k, Tensor* v, Tensor* beta, Tensor* state, Tensor* out);
+
 // Loader / Image
 typedef struct SafetensorsContext SafetensorsContext;
 EXPORT SafetensorsContext* open_safetensors(const char* filepath);
