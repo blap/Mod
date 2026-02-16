@@ -21,6 +21,7 @@ struct SafetensorsContext {
     FILE* file;
     char* header_json;
     uint64_t header_size;
+    int is_closed; // Add flag to prevent double free
 
     #ifdef USE_MMAP
     int fd;
@@ -39,6 +40,7 @@ struct SafetensorsContext {
 EXPORT SafetensorsContext* open_safetensors(const char* filepath) {
     SafetensorsContext* ctx = (SafetensorsContext*)calloc(1, sizeof(SafetensorsContext));
     if (!ctx) return NULL;
+    ctx->is_closed = 0;
 
     #ifdef USE_MMAP
     ctx->fd = -1;
@@ -242,7 +244,9 @@ EXPORT int load_tensor_data(SafetensorsContext* ctx, const char* name, float* bu
 }
 
 EXPORT void close_safetensors(SafetensorsContext* ctx) {
-    if (!ctx) return;
+    if (!ctx || ctx->is_closed) return;
+
+    ctx->is_closed = 1;
 
     if (ctx->file) { fclose(ctx->file); ctx->file = NULL; }
     if (ctx->header_json) { free(ctx->header_json); ctx->header_json = NULL; }
