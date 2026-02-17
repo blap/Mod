@@ -14,15 +14,15 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..
 
 try:
     # Import the specific model components for integration testing
-    from inference_pio.models.qwen3_0_6b.config import Qwen3_0_6bConfig
-    from inference_pio.models.qwen3_0_6b.model import Qwen3_0_6bModel
+    from inference_pio.models.qwen3_0_6b.config import Qwen3_0_6bConfig as Qwen3_0_6B_Config
+    from inference_pio.models.qwen3_0_6b.model import Qwen3_0_6B_Model
 except ImportError as e:
     print(f"Import error: {e}")
     # Define mock classes if imports fail to allow tests to run in isolation
-    class Qwen3_0_6bConfig:
+    class Qwen3_0_6B_Config:
         raise NotImplementedError("Method not implemented")
     
-    class Qwen3_0_6bModel:
+    class Qwen3_0_6B_Model:
         raise NotImplementedError("Method not implemented")
 
 
@@ -37,8 +37,8 @@ class TestQwen3_0_6bIntegration(unittest.TestCase):
     def test_config_model_integration(self):
         """Test that config and model can work together."""
         try:
-            config = Qwen3_0_6bConfig()
-            model = Qwen3_0_6bModel()
+            config = Qwen3_0_6B_Config()
+            model = Qwen3_0_6B_Model()
             
             # Verify that config and model can interact (this is a placeholder test)
             # Actual implementation would depend on how the model uses the config
@@ -54,8 +54,8 @@ class TestQwen3_0_6bIntegration(unittest.TestCase):
             # Placeholder for full pipeline test
             # This would typically involve initializing config, model, 
             # processing some input, and verifying output
-            config = Qwen3_0_6bConfig()
-            model = Qwen3_0_6bModel()
+            config = Qwen3_0_6B_Config()
+            model = Qwen3_0_6B_Model()
             
             self.assertIsNotNone(config)
             self.assertIsNotNone(model)

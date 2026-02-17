@@ -1,174 +1,93 @@
 # Inference-PIO
 
-Inference-PIO is a modular, high-performance inference system built on a self-contained plugin architecture. Each model is completely independent with its own configuration, tests, and benchmarks. The system supports advanced models like GLM-4.7, Qwen3-VL, and Qwen3-Coder.
+Inference-PIO is a modular, high-performance inference engine for Large Language Models (LLMs) and Vision-Language Models (VLMs). It features a plugin-based architecture for both hardware backends (CPU, CUDA, OpenCL) and model architectures, implemented via a custom C/C++ backend.
 
-## 📚 Documentation
+## Key Features
 
-*   **[Getting Started](docs/guides/getting_started.md):** Installation, basic usage, and configuration.
-*   **[Creating a Model Plugin](docs/guides/model_plugins/overview.md):** Guide to creating new model plugins.
-*   **[Supported Models](docs/api/models.md):** List of models and their capabilities.
-*   **[System Architecture](docs/api/architecture.md):** Deep dive into the plugin system and design.
-*   **[Advanced Features](docs/api/advanced_features.md):** Multimodal attention, streaming, and NAS.
-*   **[Benchmarking](docs/guides/benchmarking.md):** Performance measurement guide.
-*   **[Coding Standards](docs/standards/CODING.md):** Code style and naming conventions.
-*   **[Docstring Standards](docs/standards/DOCSTRINGS.md):** Documentation format guidelines.
-*   **[Comment Standards](docs/standards/COMMENTS.md):** Inline and block comment guidelines.
-*   **[Testing Standards](docs/standards/TESTING.md):** Test organization and naming conventions.
-*   **[Benchmarking Standards](docs/standards/BENCHMARKS.md):** Performance measurement guidelines.
+*   **Modular Architecture:** Everything is a plugin. Add new models or hardware support without modifying the core engine.
+*   **Custom C/C++ Backend:** High-performance tensor operations implemented in C (CPU) and CUDA/OpenCL (GPU).
+*   **Cross-Platform Build System:**
+    *   **Universal Build:** `build_ops.py` auto-detects host OS and available compilers (GCC, MSVC, MinGW, WSL).
+    *   **Cross-Compilation:** Build Windows DLLs from Linux (via MinGW) and Linux `.so` from Windows (via WSL).
+    *   **Wheel Support:** Package everything into a `.whl` for easy distribution.
+*   **Memory Efficiency:**
+    *   **Safetensors Context:** Low-memory footprint loading using `mmap` and streaming.
+    *   **Unified Memory Manager:** Tracks allocations across devices.
+    *   **Flash Attention & Paged Attention:** Optimized attention kernels.
+*   **Hybrid Scheduling:** Dynamic offloading between CPU and GPU based on workload and VRAM availability.
+*   **Hardware Support:**
+    *   **CPU:** Optimized AVX2/AVX512 kernels, OpenMP multithreading.
+    *   **NVIDIA GPU:** CUDA kernels with FP16/Int8 support.
+    *   **AMD/Intel GPU:** OpenCL kernels via dynamic driver loading.
 
-## 🛠 Project Structure
+## Installation & Build
 
-```
-.
-├── benchmark_results/              # General benchmark results
-│   └── general/                    # Cross-model benchmark data
-├── docs/                           # Documentation (Guides, API, Standards)
-├── examples/                       # Example usage scripts
-├── src/
-│   └── inference_pio/
-│       ├── benchmarks/             # General benchmarks
-│       ├── common/                 # Shared utilities and interfaces
-│       ├── configs/                # Global configuration
-│       ├── core/                   # Core system components (tools, scripts, factory)
-│       │   ├── tools/
-│       │   │   ├── scripts/        # Utility scripts (testing, benchmarking)
-│       │   │   └── ...
-│       │   └── model_factory.py    # Model creation factory
-│       ├── models/                 # Individual self-contained model plugins
-│       │   ├── glm_4_7_flash/      # GLM-4.7 Flash model
-│       │   ├── qwen3_0_6b/         # Qwen3-0.6B model
-│       │   ├── qwen3_coder_30b/    # Qwen3-Coder-30B model
-│       │   ├── qwen3_coder_next/   # Qwen3-Coder-Next model
-│       │   └── qwen3_vl_2b/        # Qwen3-VL-2B model
-│       ├── plugins/                # Plugin system infrastructure
-│       │   ├── base/               # Base plugin interfaces
-│       │   ├── cpu/                # CPU-specific plugins
-│       │   └── manager.py          # Plugin manager implementation
-│       ├── tests/                  # Global test structure
-│       │   ├── base/               # Test base classes
-│       │   ├── functional/         # Functional tests
-│       │   ├── integration/        # Integration tests
-│       │   ├── performance/        # Performance tests
-│       │   └── unit/               # Unit tests
-│       └── utils/                  # Utility functions
-└── ...
+### 1. Clone the repository
+```bash
+git clone https://github.com/your-org/inference-pio.git
+cd inference-pio
 ```
 
-## 🚀 Quick Start
-
+### 2. Install Dependencies
 ```bash
 pip install -r requirements.txt
-python src/inference_pio/__main__.py run --model glm-4-7-flash --prompt "Hello"
 ```
 
-## 💻 CLI Usage
+### 3. Build the Backend
 
-Inference-PIO provides a user-friendly CLI to interact with models.
+Inference-PIO uses a custom build script `build_ops.py` that handles compilation for CPU, CUDA, and OpenCL backends.
 
-### List Models
-List all available models in the system.
+#### Native Build (Linux or Windows)
+Run the following command to build for your current OS:
 ```bash
-python src/inference_pio/__main__.py list
+python3 build_ops.py
 ```
+*   **Linux:** Requires `gcc`. builds `.so` files.
+*   **Windows:** Requires `cl` (MSVC) or `gcc` (MinGW). Builds `.dll` files.
 
-### Run Inference
-Run a single inference command.
+#### Cross-Compilation
+
+**Building Windows Artifacts on Linux:**
+Install MinGW-w64 (`sudo apt install mingw-w64`) and run:
 ```bash
-python src/inference_pio/__main__.py run --model qwen3-0.6b --prompt "Hello, how are you?"
+python3 build_ops.py
 ```
+The script will automatically detect `x86_64-w64-mingw32-gcc` and build Windows DLLs alongside native Linux binaries.
 
-### Interactive Chat
-Start an interactive chat session with a model.
+**Building Linux Artifacts on Windows:**
+Ensure you have WSL (Windows Subsystem for Linux) installed and `gcc` available inside it (`wsl gcc --version`). Run:
 ```bash
-python src/inference_pio/__main__.py chat --model qwen3-0.6b
+python build_ops.py
 ```
+The script will detect `wsl` and invoke GCC inside the Linux environment to build `.so` files, saving them to the Windows filesystem.
 
-### View Model Info
-Display detailed information about a model plugin.
+### 4. Create a Wheel Package
+To create a distributable Python wheel containing all compiled artifacts:
 ```bash
-python src/inference_pio/__main__.py info --model qwen3-0.6b
+pip install setuptools wheel
+python3 setup.py bdist_wheel
 ```
+The resulting `.whl` file will be in `dist/` and can be installed via `pip install dist/inference_pio-*.whl`.
 
-### Manage Config
-List and view configuration files.
-```bash
-python src/inference_pio/__main__.py config list
-python src/inference_pio/__main__.py config view --file global_config.py
-```
+## Usage
 
-### Run Benchmarks
-Run standardized benchmarks across models.
-```bash
-python src/inference_pio/__main__.py benchmark --suite performance
-```
-
-## 🧩 Plugin Discovery System
-
-The system automatically discovers new plugins through:
-1. **Directory scanning**: Looks for model directories in `src/inference_pio/models/`
-2. **Manifest files**: Each model has a `plugin_manifest.json` file
-3. **Auto-registration**: Plugins are automatically registered without manual imports
-
-## 🏗️ Self-Contained Architecture
-
-Each model plugin is completely independent with its own:
-- Configuration files in `configs/`
-- Model implementation in `model.py`
-- Plugin interface in `plugin.py`
-- Tests in `tests/` (organized by model)
-- Benchmarks in `benchmarks/` (organized by model)
-- Optimization implementations in dedicated subdirectories
-
-This ensures that each model can be developed, tested, and deployed independently.
-
-## 🧪 Testing
-
-The project uses an organized test structure. Global tests are in `src/inference_pio/tests/`, and model-specific tests are in `src/inference_pio/models/<model_name>/tests/`.
-
-To run all tests:
-```bash
-python src/inference_pio/core/tools/scripts/testing/run_tests.py
-```
-
-To run tests for a specific category (e.g., unit):
-```bash
-python src/inference_pio/core/tools/scripts/testing/run_tests.py --category unit
-```
-
-## 🤝 Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for developer guidelines.
-
-## 🧪 Tests with Real Functionalities
-
-The project includes a comprehensive test suite that uses real functionalities instead of excessive simulations. These tests exercise critical system paths with real data and operations, maintaining efficiency while increasing fidelity to reality.
-
-### Types of Real Tests
-
-- **Functionality Tests**: Verify basic system functionality using real components
-- **Integration Tests**: Test interaction between multiple system components
-- **Performance Tests**: Measure real performance metrics instead of simulations
-- **Functional Tests**: Verify system behavior from a user perspective
-- **Regression Tests**: Ensure changes do not break existing functionalities
-
-### Running Real Tests
-
-To run all tests with real functionalities:
+### Running a Model
 
 ```bash
-python src/inference_pio/core/tools/scripts/testing/run_tests.py
+# Example: Run Qwen3-0.6B Benchmark
+python3 src/inference_pio/models/qwen3_0_6b/benchmarks/benchmark_inference.py
 ```
 
-## 🔌 Extensible Architecture
+### Running Tests
 
-The project implements a flexible and extensible architecture for easy inclusion of new models and test/benchmark types. Each model/plugin is completely independent with its own configuration, tests, and benchmarks.
+```bash
+python3 -m pytest tests/
+```
 
-### Adding New Models
+## Documentation & Guides
 
-To add a new model, create a new directory in `src/inference_pio/models/` following the standard structure. Refer to [Creating a Model Plugin](docs/guides/model_plugins/overview.md) for details.
+Learn how to extend Inference-PIO:
 
-### Adding New Test/Benchmark Types
-
-New test and benchmark types can be added by extending the base classes in `src/inference_pio/tests/base/` or creating new scripts in `src/inference_pio/core/tools/scripts/`.
-
-For more details on the extensible architecture, consult the documentation in `docs/guides/`.
+*   [**Creating Model Plugins**](docs/GUIDE_MODEL_PLUGINS.md): How to add support for new LLM/VLM architectures.
+*   [**Creating CPU Plugins**](docs/GUIDE_CPU_PLUGINS.md): How to implement optimized CPU backends.
+*   [**Creating GPU Plugins**](docs/GUIDE_GPU_PLUGINS.md): How to implement CUDA or OpenCL backends.

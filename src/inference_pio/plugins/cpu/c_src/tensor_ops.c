@@ -16,10 +16,12 @@
 #endif
 #include "../../common/tensor.h"
 
+#ifndef EXPORT
 #ifdef _WIN32
 #define EXPORT __declspec(dllexport)
 #else
 #define EXPORT
+#endif
 #endif
 
 // --- Optimizations Infrastructure ---
@@ -91,9 +93,14 @@ EXPORT void reset_memory_pool() {
 }
 
 EXPORT Tensor* create_tensor(int* shape, int ndim, int device_id) {
-    Tensor* t = (Tensor*)malloc(sizeof(Tensor));
+    // printf("DEBUG: create_tensor ndim=%d\n", ndim);
+    Tensor* t = (Tensor*)calloc(1, sizeof(Tensor));
+    if (!t) return NULL;
+
     t->ndim = ndim;
     t->shape = (int*)malloc(sizeof(int) * ndim);
+    if (!t->shape) { free(t); return NULL; }
+
     t->size = 1;
     for(int i=0; i<ndim; i++) {
         t->shape[i] = shape[i];
@@ -104,6 +111,7 @@ EXPORT Tensor* create_tensor(int* shape, int ndim, int device_id) {
     size_t bytes = sizeof(float) * t->size;
 
     // Arena Logic
+    int in_pool = 0;
     if (g_memory_pool && device_id == -1) {
         // Align to 64 bytes (cache line / AVX512)
         size_t alignment_padding = (64 - (g_pool_offset % 64)) % 64;
@@ -111,20 +119,43 @@ EXPORT Tensor* create_tensor(int* shape, int ndim, int device_id) {
             g_pool_offset += alignment_padding;
             t->data = (float*)((char*)g_memory_pool + g_pool_offset);
             g_pool_offset += bytes;
-            return t;
+            in_pool = 1;
         }
     }
 
-    t->data = (float*)aligned_alloc(64, bytes);
+    if (!in_pool) {
+        t->data = (float*)aligned_alloc(64, bytes);
+        // printf("DEBUG: Allocated %p (size=%zu)\n", t->data, bytes);
+    } else {
+        // printf("DEBUG: Allocated from pool %p\n", t->data);
+    }
     return t;
 }
 
 EXPORT void free_tensor(Tensor* t) {
     if(t) {
+        // printf("DEBUG: free_tensor %p\n", t);
         // Only free if NOT in pool
-        if (!g_memory_pool || t->data < g_memory_pool || t->data >= g_memory_pool + g_pool_size/sizeof(float)) {
-             if(t->data) aligned_free(t->data);
+        // Check if data pointer is within the pool range
+        int is_in_pool = 0;
+        if (g_memory_pool && t->data) {
+            char* pool_start = (char*)g_memory_pool;
+            char* pool_end = pool_start + g_pool_size;
+            char* data_ptr = (char*)t->data;
+            if (data_ptr >= pool_start && data_ptr < pool_end) {
+                is_in_pool = 1;
+            }
         }
+
+        if (!is_in_pool) {
+             if(t->data) {
+                 // printf("DEBUG: Freeing data %p\n", t->data);
+                 aligned_free(t->data);
+             }
+        } else {
+            // printf("DEBUG: Not freeing pool data %p\n", t->data);
+        }
+
         if(t->shape) free(t->shape);
         free(t);
     }
@@ -383,6 +414,9 @@ EXPORT void tensor_rope(Tensor* q, Tensor* k, Tensor* cos, Tensor* sin, Tensor* 
     }
 }
 EXPORT void tensor_conv2d(Tensor* input, Tensor* weight, Tensor* bias, Tensor* out, int stride, int padding, int groups) {
+    // Bounds check inputs
+    if (!input || !input->data || !weight || !weight->data || !out || !out->data) return;
+
     int N = input->shape[0];
     int Cin = input->shape[1];
     int H = input->shape[2];
@@ -394,6 +428,10 @@ EXPORT void tensor_conv2d(Tensor* input, Tensor* weight, Tensor* bias, Tensor* o
     int Wout = out->shape[3];
     int Cin_per_group = Cin / groups;
     int Cout_per_group = Cout / groups;
+
+    // Bounds safety: Ensure output size matches iteration space
+    if (out->size < N * Cout * Hout * Wout) return;
+
     #pragma omp parallel for collapse(2)
     for(int n=0; n<N; n++) {
         for(int c_out=0; c_out<Cout; c_out++) {
@@ -411,8 +449,11 @@ EXPORT void tensor_conv2d(Tensor* input, Tensor* weight, Tensor* bias, Tensor* o
                                 int h_in = h_in_start + kh;
                                 int w_in = w_in_start + kw;
                                 if(h_in >= 0 && h_in < H && w_in >= 0 && w_in < W) {
-                                    float val = input->data[((n*Cin + actual_c_in)*H + h_in)*W + w_in];
-                                    float w_val = weight->data[((c_out*Cin_per_group + c_in)*KH + kh)*KW + kw];
+                                    int in_idx = ((n*Cin + actual_c_in)*H + h_in)*W + w_in;
+                                    int w_idx = ((c_out*Cin_per_group + c_in)*KH + kh)*KW + kw;
+                                    // Safe access? Rely on logic correctness for perf, add strict check if debug
+                                    float val = input->data[in_idx];
+                                    float w_val = weight->data[w_idx];
                                     sum += val * w_val;
                                 }
                             }
@@ -426,40 +467,68 @@ EXPORT void tensor_conv2d(Tensor* input, Tensor* weight, Tensor* bias, Tensor* o
 }
 EXPORT void tensor_permute(Tensor* input, Tensor* out, int* dims) {
     int ndim = input->ndim;
-    int* in_strides = (int*)malloc(sizeof(int) * ndim);
-    int* out_strides = (int*)malloc(sizeof(int) * ndim);
+    // Bounds check
+    if (!input || !input->data || !out || !out->data || !dims) return;
+    if (input->size != out->size) return;
+
+    // Use calloc to avoid uninitialized memory issues if malloc fails
+    int* in_strides = (int*)calloc(ndim, sizeof(int));
+    int* out_strides = (int*)calloc(ndim, sizeof(int));
+    if (!in_strides || !out_strides) {
+        if(in_strides) free(in_strides);
+        if(out_strides) free(out_strides);
+        return;
+    }
+
     get_strides(input->shape, ndim, in_strides);
     get_strides(out->shape, ndim, out_strides);
+
     #pragma omp parallel for
     for(int i=0; i<out->size; i++) {
         int temp = i;
         int in_offset = 0;
         for(int d=0; d<ndim; d++) {
+            // Avoid division by zero if stride is 0 (shouldn't happen with valid shape)
+            if (out_strides[d] == 0) continue;
             int coord = temp / out_strides[d];
             temp %= out_strides[d];
             in_offset += coord * in_strides[dims[d]];
         }
-        out->data[i] = input->data[in_offset];
+        if (in_offset >= 0 && in_offset < input->size) {
+            out->data[i] = input->data[in_offset];
+        }
     }
     free(in_strides);
     free(out_strides);
 }
 EXPORT void tensor_set_slice(Tensor* dst, Tensor* src, int* start_indices) {
     int ndim = dst->ndim;
-    int* dst_strides = (int*)malloc(sizeof(int) * ndim);
-    int* src_strides = (int*)malloc(sizeof(int) * ndim);
+    if (!dst || !src || dst->ndim != src->ndim) return;
+
+    int* dst_strides = (int*)calloc(ndim, sizeof(int));
+    int* src_strides = (int*)calloc(ndim, sizeof(int));
+    if (!dst_strides || !src_strides) {
+        if(dst_strides) free(dst_strides);
+        if(src_strides) free(src_strides);
+        return;
+    }
+
     get_strides(dst->shape, ndim, dst_strides);
     get_strides(src->shape, ndim, src_strides);
+
     #pragma omp parallel for
     for(int i=0; i<src->size; i++) {
         int temp = i;
         int dst_offset = 0;
         for(int d=0; d<ndim; d++) {
+            if (src_strides[d] == 0) continue;
             int coord = temp / src_strides[d];
             temp %= src_strides[d];
             dst_offset += (start_indices[d] + coord) * dst_strides[d];
         }
-        dst->data[dst_offset] = src->data[i];
+        if (dst_offset >= 0 && dst_offset < dst->size) {
+            dst->data[dst_offset] = src->data[i];
+        }
     }
     free(dst_strides);
     free(src_strides);
@@ -536,20 +605,32 @@ EXPORT void tensor_fused_gate_up_swiglu(Tensor* gate_up, Tensor* out) {
 EXPORT void tensor_slice(Tensor* input, Tensor* out, int* start_indices, int* slice_shapes) {
     (void)slice_shapes;
     int ndim = input->ndim;
-    int* in_strides = (int*)malloc(sizeof(int) * ndim);
-    int* out_strides = (int*)malloc(sizeof(int) * ndim);
+    if (!input || !out) return;
+
+    int* in_strides = (int*)calloc(ndim, sizeof(int));
+    int* out_strides = (int*)calloc(ndim, sizeof(int));
+    if (!in_strides || !out_strides) {
+        if(in_strides) free(in_strides);
+        if(out_strides) free(out_strides);
+        return;
+    }
+
     get_strides(input->shape, ndim, in_strides);
     get_strides(out->shape, ndim, out_strides);
+
     #pragma omp parallel for
     for(int i=0; i<out->size; i++) {
         int temp = i;
         int in_offset = 0;
         for(int d=0; d<ndim; d++) {
+            if (out_strides[d] == 0) continue;
             int coord = temp / out_strides[d];
             temp %= out_strides[d];
             in_offset += (start_indices[d] + coord) * in_strides[d];
         }
-        out->data[i] = input->data[in_offset];
+        if (in_offset >= 0 && in_offset < input->size) {
+            out->data[i] = input->data[in_offset];
+        }
     }
     free(in_strides);
     free(out_strides);

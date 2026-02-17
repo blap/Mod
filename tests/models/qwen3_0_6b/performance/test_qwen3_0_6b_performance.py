@@ -15,15 +15,15 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..
 
 try:
     # Import the specific model components for performance testing
-    from inference_pio.models.qwen3_0_6b.config import Qwen3_0_6bConfig
-    from inference_pio.models.qwen3_0_6b.model import Qwen3_0_6bModel
+    from inference_pio.models.qwen3_0_6b.config import Qwen3_0_6bConfig as Qwen3_0_6B_Config
+    from inference_pio.models.qwen3_0_6b.model import Qwen3_0_6B_Model
 except ImportError as e:
     print(f"Import error: {e}")
     # Define mock classes if imports fail to allow tests to run in isolation
-    class Qwen3_0_6bConfig:
+    class Qwen3_0_6B_Config:
         raise NotImplementedError("Method not implemented")
     
-    class Qwen3_0_6bModel:
+    class Qwen3_0_6B_Model:
         raise NotImplementedError("Method not implemented")
 
 
@@ -39,7 +39,7 @@ class TestQwen3_0_6bPerformance(unittest.TestCase):
         """Test the performance of model initialization."""
         try:
             start_time = time.time()
-            model = Qwen3_0_6bModel()
+            model = Qwen3_0_6B_Model()
             end_time = time.time()
             
             init_time = end_time - start_time
