@@ -1,56 +1,67 @@
-# Creating CPU Plugins
+# Guide: Creating CPU Plugins
 
-CPU plugins allow you to customize how the inference engine interacts with the host processor. While the core "CPU Backend" is a shared C library (`libtensor_ops.so`), a CPU *Plugin* can manage initialization, thread affinity, and hardware-specific optimizations.
+This guide explains how to implement custom CPU backends for Inference-PIO, including the build process for cross-platform support.
 
-## Base Class
+## Architecture
 
-All CPU plugins should inherit from `NativeCPUPlugin` located in `src/inference_pio/plugins/cpu/base.py`.
+CPU plugins extend the `NativeCPUPlugin` class. The core compute logic is implemented in C and compiled into a shared library (`.so` or `.dll`).
 
-## Implementation
+### File Structure
+```
+src/inference_pio/plugins/cpu/
+├── base.py                 # Python wrapper (ctypes)
+├── c_src/
+│   ├── tensor_ops.c        # Main C implementation
+│   ├── safetensors_loader.c # Optimized loader
+│   └── tensor_ops.h        # Headers
+└── __init__.py
+```
 
-Create a new directory `src/inference_pio/plugins/cpu/<arch_name>/` (e.g., `intel_avx512`).
+## Compilation
 
-### 1. `plugin_manifest.json`
+Inference-PIO uses a unified build system `build_ops.py` that handles compilation for all plugins.
 
-```json
-{
-    "name": "IntelAVX512Plugin",
-    "version": "1.0.0",
-    "type": "hardware",
-    "description": "Optimized CPU backend for Intel AVX512",
-    "entry_point": "plugin:create_plugin"
+### 1. Adding New Ops
+Implement your C function in `tensor_ops.c` and declare it with the `EXPORT` macro:
+
+```c
+#ifdef _WIN32
+#define EXPORT __declspec(dllexport)
+#else
+#define EXPORT
+#endif
+
+EXPORT void my_custom_op(Tensor* a, Tensor* out) {
+    // ... implementation ...
 }
 ```
 
-### 2. `plugin.py`
-
-```python
-from ..base import NativeCPUPlugin
-import logging
-
-class IntelAVX512Plugin(NativeCPUPlugin):
-    def initialize(self):
-        super().initialize()
-        # Set specific OpenMP flags or thread affinity
-        self._set_thread_affinity()
-
-    def _set_thread_affinity(self):
-        # Implementation using os.sched_setaffinity or ctypes
-        pass
-
-def create_plugin():
-    return IntelAVX512Plugin()
+### 2. Building
+Run the build script from the project root:
+```bash
+python3 build_ops.py
 ```
 
-### 3. C-Backend Extensions
+### 3. Cross-Compilation
+The build system supports generating binaries for other platforms:
+*   **Linux Host:** Install `mingw-w64` to build Windows DLLs.
+*   **Windows Host:** Install WSL (`wsl --install`) to build Linux `.so` files.
 
-If you need custom C kernels for your CPU architecture:
-1.  Add source files to `src/inference_pio/plugins/cpu/<arch_name>/c_src/`.
-2.  Update `build_ops.py` to compile your specific library (e.g., `libtensor_ops_avx512.so`).
-3.  Override `load_backend_lib` in your Python plugin class to load your custom `.so` instead of the default.
+Ensure your code is platform-agnostic (use standard C99/C11 features). Avoid platform-specific headers like `<windows.h>` unless wrapped in `#ifdef _WIN32`.
+
+## Python Integration
+
+In `base.py`, load the library and define the function signature:
 
 ```python
-    def load_backend_lib(self):
-        # Custom loading logic
-        pass
+class MyCPUPlugin(NativeCPUPlugin):
+    def __init__(self):
+        super().__init__()
+        # self.lib is automatically loaded by NativeCPUPlugin
+
+        self.lib.my_custom_op.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        self.lib.my_custom_op.restype = None
+
+    def my_op(self, a, out):
+        self.lib.my_custom_op(a.c_ptr, out.c_ptr)
 ```

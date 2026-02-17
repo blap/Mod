@@ -1,54 +1,68 @@
-# Creating GPU Plugins
+# Guide: Creating GPU Plugins
 
-GPU plugins integrate hardware accelerators (NVIDIA, AMD, Intel ARC) into the inference engine.
+This guide explains how to implement custom GPU backends (CUDA and OpenCL) for Inference-PIO.
 
-## Base Classes
+## Overview
 
-*   **CUDA:** Inherit from `CUDABasePlugin` (`src/inference_pio/plugins/cuda/base.py`).
-*   **OpenCL (AMD/Intel):** Inherit from `AMDBasePlugin` or `IntelBasePlugin`.
+GPU plugins leverage high-performance compute kernels for inference. Inference-PIO supports:
+*   **CUDA:** For NVIDIA GPUs.
+*   **OpenCL:** For AMD, Intel, and other OpenCL-compatible devices.
 
-## CUDA Example
+## CUDA Backends
 
-### 1. `plugin_manifest.json`
+CUDA kernels are implemented in `.cu` files and compiled using `nvcc`.
 
-```json
-{
-    "name": "NVIDIATuringPlugin",
-    "version": "1.0.0",
-    "type": "hardware",
-    "description": "Optimized backend for NVIDIA Turing GPUs",
-    "entry_point": "plugin:create_plugin",
-    "compatibility": {
-        "compute_capability": "7.5"
-    }
-}
+### File Structure
+```
+src/inference_pio/plugins/cuda/
+├── base.py                 # Python wrapper (ctypes)
+├── c_src/
+│   ├── tensor_ops_cuda.cu  # Main CUDA implementation
+│   └── fused_ops.cu        # Optimized fused kernels
+└── __init__.py
 ```
 
-### 2. `plugin.py`
+### Compilation
 
-```python
-from ..base import CUDABasePlugin
+The `build_ops.py` script automatically detects `nvcc` and compiles `.cu` files into shared libraries (`.dll` or `.so`).
 
-class NVIDIATuringPlugin(CUDABasePlugin):
-    def initialize(self):
-        super().initialize()
-        # Tune specific kernels for Turing
-        self._tune_kernels()
+**Note:** Cross-compiling CUDA (e.g., building Windows DLLs on Linux) is currently *not supported* by `build_ops.py` due to NVCC complexities. You must build on the target OS or use native compilation.
 
-def create_plugin():
-    return NVIDIATuringPlugin()
+## OpenCL Backends
+
+OpenCL kernels are implemented in `.c` files that load OpenCL libraries dynamically.
+
+### File Structure
+```
+src/inference_pio/plugins/common/c_src/
+├── tensor_ops_opencl.c    # Shared OpenCL implementation
+└── cl_minimal.h           # Minimal OpenCL headers (dependency-free)
+
+src/inference_pio/plugins/amd/
+├── base.py                # AMD-specific Python wrapper
+└── __init__.py
+
+src/inference_pio/plugins/intel/
+├── base.py                # Intel-specific Python wrapper
+└── __init__.py
 ```
 
-### 3. Custom Kernels (`.cu`)
+### Dynamic Loading
+The OpenCL backend uses `dlopen` (Linux) or `LoadLibrary` (Windows) to load vendor-specific OpenCL implementations at runtime. This avoids build-time dependencies on OpenCL SDKs.
 
-1.  Write optimized CUDA C++ kernels in `c_src/`.
-2.  Update `build_ops.py` to compile them using `nvcc` into a shared library (e.g., `libtensor_ops_cuda_turing.so`).
-3.  Ensure the functions are exported with `extern "C"`.
+To implement a new OpenCL backend:
+1.  Implement kernels in `tensor_ops_opencl.c`.
+2.  Use the `VENDOR_FILTER` macro to conditionally compile vendor-specific logic if needed.
+3.  Ensure your C code is compatible with both Windows (MSVC/MinGW) and Linux (GCC).
 
-## OpenCL Example
+### Building OpenCL plugins
+Run:
+```bash
+python3 build_ops.py
+```
+This will compile separate shared libraries for AMD and Intel backends (`libtensor_ops_amd.so`, `libtensor_ops_intel.so`) using the common source.
 
-OpenCL plugins typically share the `tensor_ops_opencl.c` source but can be compiled with different macros or linked against different vendor SDKs.
-
-1.  Create `src/inference_pio/plugins/amd/rx6000/`.
-2.  Implement `plugin.py` inheriting from `AMDBasePlugin`.
-3.  Ensure `build_ops.py` compiles the OpenCL backend for this target.
+### Cross-Compilation
+The OpenCL backend supports full cross-compilation:
+*   **Linux Host:** Builds Windows DLLs via MinGW.
+*   **Windows Host:** Builds Linux `.so` files via WSL.
