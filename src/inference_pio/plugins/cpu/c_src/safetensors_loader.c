@@ -147,12 +147,11 @@ static inline float half_to_float(uint16_t h) {
 EXPORT int load_tensor_data(SafetensorsContext* ctx, const char* name, float* buffer, int size) {
     if (!ctx || !ctx->header_json) return 0;
 
-    int mapped = 0;
     #ifdef USE_MMAP
-    if (ctx->mmap_addr) mapped = 1;
+    // if (ctx->mmap_addr) mapped = 1;
     #endif
     #ifdef USE_MMAP_WIN
-    if (ctx->mmap_addr_win) mapped = 1;
+    // if (ctx->mmap_addr_win) mapped = 1;
     #endif
 
     char search_key[256];

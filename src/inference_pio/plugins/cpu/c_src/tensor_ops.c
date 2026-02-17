@@ -16,10 +16,12 @@
 #endif
 #include "../../common/tensor.h"
 
+#ifndef EXPORT
 #ifdef _WIN32
 #define EXPORT __declspec(dllexport)
 #else
 #define EXPORT
+#endif
 #endif
 
 // --- Optimizations Infrastructure ---

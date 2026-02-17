@@ -2,6 +2,7 @@ import os
 import sys
 import subprocess
 import shutil
+import platform
 from pathlib import Path
 
 # Configuration
@@ -9,13 +10,54 @@ SRC_DIR = Path("src/inference_pio")
 PLUGINS_DIR = SRC_DIR / "plugins"
 COMMON_C_SRC = PLUGINS_DIR / "common" / "c_src"
 
-# Compiler flags
-CFLAGS = ["-O3", "-fPIC", "-shared", "-Wall", "-Wextra", "-fopenmp"]
-if os.name == "nt":
-    CFLAGS = ["/O2", "/LD", "/openmp"] # MSVC flags
+class Compiler:
+    def compile(self, sources, output_path, include_dirs=None, defines=None, flags=None, libraries=None):
+        raise NotImplementedError
+
+class GccCompiler(Compiler):
+    def __init__(self, cmd="gcc"):
+        self.cmd = cmd
+
+    def compile(self, sources, output_path, include_dirs=None, defines=None, flags=None, libraries=None):
+        cmd = [self.cmd] + [str(s) for s in sources]
+
+        # Base Flags
+        cmd += ["-O3", "-fPIC", "-shared", "-Wall", "-Wextra", "-fopenmp"]
+
+        if flags: cmd += flags
+        if include_dirs: cmd += [f"-I{d}" for d in include_dirs]
+        if defines: cmd += [f"-D{d}" for d in defines]
+
+        cmd += ["-o", str(output_path)]
+
+        if libraries: cmd += [f"-l{l}" for l in libraries]
+
+        # Link math lib on Linux/standard GCC
+        if "mingw" not in self.cmd and platform.system() != "Windows":
+             cmd.append("-lm")
+
+        return run_command(cmd)
+
+class MsvcCompiler(Compiler):
+    def __init__(self, cmd="cl"):
+        self.cmd = cmd
+
+    def compile(self, sources, output_path, include_dirs=None, defines=None, flags=None, libraries=None):
+        # MSVC flags
+        cmd = [self.cmd] + [str(s) for s in sources]
+        cmd += ["/O2", "/LD", "/openmp"] # /LD = DLL
+
+        if flags: cmd += flags
+        if include_dirs: cmd += [f"/I{d}" for d in include_dirs]
+        if defines: cmd += [f"/D{d}" for d in defines]
+
+        cmd += [f"/Fe:{output_path}"]
+
+        if libraries: cmd += [f"{l}.lib" for l in libraries]
+
+        return run_command(cmd)
 
 def run_command(cmd, cwd=None):
-    """Run a shell command and print output."""
     print(f"Running: {' '.join(cmd)}")
     try:
         subprocess.check_call(cmd, cwd=cwd)
@@ -27,141 +69,128 @@ def run_command(cmd, cwd=None):
         print(f"Error: Command not found: {cmd[0]}")
         return False
 
-def compile_cpu():
-    """Compile CPU backend."""
-    print("\n[Build] Compiling CPU Backend...")
+def get_compilers():
+    compilers = []
+
+    # 1. Host Native
+    if os.name == "nt":
+        if shutil.which("cl"):
+            compilers.append({"name": "Windows (MSVC)", "compiler": MsvcCompiler("cl"), "ext": ".dll", "os": "windows"})
+        # Check for MinGW on Windows too? Usually rare for this project setup but possible.
+    else:
+        if shutil.which("gcc"):
+            compilers.append({"name": "Linux (GCC)", "compiler": GccCompiler("gcc"), "ext": ".so", "os": "linux"})
+
+    # 2. Cross Compilation (Linux -> Windows)
+    if os.name != "nt":
+        cross_gcc = "x86_64-w64-mingw32-gcc"
+        if shutil.which(cross_gcc):
+            print(f"Found Cross-Compiler: {cross_gcc}")
+            compilers.append({"name": "Windows (MinGW)", "compiler": GccCompiler(cross_gcc), "ext": ".dll", "os": "windows"})
+        else:
+            print(f"Cross-Compiler {cross_gcc} not found. Skipping Windows build on Linux.")
+
+    return compilers
+
+def compile_cpu(compiler_info):
+    name = compiler_info["name"]
+    compiler = compiler_info["compiler"]
+    ext = compiler_info["ext"]
+
+    print(f"\n[Build] Compiling CPU Backend for {name}...")
     src = PLUGINS_DIR / "cpu" / "c_src" / "tensor_ops.c"
-    # Also include the safetensors_loader.c
     loader_src = PLUGINS_DIR / "cpu" / "c_src" / "safetensors_loader.c"
 
     if not src.exists():
-        print(f"Skipping CPU: {src} not found")
+        print(f"Skipping: {src} not found")
         return
 
-    out_name = "libtensor_ops.dll" if os.name == "nt" else "libtensor_ops.so"
-    out_path = src.parent / out_name
-
-    cmd = ["gcc"] + [str(src)] + CFLAGS
-
-    # Check if loader exists and append
+    out_path = src.parent / f"libtensor_ops{ext}"
+    sources = [src]
     if loader_src.exists():
-        cmd.append(str(loader_src))
+        sources.append(loader_src)
 
-    cmd += ["-o", str(out_path)]
-
-    # Link with math library on Linux
-    if os.name != "nt":
-        cmd.append("-lm")
-        cmd.append("-fopenmp") # Link OpenMP
-
-    if os.name == "nt":
-        # MSVC syntax is different - NOT UPDATED FOR LOADER YET (TODO)
-        cmd = ["cl", str(src)] + CFLAGS + ["/Fe:" + str(out_path)]
-
-    if run_command(cmd):
+    if compiler.compile(sources, out_path):
         print(f"Success: {out_path}")
     else:
-        print("Failed to compile CPU backend.")
+        print(f"Failed to compile CPU backend for {name}")
 
-def compile_cuda():
-    """Compile CUDA backend."""
-    print("\n[Build] Compiling CUDA Backend...")
+def compile_cuda(compiler_info):
+    # CUDA usually requires native NVCC. Cross-compiling CUDA is hard.
+    # We only build CUDA if host OS matches target OS roughly, or if we are native.
+    # For now, simplistic check: only build if "gcc" (Linux) or "cl" (Windows) and nvcc exists.
+
+    if compiler_info["os"] == "windows" and os.name != "nt":
+        print("Skipping CUDA cross-compilation (not supported yet).")
+        return
+
+    if shutil.which("nvcc") is None:
+        print("Skipping CUDA: nvcc not found")
+        return
+
+    print(f"\n[Build] Compiling CUDA Backend for {compiler_info['name']}...")
     src_dir = PLUGINS_DIR / "cuda" / "c_src"
     src = src_dir / "tensor_ops_cuda.cu"
 
-    if not src.exists():
-        print(f"Skipping CUDA: {src} not found")
-        return
-
-    # Check for nvcc
-    if shutil.which("nvcc") is None:
-        print("Skipping CUDA: nvcc not found in PATH")
-        return
-
-    # Define targets
     targets = [
-        {"name": "libtensor_ops_cuda", "flags": []}, # Default
-        {"name": "libtensor_ops_cuda_sm61", "flags": ["-arch=sm_61"]} # Pascal GTX 10-series
+        {"name": "libtensor_ops_cuda", "flags": []},
+        {"name": "libtensor_ops_cuda_sm61", "flags": ["-arch=sm_61"]}
     ]
 
     for target in targets:
-        out_name = f"{target['name']}.dll" if os.name == "nt" else f"{target['name']}.so"
-        out_path = src_dir / out_name
+        out_path = src_dir / f"{target['name']}{compiler_info['ext']}"
 
-        # Basic NVCC flags
+        # NVCC flags construction
         nvcc_flags = ["-O3", "--shared", "-Xcompiler", "-fPIC"] + target["flags"]
-        if os.name == "nt":
-            nvcc_flags = ["-O3", "--shared", "-Xcompiler", "/LD"] + target["flags"]
+        if compiler_info["os"] == "windows":
+             nvcc_flags = ["-O3", "--shared", "-Xcompiler", "/LD"] + target["flags"]
 
-        # Compile consolidated source
-        sources = [str(src)]
-
-        print(f"Building {out_name}...")
-        cmd = ["nvcc"] + sources + nvcc_flags + ["-o", str(out_path)]
-
+        cmd = ["nvcc", str(src)] + nvcc_flags + ["-o", str(out_path)]
         if run_command(cmd):
             print(f"Success: {out_path}")
         else:
-            print(f"Failed to compile {out_name}")
+            print(f"Failed: {out_path}")
 
-def compile_opencl(vendor, output_dir):
-    """Compile OpenCL backend for specific vendor."""
-    print(f"\n[Build] Compiling OpenCL Backend for {vendor}...")
-
-    # We use the shared common source
+def compile_opencl(compiler_info, vendor, output_dir):
+    print(f"\n[Build] Compiling OpenCL Backend ({vendor}) for {compiler_info['name']}...")
     src = COMMON_C_SRC / "tensor_ops_opencl.c"
-
-    # Check if we have the shared source, if not, fallback or warn
     if not src.exists():
-        # Fallback to existing AMD one if it exists and we are compiling AMD?
-        # But per plan we want to standardize.
-        # Let's check if the file exists. If not, maybe we haven't created it yet.
-        # For this script to work, the file must exist.
-        # Since I'm creating the script first, I'll add a check.
-        print(f"Warning: {src} not found. Skipping OpenCL build.")
+        print(f"Warning: {src} not found.")
         return
 
-    out_name = f"libtensor_ops_{vendor.lower()}.dll" if os.name == "nt" else f"libtensor_ops_{vendor.lower()}.so"
-    out_path = output_dir / out_name
+    output_dir.mkdir(parents=True, exist_ok=True)
+    out_path = output_dir / f"libtensor_ops_{vendor.lower()}{compiler_info['ext']}"
 
-    # We define VENDOR_FILTER macro
-    macros = [f"-DVENDOR_FILTER=\"{vendor}\""]
-    if os.name == "nt":
-        macros = [f"/DVENDOR_FILTER=\"{vendor}\""]
+    defines = [f"VENDOR_FILTER=\"{vendor}\""]
+    libraries = []
+    if compiler_info["os"] == "linux":
+        libraries.append("dl") # For dlopen
 
-    cmd = ["gcc", str(src)] + CFLAGS + macros + ["-o", str(out_path)]
-    if os.name != "nt":
-        cmd.append("-ldl") # For dlopen
-
-    if os.name == "nt":
-         cmd = ["cl", str(src)] + CFLAGS + macros + ["/Fe:" + str(out_path)]
-
-    if run_command(cmd):
+    if compiler_info["compiler"].compile([src], out_path, defines=defines, libraries=libraries):
         print(f"Success: {out_path}")
     else:
-        print(f"Failed to compile {vendor} backend.")
+        print(f"Failed to compile {vendor} backend")
 
 def main():
-    print("Inference-PIO Build Script")
-    print("==========================")
+    print("Inference-PIO Universal Build Script")
+    print("====================================")
 
-    # 1. CPU
-    compile_cpu()
+    compilers = get_compilers()
+    if not compilers:
+        print("No suitable compilers found!")
+        return
 
-    # 2. CUDA
-    compile_cuda()
+    for c in compilers:
+        print(f"\n--- Building for {c['name']} ---")
+        compile_cpu(c)
+        compile_cuda(c)
 
-    # 3. AMD (OpenCL)
-    amd_dir = PLUGINS_DIR / "amd" / "c_src"
-    amd_dir.mkdir(parents=True, exist_ok=True)
-    compile_opencl("AMD", amd_dir)
+        # AMD
+        compile_opencl(c, "AMD", PLUGINS_DIR / "amd" / "c_src")
+        # Intel
+        compile_opencl(c, "Intel", PLUGINS_DIR / "intel" / "c_src")
 
-    # 4. Intel (OpenCL)
-    intel_dir = PLUGINS_DIR / "intel" / "c_src"
-    intel_dir.mkdir(parents=True, exist_ok=True)
-    compile_opencl("Intel", intel_dir)
-
-    print("\nBuild Complete.")
+    print("\nAll builds finished.")
 
 if __name__ == "__main__":
     main()

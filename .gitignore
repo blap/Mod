@@ -76,6 +76,7 @@ config.local
 *.safetensors
 data/
 dataset/
+_model_cache/
 
 # Performance and profiling
 profile/
